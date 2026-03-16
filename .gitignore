@@ -1,0 +1,7 @@
+node_modules/
+.next/
+.env*.local
+.playwright-mcp/
+firebase-debug.log
+tsconfig.tsbuildinfo
+next-env.d.ts
