@@ -5,3 +5,4 @@ node_modules/
 firebase-debug.log
 tsconfig.tsbuildinfo
 next-env.d.ts
+.vercel
