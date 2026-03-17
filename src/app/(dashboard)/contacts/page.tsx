@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ClientProfileSheet } from "@/components/contacts/client-profile-sheet";
@@ -14,7 +12,6 @@ import type { Lead, Client } from "@/types";
 type Tab = "prospects" | "clients";
 
 export default function ContactsPage() {
-  const router = useRouter();
   const [tab, setTab] = useState<Tab>("prospects");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "board">("list");
@@ -46,50 +43,76 @@ export default function ContactsPage() {
 
   return (
     <>
-      {/* Tabs + Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-        <div className="flex bg-white rounded-xl p-1 shadow-sm">
-          {(["prospects", "clients"] as const).map((t) => (
+      {/* Segmented Control + Search */}
+      <div className="flex flex-col gap-3 mb-5">
+        {/* Top row: segmented control + add button */}
+        <div className="flex items-center justify-between gap-3">
+          {/* Apple-style segmented control */}
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            {(["prospects", "clients"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-5 py-1.5 rounded-[7px] text-[13px] font-semibold border-none cursor-pointer transition-all capitalize ${
+                  tab === t
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "bg-transparent text-gray-500"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-2 items-center">
+            {tab === "prospects" && (
+              <div className="hidden md:flex bg-gray-100 rounded-lg p-0.5">
+                {(["list", "board"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    className={`px-4 py-1.5 rounded-[7px] text-[13px] font-semibold border-none cursor-pointer transition-all capitalize ${
+                      view === v
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "bg-transparent text-gray-500"
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-[10px] text-[13px] font-semibold border-none cursor-pointer transition-all capitalize ${
-                tab === t ? "bg-brand-dark text-white" : "bg-transparent text-gray-500"
-              }`}
+              onClick={() => setAddSheetOpen(true)}
+              className="bg-blue-500 text-white border-none rounded-full w-9 h-9 text-xl font-light cursor-pointer hover:bg-blue-600 transition-colors flex items-center justify-center shrink-0"
             >
-              {t}
+              +
             </button>
-          ))}
+          </div>
         </div>
-        <div className="flex gap-2 items-center">
+
+        {/* Apple-style search bar */}
+        <div className="relative">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-white border border-gray-200 rounded-[10px] px-3.5 py-2 text-[13px] outline-none w-full sm:w-[200px]"
-            placeholder={`Search ${tab}...`}
+            className="w-full bg-gray-100 rounded-xl pl-9 pr-4 py-2.5 text-[15px] outline-none border-none placeholder:text-gray-400"
+            placeholder="Search"
           />
-          {tab === "prospects" && (
-            <div className="hidden md:flex bg-white rounded-xl p-1 shadow-sm">
-              {(["list", "board"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={`px-4 py-1.5 rounded-[10px] text-[12px] font-semibold border-none cursor-pointer transition-all capitalize ${
-                    view === v ? "bg-brand-dark text-white" : "bg-transparent text-gray-500"
-                  }`}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-          )}
-          <button
-            onClick={() => setAddSheetOpen(true)}
-            className="bg-brand-dark text-white border-none rounded-xl px-4 py-2 text-[13px] font-bold cursor-pointer hover:opacity-85 transition-opacity flex items-center gap-1.5 shrink-0"
-          >
-            <span className="text-lg leading-none">+</span>
-            <span className="hidden sm:inline">Add Contact</span>
-          </button>
         </div>
       </div>
 
@@ -102,10 +125,12 @@ export default function ContactsPage() {
               {KANBAN_COLUMNS.map((col) => {
                 const items = filteredLeads.filter((l) => l.status === col.id);
                 return (
-                  <div key={col.id} className="min-w-[200px] flex-1 bg-gray-100 rounded-2xl p-3">
-                    <div className="flex justify-between items-center mb-3 px-0.5">
-                      <span className="font-bold text-xs text-gray-500">{col.label}</span>
-                      <span className="bg-white rounded-full px-2 py-0.5 text-[11px] font-bold text-gray-500">
+                  <div key={col.id} className="min-w-[200px] flex-1 bg-gray-50 rounded-2xl p-3">
+                    <div className="flex justify-between items-center mb-3 px-1">
+                      <span className="font-semibold text-[13px] text-gray-500 uppercase tracking-wide">
+                        {col.label}
+                      </span>
+                      <span className="bg-gray-200/60 rounded-full px-2 py-0.5 text-[11px] font-semibold text-gray-500">
                         {items.length}
                       </span>
                     </div>
@@ -125,9 +150,9 @@ export default function ContactsPage() {
 
           {/* List View — always on mobile, shown on desktop when view=list */}
           <div className={view === "board" ? "md:hidden" : ""}>
-            <div className="flex flex-col gap-2">
-              {filteredLeads.map((lead) => (
-                <LeadRow key={lead.id} lead={lead} />
+            <div className="bg-white rounded-2xl overflow-hidden">
+              {filteredLeads.map((lead, idx) => (
+                <LeadRow key={lead.id} lead={lead} isLast={idx === filteredLeads.length - 1} />
               ))}
             </div>
           </div>
@@ -136,9 +161,14 @@ export default function ContactsPage() {
 
       {/* Clients Tab */}
       {tab === "clients" && (
-        <div className="flex flex-col gap-2">
-          {filteredClients.map((client) => (
-            <ClientRow key={client.id} client={client} onSelect={() => router.push(`/clients/${client.id}`)} />
+        <div className="bg-white rounded-2xl overflow-hidden">
+          {filteredClients.map((client, idx) => (
+            <ClientRow
+              key={client.id}
+              client={client}
+              onSelect={() => setSelectedClient(client)}
+              isLast={idx === filteredClients.length - 1}
+            />
           ))}
         </div>
       )}
@@ -161,82 +191,77 @@ function KanbanCard({ lead, expanded, onToggle }: { readonly lead: Lead; readonl
   return (
     <div
       onClick={onToggle}
-      className="bg-white rounded-[14px] p-3.5 shadow-sm cursor-pointer mb-2 hover:shadow-md hover:-translate-y-px transition-all"
+      className="bg-white rounded-2xl p-4 shadow-sm cursor-pointer mb-2 hover:shadow-md transition-all"
     >
-      <div className="font-bold text-[13px] mb-0.5">
+      <div className="font-semibold text-[15px] mb-0.5">
         {lead.name}
-        {lead.es && <span className="text-[10px] ml-1">🇪🇸</span>}
+        {lead.es && <span className="text-[11px] ml-1">🇪🇸</span>}
       </div>
-      <div className="text-[11px] text-gray-400 mb-2.5 leading-relaxed">{lead.service}</div>
+      <div className="text-[13px] text-gray-400 mb-3 leading-relaxed">{lead.service}</div>
       <div className="flex justify-between items-center">
-        <span className="font-extrabold text-[13px]">
+        <span className="font-bold text-[15px]">
           {formatCurrency(lead.value)}
-          <span className="text-[10px] text-gray-400 font-normal">/mo</span>
+          <span className="text-[11px] text-gray-400 font-normal">/mo</span>
         </span>
-        <span className="text-[10px] text-gray-400">{lead.ago}</span>
+        <span className="text-[11px] text-gray-400">{lead.ago}</span>
       </div>
       {expanded && (
-        <div className="mt-3 pt-3 border-t border-gray-100 flex gap-1.5">
-          <button className="bg-green-50 text-green-700 border-none rounded-lg px-2.5 py-1 text-[11px] font-semibold cursor-pointer">📞 Call</button>
-          <button className="bg-blue-50 text-blue-700 border-none rounded-lg px-2.5 py-1 text-[11px] font-semibold cursor-pointer">💬 SMS</button>
-          <button className="bg-brand-dark text-white border-none rounded-lg px-2.5 py-1 text-[11px] font-semibold cursor-pointer">Convert</button>
+        <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+          <button className="bg-green-50 text-green-700 border-none rounded-full px-3.5 py-1.5 text-[13px] font-semibold cursor-pointer">Call</button>
+          <button className="bg-blue-50 text-blue-700 border-none rounded-full px-3.5 py-1.5 text-[13px] font-semibold cursor-pointer">SMS</button>
+          <button className="bg-blue-500 text-white border-none rounded-full px-3.5 py-1.5 text-[13px] font-semibold cursor-pointer">Convert</button>
         </div>
       )}
     </div>
   );
 }
 
-function LeadRow({ lead }: { readonly lead: Lead }) {
+function LeadRow({ lead, isLast }: { readonly lead: Lead; readonly isLast: boolean }) {
   return (
-    <Card className="flex items-center gap-3 cursor-pointer hover:shadow-md transition-all" padding="sm">
-      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-base shrink-0">👤</div>
+    <div className={`flex items-center gap-3.5 px-4 py-3 min-h-[52px] ${!isLast ? "border-b border-gray-100" : ""}`}>
+      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-[15px] shrink-0">
+        👤
+      </div>
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-[13px]">
+        <div className="font-semibold text-[15px]">
           {lead.name}
-          {lead.es && <span className="text-[10px] ml-1">🇪🇸</span>}
+          {lead.es && <span className="text-[11px] ml-1">🇪🇸</span>}
         </div>
-        <div className="text-[11px] text-gray-400 truncate">{lead.service}</div>
+        <div className="text-[13px] text-gray-400 truncate">{lead.service}</div>
       </div>
       <div className="text-right shrink-0 flex items-center gap-2">
         <Badge variant={lead.status === "new" ? "success" : lead.status === "contacted" ? "info" : "warning"}>
           {lead.status}
         </Badge>
-        <span className="font-bold text-[13px]">{formatCurrency(lead.value)}</span>
+        <span className="font-bold text-[15px]">{formatCurrency(lead.value)}</span>
       </div>
-    </Card>
+    </div>
   );
 }
 
-function ClientRow({ client, onSelect }: { readonly client: Client; readonly onSelect: () => void }) {
+function ClientRow({ client, onSelect, isLast }: { readonly client: Client; readonly onSelect: () => void; readonly isLast: boolean }) {
   return (
-    <div onClick={onSelect}>
-      <Card className="flex items-center gap-3.5 cursor-pointer hover:shadow-md transition-all" padding="sm">
-        <Avatar initials={client.ini} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="font-bold text-sm">{client.name}</span>
-            {client.tag && (
-              <span className="bg-yellow-50 text-yellow-700 rounded px-1.5 py-0.5 text-[10px] font-bold">
-                {client.tag}
-              </span>
-            )}
-          </div>
-          <div className="text-xs text-gray-400">
-            {client.phone} · {client.props} {client.props === 1 ? "property" : "properties"}
-          </div>
+    <div
+      onClick={onSelect}
+      className={`flex items-center gap-3.5 px-4 py-3 min-h-[52px] cursor-pointer active:bg-gray-50 transition-colors ${!isLast ? "border-b border-gray-100" : ""}`}
+    >
+      <Avatar initials={client.ini} />
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-[17px] leading-tight mb-0.5">{client.name}</div>
+        <div className="text-[13px] text-gray-400">{client.phone}</div>
+      </div>
+      <div className="text-right shrink-0">
+        <div className="flex items-center gap-1.5 justify-end mb-0.5">
+          <span className="text-[13px] text-gray-400">{client.props} prop{client.props !== 1 ? "s" : ""}</span>
+          <span className="text-gray-200">·</span>
+          <span className="font-bold text-[15px]">{formatCurrency(client.mrr)}<span className="text-[11px] text-gray-400 font-normal">/mo</span></span>
         </div>
-        <div className="text-right shrink-0">
-          <div className="font-black text-lg tracking-tight leading-none mb-1">
-            {formatCurrency(client.mrr)}
-            <span className="text-[11px] text-gray-400 font-normal">/mo</span>
-          </div>
-          {client.bal > 0 ? (
-            <span className="text-[11px] text-red-600 font-bold">{formatCurrency(client.bal)} due</span>
-          ) : (
-            <span className="text-[11px] text-green-600 font-semibold">✓ Paid</span>
-          )}
-        </div>
-      </Card>
+        {client.bal > 0 ? (
+          <span className="text-[11px] text-red-500 font-semibold">{formatCurrency(client.bal)} due</span>
+        ) : (
+          <span className="text-[11px] text-green-500 font-medium">Paid</span>
+        )}
+      </div>
     </div>
   );
 }

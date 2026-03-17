@@ -30,103 +30,105 @@ export function ClientProfileSheet({ client, onClose }: ClientProfileSheetProps)
   };
 
   return (
-    <BottomSheet open={!!client} onClose={onClose} title={client.name}>
-      {/* Header */}
-      <div className="flex items-start gap-4 mb-5">
-        <Avatar initials={client.ini} size="lg" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <Link
-              href={`/clients/${client.id}`}
-              onClick={(e) => { e.preventDefault(); handleNavigateToProfile(); }}
-              className="font-black text-xl tracking-tight hover:text-brand transition-colors no-underline text-inherit"
-            >
-              {client.name}
-            </Link>
-            {client.tag && (
-              <span className="bg-yellow-50 text-yellow-700 rounded-md px-2 py-0.5 text-[10px] font-bold">
-                {client.tag}
-              </span>
-            )}
-          </div>
-          <div className="text-[13px] text-gray-400">
-            {client.phone} · {client.props} {client.props === 1 ? "property" : "properties"}
-          </div>
+    <BottomSheet open={!!client} onClose={onClose}>
+      {/* Centered header with large avatar */}
+      <div className="flex flex-col items-center pt-2 mb-5">
+        <div className="mb-3">
+          <Avatar initials={client.ini} size="lg" />
         </div>
+        <h2 className="text-[22px] font-bold text-gray-900 mb-1">{client.name}</h2>
+        {client.tag && (
+          <div className="flex gap-1.5 mb-1">
+            <span className="bg-gray-100 text-gray-600 rounded-full px-3 py-0.5 text-[13px] font-medium">
+              {client.tag}
+            </span>
+          </div>
+        )}
+        <div className="text-[15px] text-gray-400">{client.phone}</div>
       </div>
 
-      {/* View Full Profile Link */}
-      <Link
-        href={`/clients/${client.id}`}
-        onClick={(e) => { e.preventDefault(); handleNavigateToProfile(); }}
-        className="flex items-center justify-center text-[13px] font-semibold text-brand hover:text-brand/80 transition-colors no-underline mb-5"
-      >
-        View Full Profile →
-      </Link>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2.5 mb-5">
-        <div className="bg-green-50 rounded-xl p-3">
-          <div className="text-[10px] font-semibold text-gray-400 tracking-wider mb-1">MRR</div>
-          <div className="font-black text-lg text-green-700">{formatCurrency(client.mrr)}</div>
-        </div>
-        <div className="bg-gray-50 rounded-xl p-3">
-          <div className="text-[10px] font-semibold text-gray-400 tracking-wider mb-1">LIFETIME</div>
-          <div className="font-black text-lg text-brand">{formatCurrency(lifetime)}</div>
-        </div>
-        <div className={`rounded-xl p-3 ${client.bal > 0 ? "bg-red-50" : "bg-green-50"}`}>
-          <div className="text-[10px] font-semibold text-gray-400 tracking-wider mb-1">BALANCE</div>
-          <div className={`font-black text-lg ${client.bal > 0 ? "text-red-600" : "text-green-700"}`}>
-            {client.bal > 0 ? formatCurrency(client.bal) : "Paid"}
-          </div>
-        </div>
-      </div>
-
-      {/* Quick actions */}
-      <div className="flex gap-2 mb-5">
+      {/* Quick action circles (Apple Contacts style) */}
+      <div className="flex justify-center gap-6 mb-6">
         {[
-          { icon: "📞", label: "Call",    bg: "bg-green-50",  fg: "text-green-700" },
-          { icon: "💬", label: "Message", bg: "bg-blue-50",   fg: "text-blue-700" },
-          { icon: "📋", label: "New Job", bg: "bg-yellow-50", fg: "text-yellow-700" },
-          { icon: "💰", label: "Charge",  bg: "bg-purple-50", fg: "text-purple-700" },
+          { icon: "📞", label: "Call" },
+          { icon: "💬", label: "Message" },
+          { icon: "✉️", label: "Email" },
+          { icon: "📤", label: "Share" },
         ].map((action) => (
           <button
             key={action.label}
-            className={`${action.bg} ${action.fg} flex-1 border-none rounded-xl py-2.5 font-semibold text-xs cursor-pointer hover:opacity-80 transition-opacity`}
+            className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer"
           >
-            {action.icon} {action.label}
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-xl hover:bg-gray-200 transition-colors">
+              {action.icon}
+            </div>
+            <span className="text-[11px] text-gray-500 font-medium">{action.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Recent Jobs */}
-      <div>
-        <h4 className="font-bold text-sm mb-3">Recent Jobs</h4>
-        {clientJobs.length === 0 ? (
-          <p className="text-gray-400 text-[13px]">No jobs yet.</p>
-        ) : (
-          clientJobs.map((job) => {
-            const status = JOB_STATUS_STYLES[job.st];
-            return (
-              <div
-                key={job.id}
-                className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0"
-              >
-                <div>
-                  <div className="font-semibold text-[13px]">{job.svc}</div>
-                  <div className="text-[11px] text-gray-400">
-                    {job.time} · {job.photos} photos · {job.worker}
+      {/* Stats row with thin separators */}
+      <div className="bg-white rounded-2xl overflow-hidden mb-5">
+        <div className="flex items-center divide-x divide-gray-100">
+          <div className="flex-1 text-center py-3 px-2">
+            <div className="text-[11px] text-gray-400 font-medium uppercase tracking-wider mb-0.5">MRR</div>
+            <div className="text-[17px] font-bold text-green-600">{formatCurrency(client.mrr)}</div>
+          </div>
+          <div className="flex-1 text-center py-3 px-2">
+            <div className="text-[11px] text-gray-400 font-medium uppercase tracking-wider mb-0.5">Lifetime</div>
+            <div className="text-[17px] font-bold text-gray-900">{formatCurrency(lifetime)}</div>
+          </div>
+          <div className="flex-1 text-center py-3 px-2">
+            <div className="text-[11px] text-gray-400 font-medium uppercase tracking-wider mb-0.5">Balance</div>
+            <div className={`text-[17px] font-bold ${client.bal > 0 ? "text-red-500" : "text-green-600"}`}>
+              {client.bal > 0 ? formatCurrency(client.bal) : "Paid"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Jobs — Apple grouped list */}
+      <div className="mb-5">
+        <h4 className="text-[13px] font-semibold text-gray-400 uppercase tracking-wider px-4 mb-2">
+          Recent Jobs
+        </h4>
+        <div className="bg-white rounded-2xl overflow-hidden">
+          {clientJobs.length === 0 ? (
+            <p className="text-gray-400 text-[15px] px-4 py-4">No jobs yet.</p>
+          ) : (
+            clientJobs.map((job, idx) => {
+              const status = JOB_STATUS_STYLES[job.st];
+              return (
+                <div
+                  key={job.id}
+                  className={`flex items-center justify-between px-4 py-3 min-h-[44px] ${
+                    idx !== clientJobs.length - 1 ? "border-b border-gray-100" : ""
+                  }`}
+                >
+                  <div>
+                    <div className="font-semibold text-[15px]">{job.svc}</div>
+                    <div className="text-[13px] text-gray-400">
+                      {job.time} · {job.photos} photos · {job.worker}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Badge variant={JOB_BADGE[job.st]}>{status.label}</Badge>
+                    <span className="font-bold text-[15px]">{formatCurrency(job.total)}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <Badge variant={JOB_BADGE[job.st]}>{status.label}</Badge>
-                  <span className="font-extrabold text-sm">{formatCurrency(job.total)}</span>
-                </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
+
+      {/* View Full Profile link */}
+      <button
+        onClick={handleNavigateToProfile}
+        className="w-full bg-transparent border-none text-blue-500 text-[15px] font-semibold py-3 cursor-pointer hover:text-blue-600 transition-colors"
+      >
+        View Full Profile →
+      </button>
     </BottomSheet>
   );
 }

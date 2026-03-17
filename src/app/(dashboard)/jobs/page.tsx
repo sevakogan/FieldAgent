@@ -2,8 +2,6 @@
 
 import { useState, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { CalendarView } from "@/components/jobs/calendar-view";
 import { formatCurrency, JOB_STATUS_STYLES } from "@/lib/utils";
@@ -11,8 +9,11 @@ import { getServiceColor } from "@/lib/service-colors";
 import { JOBS, CLIENTS } from "@/lib/mock-data";
 import type { Job } from "@/types";
 
-const JOB_ICONS = { done: "\u2705", active: "\u2699\uFE0F", upcoming: "\uD83D\uDCC5" } as const;
-const JOB_BADGE = { done: "success", active: "warning", upcoming: "info" } as const;
+const STATUS_DOT_COLORS = {
+  done: "text-emerald-500",
+  active: "text-yellow-500",
+  upcoming: "text-blue-500",
+} as const;
 
 type ViewMode = "list" | "calendar";
 
@@ -43,6 +44,14 @@ function formatTimeDisplay(time24: string): string {
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
   return `${h12}:${minutes} ${ampm}`;
+}
+
+function formatTodayDate(): string {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 interface InlineClient {
@@ -153,39 +162,43 @@ function JobsPageContent() {
   }, []);
 
   return (
-    <>
-      <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
-        <h2 className="font-extrabold text-base tracking-tight">All Jobs</h2>
-        <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex bg-gray-100 rounded-xl p-0.5">
-            <button
-              onClick={() => setViewMode("list")}
-              className={`px-3 py-1.5 rounded-[10px] text-[12px] font-semibold transition-all ${
-                viewMode === "list"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              List
-            </button>
-            <button
-              onClick={() => setViewMode("calendar")}
-              className={`px-3 py-1.5 rounded-[10px] text-[12px] font-semibold transition-all ${
-                viewMode === "calendar"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Calendar
-            </button>
+    <div className="min-h-full -m-5 md:-m-7 p-5 md:p-7 bg-[#f2f2f7]">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-[34px] font-bold tracking-tight leading-tight">Jobs</h2>
+            <p className="text-[13px] text-gray-500 mt-0.5">{formatTodayDate()}</p>
           </div>
-
           <button
             onClick={handleOpen}
-            className="bg-brand-dark text-white border-none rounded-[10px] px-4 py-2 text-[13px] font-semibold cursor-pointer hover:opacity-85 transition-opacity inline-flex items-center gap-1.5"
+            className="bg-brand-dark text-white border-none rounded-full px-4 py-2 text-[13px] font-semibold cursor-pointer hover:opacity-85 transition-opacity inline-flex items-center gap-1 mt-2"
           >
             + New Job
+          </button>
+        </div>
+
+        {/* Segmented control */}
+        <div className="flex bg-gray-200/70 rounded-lg p-0.5 mt-4 w-fit">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`px-5 py-1.5 rounded-[7px] text-[13px] font-semibold transition-all ${
+              viewMode === "list"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            List
+          </button>
+          <button
+            onClick={() => setViewMode("calendar")}
+            className={`px-5 py-1.5 rounded-[7px] text-[13px] font-semibold transition-all ${
+              viewMode === "calendar"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Calendar
           </button>
         </div>
       </div>
@@ -193,189 +206,204 @@ function JobsPageContent() {
       {viewMode === "calendar" ? (
         <CalendarView jobs={jobs} onJobDateChange={handleJobDateChange} />
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {sorted.map((job) => {
+        <div className="bg-white rounded-2xl overflow-hidden">
+          {sorted.map((job, index) => {
             const status = JOB_STATUS_STYLES[job.st];
-            const borderColor = getServiceColor(job.svc).replace("bg-", "border-l-");
+            const serviceColorClass = getServiceColor(job.svc);
+            const dotColor = serviceColorClass
+              .replace("bg-", "text-")
+              .replace("-500", "-500");
 
             return (
-              <Card
+              <div
                 key={job.id}
-                className={`flex items-center gap-3.5 cursor-pointer hover:shadow-md transition-all border-l-4 ${borderColor}`}
-                padding="sm"
+                className={`flex items-center gap-3 px-4 min-h-[56px] cursor-pointer hover:bg-gray-50 transition-colors ${
+                  index < sorted.length - 1 ? "border-b border-gray-100" : ""
+                }`}
               >
-                <div className={`w-12 h-12 rounded-2xl ${status.icon} flex items-center justify-center text-xl shrink-0`}>
-                  {JOB_ICONS[job.st]}
+                {/* Colored dot */}
+                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${serviceColorClass}`} />
+
+                {/* Center content */}
+                <div className="flex-1 min-w-0 py-2.5">
+                  <span className="font-semibold text-[15px] text-gray-900 block leading-tight">
+                    {job.client}
+                  </span>
+                  <span className="text-[13px] text-gray-500 block leading-tight mt-0.5 truncate">
+                    {job.svc} &middot; {job.time}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-bold text-sm">{job.client}</span>
-                    <Badge variant={JOB_BADGE[job.st]}>{status.label}</Badge>
+
+                {/* Right side */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-right">
+                    <span className="font-semibold text-[15px] text-gray-900 block leading-tight">
+                      {formatCurrency(job.total)}
+                    </span>
+                    <span className={`text-[11px] font-medium block leading-tight mt-0.5 ${STATUS_DOT_COLORS[job.st]}`}>
+                      {status.label}
+                    </span>
                   </div>
-                  <div className="text-xs text-gray-400 truncate">
-                    {job.addr} - {job.svc} - {job.time} - {job.worker}
-                  </div>
+                  <span className="text-gray-300 text-[18px] font-light ml-1">&rsaquo;</span>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  {job.photos > 0 && (
-                    <span className="text-[11px] text-gray-400">{job.photos} photos</span>
-                  )}
-                  <span className="font-black text-xl tracking-tight">{formatCurrency(job.total)}</span>
-                </div>
-              </Card>
+              </div>
             );
           })}
         </div>
       )}
 
       <BottomSheet open={sheetOpen} onClose={handleClose} title="New Job">
-        <div className="flex flex-col gap-4">
-          {/* Client selector */}
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500">Client</span>
-            <select
-              value={form.clientId}
-              onChange={(e) => updateField("clientId", e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
-            >
-              <option value="">Select a client...</option>
-              {localClients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="flex flex-col gap-5">
+          {/* Client section */}
+          <div className="bg-white rounded-2xl overflow-hidden">
+            <label className="block px-4 py-3">
+              <span className="text-[13px] font-medium text-gray-500 block mb-1.5">Client</span>
+              <select
+                value={form.clientId}
+                onChange={(e) => updateField("clientId", e.target.value)}
+                className="w-full rounded-xl border-none bg-gray-50 px-3 py-2.5 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+              >
+                <option value="">Select a client...</option>
+                {localClients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          {/* Inline add client */}
-          {!showAddClient ? (
-            <button
-              type="button"
-              onClick={() => setShowAddClient(true)}
-              className="text-[12px] font-semibold text-brand hover:text-brand/80 transition-colors cursor-pointer bg-transparent border-none p-0 text-left -mt-2"
-            >
-              + Add new client
-            </button>
-          ) : (
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 -mt-2">
-              <div className="grid grid-cols-2 gap-3 mb-2">
-                <input
-                  type="text"
-                  value={inlineClient.name}
-                  onChange={(e) => setInlineClient((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Name"
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400 transition-all"
-                />
-                <input
-                  type="tel"
-                  value={inlineClient.phone}
-                  onChange={(e) => setInlineClient((prev) => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Phone"
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400 transition-all"
-                />
+            {/* Inline add client */}
+            {!showAddClient ? (
+              <button
+                type="button"
+                onClick={() => setShowAddClient(true)}
+                className="text-[13px] font-medium text-blue-500 hover:text-blue-600 transition-colors cursor-pointer bg-transparent border-none px-4 pb-3 pt-0 text-left"
+              >
+                + Add new client
+              </button>
+            ) : (
+              <div className="px-4 pb-3">
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="grid grid-cols-2 gap-3 mb-2">
+                    <input
+                      type="text"
+                      value={inlineClient.name}
+                      onChange={(e) => setInlineClient((prev) => ({ ...prev, name: e.target.value }))}
+                      placeholder="Name"
+                      className="w-full rounded-lg border-none bg-white px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                    />
+                    <input
+                      type="tel"
+                      value={inlineClient.phone}
+                      onChange={(e) => setInlineClient((prev) => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Phone"
+                      className="w-full rounded-lg border-none bg-white px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveInlineClient}
+                      disabled={!inlineClient.name.trim()}
+                      className="bg-brand-dark text-white rounded-lg px-3 py-1.5 text-[13px] font-semibold cursor-pointer hover:opacity-85 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Save Client
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowAddClient(false); setInlineClient(EMPTY_INLINE_CLIENT); }}
+                      className="text-gray-500 hover:text-gray-700 bg-transparent border-none text-[13px] font-semibold cursor-pointer transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveInlineClient}
-                  disabled={!inlineClient.name.trim()}
-                  className="bg-brand-dark text-white rounded-lg px-3 py-1.5 text-[12px] font-semibold cursor-pointer hover:opacity-85 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Save Client
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowAddClient(false); setInlineClient(EMPTY_INLINE_CLIENT); }}
-                  className="text-gray-500 hover:text-gray-700 bg-transparent border-none text-[12px] font-semibold cursor-pointer transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Service type */}
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500">Service Type</span>
+          <div className="bg-white rounded-2xl px-4 py-3">
+            <span className="text-[13px] font-medium text-gray-500 block mb-1.5">Service Type</span>
             <input
               type="text"
               value={form.svc}
               onChange={(e) => updateField("svc", e.target.value)}
               placeholder="e.g. Lawn Mowing"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+              className="w-full rounded-xl border-none bg-gray-50 px-3 py-2.5 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
             />
-          </label>
+          </div>
 
-          {/* Date & Time row */}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-gray-500">Date</span>
+          {/* Date & Time */}
+          <div className="bg-white rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <span className="text-[15px] text-gray-900">Date</span>
               <input
                 type="date"
                 value={form.date}
                 onChange={(e) => updateField("date", e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                className="border-none bg-transparent text-[15px] text-blue-500 outline-none text-right cursor-pointer"
               />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-gray-500">Time</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[15px] text-gray-900">Time</span>
               <input
                 type="time"
                 value={form.time}
                 onChange={(e) => updateField("time", e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                className="border-none bg-transparent text-[15px] text-blue-500 outline-none text-right cursor-pointer"
               />
-            </label>
+            </div>
           </div>
 
-          {/* Worker & Price row */}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-gray-500">Assign Worker</span>
+          {/* Worker & Price */}
+          <div className="bg-white rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100">
+              <span className="text-[13px] font-medium text-gray-500 block mb-1.5">Assign Worker</span>
               <input
                 type="text"
                 value={form.worker}
                 onChange={(e) => updateField("worker", e.target.value)}
                 placeholder="e.g. Jose M."
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                className="w-full rounded-xl border-none bg-gray-50 px-3 py-2.5 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
               />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-gray-500">Price ($)</span>
+            </div>
+            <div className="px-4 py-3">
+              <span className="text-[13px] font-medium text-gray-500 block mb-1.5">Price ($)</span>
               <input
                 type="number"
                 value={form.total}
                 onChange={(e) => updateField("total", e.target.value)}
                 placeholder="0"
                 min="0"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                className="w-full rounded-xl border-none bg-gray-50 px-3 py-2.5 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
               />
-            </label>
+            </div>
           </div>
 
           {/* Notes */}
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500">Notes</span>
+          <div className="bg-white rounded-2xl px-4 py-3">
+            <span className="text-[13px] font-medium text-gray-500 block mb-1.5">Notes</span>
             <textarea
               value={form.notes}
               onChange={(e) => updateField("notes", e.target.value)}
               placeholder="Any special instructions..."
               rows={3}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all resize-none"
+              className="w-full rounded-xl border-none bg-gray-50 px-3 py-2.5 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all resize-none"
             />
-          </label>
+          </div>
 
           {/* Submit */}
           <button
             onClick={handleSubmit}
             disabled={!form.clientId || !form.svc || !form.date || !form.time}
-            className="w-full bg-brand-dark text-white rounded-xl py-3 text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed mt-1"
+            className="w-full bg-brand-dark text-white rounded-2xl py-3.5 text-[17px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Create Job
           </button>
         </div>
       </BottomSheet>
-    </>
+    </div>
   );
 }
 
