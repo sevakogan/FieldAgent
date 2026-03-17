@@ -1,22 +1,37 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { CLIENTS } from "@/lib/mock-data";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/contacts",  label: "Contacts",  icon: "👥" },
-  { href: "/jobs",      label: "Jobs",      icon: "🔧" },
-  { href: "/business",  label: "Business",  icon: "💰" },
-  { href: "/referrals", label: "Referrals", icon: "🎁" },
-  { href: "/settings",  label: "Settings",  icon: "⚙️" },
+  { href: "/dashboard",          label: "Dashboard", icon: "📊" },
+  { href: "/contacts",           label: "Contacts",  icon: "👥" },
+  { href: "/jobs",               label: "Jobs",      icon: "🔧" },
+  { href: "/jobs?view=calendar", label: "Calendar",  icon: "📅" },
+  { href: "/business",           label: "Business",  icon: "💰" },
+  { href: "/referrals",          label: "Referrals", icon: "🎁" },
+  { href: "/settings",           label: "Settings",  icon: "⚙️" },
 ] as const;
 
-export function Sidebar() {
+function SidebarContent() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const mrr = CLIENTS.reduce((sum, c) => sum + c.mrr, 0);
+  const currentView = searchParams.get("view");
+
+  const isNavActive = (href: string) => {
+    if (href.includes("?")) {
+      const [path, query] = href.split("?");
+      const params = new URLSearchParams(query);
+      return pathname === path && params.get("view") === currentView;
+    }
+    // For /jobs without query, only active when no view param
+    if (href === "/jobs") return pathname === "/jobs" && !currentView;
+    return pathname === href;
+  };
 
   return (
     <aside className="hidden md:flex w-[220px] fixed top-0 left-0 bottom-0 bg-brand-dark flex-col p-5 z-50">
@@ -34,7 +49,7 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex flex-col gap-0.5">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = isNavActive(item.href);
           return (
             <Link
               key={item.href}
@@ -63,5 +78,13 @@ export function Sidebar() {
         <div className="text-[11px] text-white/30 mt-1.5">{CLIENTS.length} clients</div>
       </div>
     </aside>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <Suspense>
+      <SidebarContent />
+    </Suspense>
   );
 }
