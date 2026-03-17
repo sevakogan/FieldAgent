@@ -19,42 +19,82 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Check if user already has a profile
+  // Check if user already has a profile with a company
   const { data: existing } = await admin
     .from("profiles")
-    .select("id")
+    .select("id, company_id")
     .eq("id", user.id)
     .single();
 
-  if (existing) {
-    return NextResponse.json({ error: "Profile already exists" }, { status: 409 });
+  let companyId: string;
+
+  if (existing?.company_id) {
+    // Already onboarded — update existing records
+    const { error: companyError } = await admin
+      .from("companies")
+      .update({ name: companyName, phone: phone || "" })
+      .eq("id", existing.company_id);
+
+    if (companyError) {
+      return NextResponse.json({ error: companyError.message }, { status: 500 });
+    }
+
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({ full_name: fullName, phone: phone || "" })
+      .eq("id", user.id);
+
+    if (profileError) {
+      return NextResponse.json({ error: profileError.message }, { status: 500 });
+    }
+
+    companyId = existing.company_id;
+  } else {
+    // Create company
+    const { data: company, error: companyError } = await admin
+      .from("companies")
+      .insert({ name: companyName, owner_id: user.id, phone: phone || "" })
+      .select()
+      .single();
+
+    if (companyError) {
+      return NextResponse.json({ error: companyError.message }, { status: 500 });
+    }
+
+    if (existing) {
+      // Profile row exists but no company — update it
+      const { error: profileError } = await admin
+        .from("profiles")
+        .update({
+          company_id: company.id,
+          role: "owner",
+          full_name: fullName,
+          phone: phone || "",
+        })
+        .eq("id", user.id);
+
+      if (profileError) {
+        return NextResponse.json({ error: profileError.message }, { status: 500 });
+      }
+    } else {
+      // No profile at all — insert
+      const { error: profileError } = await admin
+        .from("profiles")
+        .insert({
+          id: user.id,
+          company_id: company.id,
+          role: "owner",
+          full_name: fullName,
+          phone: phone || "",
+        });
+
+      if (profileError) {
+        return NextResponse.json({ error: profileError.message }, { status: 500 });
+      }
+    }
+
+    companyId = company.id;
   }
 
-  // Create company
-  const { data: company, error: companyError } = await admin
-    .from("companies")
-    .insert({ name: companyName, owner_id: user.id, phone: phone || "" })
-    .select()
-    .single();
-
-  if (companyError) {
-    return NextResponse.json({ error: companyError.message }, { status: 500 });
-  }
-
-  // Create profile
-  const { error: profileError } = await admin
-    .from("profiles")
-    .insert({
-      id: user.id,
-      company_id: company.id,
-      role: "owner",
-      full_name: fullName,
-      phone: phone || "",
-    });
-
-  if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ success: true, companyId: company.id });
+  return NextResponse.json({ success: true, companyId });
 }
