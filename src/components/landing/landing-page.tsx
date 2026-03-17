@@ -431,8 +431,8 @@ export function LandingContent() {
             One app to schedule, invoice, and manage it all.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 md:mb-24">
-            <Link href="/login" className="bg-[#0071e3] text-white font-medium text-base px-8 py-3 rounded-full hover:bg-[#0077ED] transition-colors no-underline">
-              Start free trial
+            <Link href="/login?mode=signup" className="bg-[#0071e3] text-white font-medium text-base px-8 py-3 rounded-full hover:bg-[#0077ED] transition-colors no-underline">
+              Start Free Trial
             </Link>
             <a href="#features" className="text-[#0071e3] font-medium text-base no-underline flex items-center gap-1.5 group">
               Learn more
@@ -611,8 +611,8 @@ export function LandingContent() {
             ))}
           </div>
           <div className="text-center mt-12">
-            <Link href="/login" className="bg-[#0071e3] text-white font-medium text-sm px-7 py-2.5 rounded-full hover:bg-[#0077ED] transition-colors no-underline inline-block">
-              Start free trial
+            <Link href="/login?mode=signup" className="bg-[#0071e3] text-white font-medium text-sm px-7 py-2.5 rounded-full hover:bg-[#0077ED] transition-colors no-underline inline-block">
+              Start Free Trial
             </Link>
           </div>
         </div>
@@ -649,8 +649,8 @@ export function LandingContent() {
           <p className="text-white/50 text-lg md:text-[21px] leading-[1.38] mb-10">
             14-day free trial. No credit card required.
           </p>
-          <Link href="/login" className="bg-[#0071e3] text-white font-medium text-base px-8 py-3 rounded-full hover:bg-[#0077ED] transition-colors no-underline inline-block">
-            Get started
+          <Link href="/login?mode=signup" className="bg-[#0071e3] text-white font-medium text-base px-8 py-3 rounded-full hover:bg-[#0077ED] transition-colors no-underline inline-block">
+            Get Started
           </Link>
         </div>
       </section>

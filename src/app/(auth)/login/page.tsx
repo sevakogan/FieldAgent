@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Mode = "login" | "signup" | "forgot";
 
-export default function LoginPage() {
-  const [mode, setMode] = useState<Mode>("login");
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -43,16 +45,34 @@ export default function LoginPage() {
     }
 
     if (mode === "signup") {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       });
-      setLoading(false);
       if (signUpError) {
+        setLoading(false);
         setError(signUpError.message);
         return;
       }
-      setSuccess("Check your email for a confirmation link.");
+
+      // With email confirmation disabled, user is auto-confirmed.
+      // Send welcome email via our API.
+      if (data.user) {
+        try {
+          await fetch("/api/welcome-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, userId: data.user.id }),
+          });
+        } catch {
+          // Welcome email is non-critical — don't block signup
+        }
+      }
+
+      setLoading(false);
+      // Auto-confirmed: redirect to onboarding
+      router.push("/onboard");
+      router.refresh();
       return;
     }
 
@@ -168,5 +188,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-dvh flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

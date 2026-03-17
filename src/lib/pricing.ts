@@ -46,7 +46,7 @@ export const TIERS: Tier[] = [
       "SMS notifications",
       "Basic reporting",
     ],
-    cta: "Start free trial",
+    cta: "Start Free Trial",
   },
   {
     id: "growth",
@@ -66,7 +66,7 @@ export const TIERS: Tier[] = [
       "WhatsApp notifications",
       "Revenue analytics",
     ],
-    cta: "Start free trial",
+    cta: "Start Free Trial",
   },
   {
     id: "pro",
@@ -85,7 +85,7 @@ export const TIERS: Tier[] = [
       "Priority support",
       "Custom integrations",
     ],
-    cta: "Start free trial",
+    cta: "Start Free Trial",
   },
   {
     id: "enterprise",
