@@ -2,8 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FieldPay — Field Service CRM",
-  description: "Manage leads, clients, jobs, and revenue for your field service business.",
+  title: {
+    default: "FieldPay — Field Service CRM",
+    template: "%s | FieldPay",
+  },
+  description:
+    "Schedule jobs, send invoices, and manage your crew. Built for lawn care, pool service, property cleaning, pressure washing, and more.",
+  metadataBase: new URL("https://fieldpay.app"),
 };
 
 export const viewport: Viewport = {
