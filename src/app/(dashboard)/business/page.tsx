@@ -160,48 +160,73 @@ export default function BusinessPage() {
 }
 
 const PLATFORMS = [
-  { icon: "🔵", name: "Google Business", url: "g.page/johns-lawn",    active: true },
-  { icon: "🔴", name: "Yelp",            url: "yelp.com/biz/johns",   active: true },
-  { icon: "🔵", name: "Facebook",         url: "Not connected",        active: false },
-  { icon: "🟢", name: "Nextdoor",         url: "Not connected",        active: false },
+  { icon: "🔵", name: "Google Business", url: "g.page/johns-lawn",    active: true,  href: "https://business.google.com" },
+  { icon: "🔴", name: "Yelp",            url: "yelp.com/biz/johns",   active: true,  href: "https://biz.yelp.com" },
+  { icon: "🔵", name: "Facebook",         url: "Not connected",        active: false, href: "https://www.facebook.com/business" },
+  { icon: "🟢", name: "Nextdoor",         url: "Not connected",        active: false, href: "https://business.nextdoor.com" },
 ] as const;
+
+function ReviewPlatformRow({ platform }: { readonly platform: typeof PLATFORMS[number] }) {
+  const content = (
+    <>
+      <div className="flex items-center gap-2.5">
+        <div
+          className={`w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0 transition-colors ${
+            platform.active ? "bg-green-50" : "bg-gray-100"
+          }`}
+        >
+          {platform.icon}
+        </div>
+        <div>
+          <div className="font-semibold text-[13px]">{platform.name}</div>
+          <div className={`text-[11px] ${platform.active ? "text-green-500" : "text-gray-400"}`}>
+            {platform.url}
+          </div>
+        </div>
+      </div>
+      {platform.active ? (
+        <span className="rounded-md px-2.5 py-1 text-[10px] font-bold bg-green-50 text-green-600 border border-green-200">
+          Active
+        </span>
+      ) : (
+        <a
+          href={platform.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-md px-2.5 py-1 text-[10px] font-bold bg-brand text-white hover:bg-brand/90 transition-colors cursor-pointer shadow-sm no-underline"
+        >
+          Connect
+        </a>
+      )}
+    </>
+  );
+
+  if (platform.active) {
+    return (
+      <a
+        href={platform.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0 rounded-lg px-2 -mx-2 transition-all duration-150 hover:bg-gray-50 cursor-pointer no-underline text-inherit"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0 rounded-lg px-2 -mx-2 transition-all duration-150 hover:bg-gray-50 cursor-pointer">
+      {content}
+    </div>
+  );
+}
 
 function ReviewPlatforms() {
   return (
     <>
       {PLATFORMS.map((platform) => (
-        <div
-          key={platform.name}
-          className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0 rounded-lg px-2 -mx-2 transition-all duration-150 hover:bg-gray-50 cursor-pointer"
-        >
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0 transition-colors ${
-                platform.active ? "bg-green-50" : "bg-gray-100"
-              }`}
-            >
-              {platform.icon}
-            </div>
-            <div>
-              <div className="font-semibold text-[13px]">{platform.name}</div>
-              <div className={`text-[11px] ${platform.active ? "text-green-500" : "text-gray-400"}`}>
-                {platform.url}
-              </div>
-            </div>
-          </div>
-          {platform.active ? (
-            <span className="rounded-md px-2.5 py-1 text-[10px] font-bold bg-green-50 text-green-600 border border-green-200">
-              Active
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="rounded-md px-2.5 py-1 text-[10px] font-bold bg-brand text-white hover:bg-brand/90 transition-colors cursor-pointer shadow-sm"
-            >
-              Connect
-            </button>
-          )}
-        </div>
+        <ReviewPlatformRow key={platform.name} platform={platform} />
       ))}
     </>
   );

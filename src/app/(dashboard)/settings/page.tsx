@@ -10,6 +10,21 @@ import { BusinessTypeSelector } from "@/components/settings/business-type-select
 import { createClient } from "@/lib/supabase/client";
 import type { BusinessType, CompanyService } from "@/types";
 
+const LANGUAGE_OPTIONS = [
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "pt", label: "Portuguese" },
+  { value: "fr", label: "French" },
+  { value: "ht", label: "Creole" },
+] as const;
+
+function detectBrowserLanguage(): string {
+  if (typeof navigator === "undefined") return "en";
+  const browserLang = navigator.language.split("-")[0];
+  const supported = LANGUAGE_OPTIONS.find((opt) => opt.value === browserLang);
+  return supported ? supported.value : "en";
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const [inviteRole, setInviteRole] = useState<"crew" | "client" | null>(null);
@@ -24,6 +39,7 @@ export default function SettingsPage() {
   const [newServiceName, setNewServiceName] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
   const [addingService, setAddingService] = useState(false);
+  const [language, setLanguage] = useState<string>(detectBrowserLanguage);
   const [notifications, setNotifications] = useState({
     sms: true,
     whatsapp: true,
@@ -144,7 +160,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleChangeBusinessType = async (newType: BusinessType) => {
+  const handleChangeBusinessType = async (newTypes: BusinessType[]) => {
     if (!companyId) return;
 
     const response = await fetch("/api/onboard", {
@@ -154,13 +170,14 @@ export default function SettingsPage() {
         companyName: businessName,
         fullName: ownerName,
         phone,
-        businessType: newType,
+        businessType: newTypes,
       }),
     });
 
     if (!response.ok) return;
 
-    setBusinessType(newType);
+    const newTypeStr = newTypes.join(",");
+    setBusinessType(newTypeStr);
 
     // Reload services from DB after re-seeding
     const supabase = createClient();
@@ -270,7 +287,7 @@ export default function SettingsPage() {
               onChange={(e) => setNewServicePrice(e.target.value)}
               type="number"
               min="0"
-              step="1"
+              step="0.01"
             />
             <button
               onClick={handleAddService}
@@ -295,6 +312,25 @@ export default function SettingsPage() {
         )}
       </Card>
 
+      {/* Language */}
+      <Card className="mb-4" padding="lg">
+        <h2 className="font-extrabold text-[15px] mb-4 tracking-tight">Language</h2>
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="w-full bg-gray-50 border border-gray-200 rounded-[10px] px-3.5 py-2.5 text-[13px] outline-none focus:border-gray-400 transition-colors appearance-none cursor-pointer"
+        >
+          {LANGUAGE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-[11px] text-gray-400 mt-2">
+          Client-facing pages will also use this language.
+        </p>
+      </Card>
+
       {/* Team & Clients */}
       <Card className="mb-4" padding="lg">
         <h2 className="font-extrabold text-[15px] mb-4">Team & Clients</h2>
@@ -303,13 +339,13 @@ export default function SettingsPage() {
             onClick={() => setInviteRole("crew")}
             className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 text-sm font-semibold cursor-pointer hover:bg-gray-100 transition-colors text-left px-4"
           >
-            👷 Invite Crew Member
+            Invite Crew Member
           </button>
           <button
             onClick={() => setInviteRole("client")}
             className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 text-sm font-semibold cursor-pointer hover:bg-gray-100 transition-colors text-left px-4"
           >
-            👤 Invite Client
+            Invite Client
           </button>
         </div>
       </Card>
@@ -318,14 +354,14 @@ export default function SettingsPage() {
       <Card className="mb-4" padding="lg">
         <h2 className="font-extrabold text-[15px] mb-4">Notifications</h2>
         {[
-          { key: "sms" as const,      icon: "📱", label: "SMS",      sub: "Job + invoice alerts" },
-          { key: "whatsapp" as const, icon: "💬", label: "WhatsApp", sub: "Spanish customers prefer this" },
-          { key: "email" as const,    icon: "📧", label: "Email",    sub: "Invoices + receipts" },
-          { key: "push" as const,     icon: "🔔", label: "Push",     sub: "Real-time" },
+          { key: "sms" as const,      label: "SMS",      sub: "Job + invoice alerts" },
+          { key: "whatsapp" as const, label: "WhatsApp", sub: "Spanish customers prefer this" },
+          { key: "email" as const,    label: "Email",    sub: "Invoices + receipts" },
+          { key: "push" as const,     label: "Push",     sub: "Real-time" },
         ].map((item) => (
           <div key={item.key} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
             <div>
-              <div className="font-semibold text-[13px]">{item.icon} {item.label}</div>
+              <div className="font-semibold text-[13px]">{item.label}</div>
               <div className="text-[11px] text-gray-400">{item.sub}</div>
             </div>
             <Toggle

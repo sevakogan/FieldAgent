@@ -17,10 +17,14 @@ export const CLIENTS: readonly Client[] = [
 ];
 
 export const JOBS: readonly Job[] = [
-  { id: 1, ini: "ML", client: "Maria Lopez",   addr: "123 SW 8th St",  svc: "Weekly Lawn Care", worker: "Jose M.", time: "9:00 AM",  st: "done",     total: 65,  photos: 4 },
-  { id: 2, ini: "JS", client: "John Smith",    addr: "456 Coral Way",  svc: "Mow + Edge",       worker: "You",     time: "11:30 AM", st: "active",   total: 80,  photos: 1 },
-  { id: 3, ini: "AR", client: "Ana Rodriguez", addr: "789 NW 5th Ave", svc: "Full Cleanup",     worker: "Jose M.", time: "2:00 PM",  st: "upcoming", total: 150, photos: 0 },
-  { id: 4, ini: "DC", client: "David Chen",    addr: "321 SW 12th",    svc: "Biweekly Mow",     worker: "You",     time: "4:00 PM",  st: "upcoming", total: 80,  photos: 0 },
+  { id: 1, ini: "ML", client: "Maria Lopez",   addr: "123 SW 8th St",  svc: "Lawn Mowing",       worker: "Jose M.", date: "2026-03-17", time: "9:00 AM",  st: "done",     total: 65,  photos: 4 },
+  { id: 2, ini: "JS", client: "John Smith",    addr: "456 Coral Way",  svc: "Hedge Trimming",    worker: "You",     date: "2026-03-17", time: "11:30 AM", st: "active",   total: 80,  photos: 1 },
+  { id: 3, ini: "AR", client: "Ana Rodriguez", addr: "789 NW 5th Ave", svc: "Pool Cleaning",     worker: "Jose M.", date: "2026-03-18", time: "2:00 PM",  st: "upcoming", total: 150, photos: 0 },
+  { id: 4, ini: "DC", client: "David Chen",    addr: "321 SW 12th",    svc: "Lawn Mowing",       worker: "You",     date: "2026-03-19", time: "4:00 PM",  st: "upcoming", total: 80,  photos: 0 },
+  { id: 5, ini: "SW", client: "Sandra White",  addr: "900 Brickell",   svc: "Pressure Washing",  worker: "Jose M.", date: "2026-03-20", time: "10:00 AM", st: "upcoming", total: 220, photos: 0 },
+  { id: 6, ini: "ML", client: "Maria Lopez",   addr: "123 SW 8th St",  svc: "Leaf Cleanup",      worker: "You",     date: "2026-03-21", time: "8:30 AM",  st: "upcoming", total: 90,  photos: 0 },
+  { id: 7, ini: "AR", client: "Ana Rodriguez", addr: "789 NW 5th Ave", svc: "Lawn Mowing",       worker: "Jose M.", date: "2026-03-24", time: "9:00 AM",  st: "upcoming", total: 65,  photos: 0 },
+  { id: 8, ini: "JS", client: "John Smith",    addr: "456 Coral Way",  svc: "Pool Cleaning",     worker: "You",     date: "2026-03-17", time: "3:00 PM",  st: "upcoming", total: 120, photos: 0 },
 ];
 
 export const CALLS: readonly Call[] = [

@@ -1,7 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getBusinessConfig } from "@/lib/service-catalog";
+import { getMergedServices } from "@/lib/service-catalog";
 import { NextResponse } from "next/server";
+
+function normalizeBusinessType(raw: unknown): string {
+  if (Array.isArray(raw)) {
+    return raw.filter(Boolean).join(",");
+  }
+  return typeof raw === "string" ? raw : "lawn_care";
+}
+
+function parseBusinessTypes(raw: unknown): readonly string[] {
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (typeof raw === "string") return raw.split(",").filter(Boolean);
+  return ["lawn_care"];
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -12,11 +25,14 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { companyName, fullName, phone, businessType = "lawn_care" } = body;
+  const { companyName, fullName, phone, businessType: rawBusinessType = "lawn_care" } = body;
 
   if (!companyName || !fullName) {
     return NextResponse.json({ error: "Company name and full name are required" }, { status: 400 });
   }
+
+  const businessTypeStr = normalizeBusinessType(rawBusinessType);
+  const businessTypes = parseBusinessTypes(rawBusinessType);
 
   const admin = createAdminClient();
 
@@ -33,7 +49,7 @@ export async function POST(request: Request) {
     // Already onboarded — update existing records
     const { error: companyError } = await admin
       .from("companies")
-      .update({ name: companyName, phone: phone || "", business_type: businessType })
+      .update({ name: companyName, phone: phone || "", business_type: businessTypeStr })
       .eq("id", existing.company_id);
 
     if (companyError) {
@@ -54,7 +70,7 @@ export async function POST(request: Request) {
     // Create company
     const { data: company, error: companyError } = await admin
       .from("companies")
-      .insert({ name: companyName, owner_id: user.id, phone: phone || "", business_type: businessType })
+      .insert({ name: companyName, owner_id: user.id, phone: phone || "", business_type: businessTypeStr })
       .select()
       .single();
 
@@ -97,9 +113,9 @@ export async function POST(request: Request) {
     companyId = company.id;
   }
 
-  // Seed company_services from the business type catalog
-  const config = getBusinessConfig(businessType);
-  const servicesToInsert = config.services.map((s, i) => ({
+  // Seed company_services from all selected business type catalogs (merged, deduplicated)
+  const mergedServices = getMergedServices(businessTypes);
+  const servicesToInsert = mergedServices.map((s, i) => ({
     company_id: companyId,
     name: s.name,
     default_price: s.defaultPrice,

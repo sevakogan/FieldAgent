@@ -159,3 +159,28 @@ export const SERVICE_CATALOG: Record<BusinessType, BusinessTypeConfig> = {
 export function getBusinessConfig(type: string): BusinessTypeConfig {
   return SERVICE_CATALOG[type as BusinessType] ?? SERVICE_CATALOG.lawn_care;
 }
+
+/** Merge services from multiple business types, deduplicating by name */
+export function getMergedServices(types: readonly string[]): readonly ServiceTemplate[] {
+  const validTypes = types.filter((t): t is BusinessType =>
+    BUSINESS_TYPES.includes(t as BusinessType)
+  );
+  if (validTypes.length === 0) {
+    return SERVICE_CATALOG.lawn_care.services;
+  }
+
+  const seen = new Set<string>();
+  const merged: ServiceTemplate[] = [];
+
+  for (const type of validTypes) {
+    const config = SERVICE_CATALOG[type];
+    for (const service of config.services) {
+      if (!seen.has(service.name)) {
+        seen.add(service.name);
+        merged.push(service);
+      }
+    }
+  }
+
+  return merged;
+}

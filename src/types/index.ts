@@ -30,6 +30,7 @@ export interface Job {
   readonly addr: string;
   readonly svc: string;
   readonly worker: string;
+  readonly date: string;
   readonly time: string;
   readonly st: "done" | "active" | "upcoming";
   readonly total: number;

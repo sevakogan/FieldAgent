@@ -142,79 +142,81 @@ export function AddContactSheet({ open, onClose, onAddProspect, onAddClient }: A
           ))}
         </div>
 
-        {/* Shared fields */}
-        <FormField label="NAME" value={contactType === "prospect" ? prospect.name : client.name}
-          onChange={(v) => contactType === "prospect" ? updateProspect("name", v) : updateClient("name", v)}
-          placeholder="Full name" />
+        {/* Form fields - 2-column on desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0">
+          <FormField label="NAME" value={contactType === "prospect" ? prospect.name : client.name}
+            onChange={(v) => contactType === "prospect" ? updateProspect("name", v) : updateClient("name", v)}
+            placeholder="Full name" />
 
-        <FormField label="PHONE" type="tel"
-          value={contactType === "prospect" ? prospect.phone : client.phone}
-          onChange={(v) => contactType === "prospect" ? updateProspect("phone", v) : updateClient("phone", v)}
-          placeholder="(786) 555-0100" />
+          <FormField label="PHONE" type="tel"
+            value={contactType === "prospect" ? prospect.phone : client.phone}
+            onChange={(v) => contactType === "prospect" ? updateProspect("phone", v) : updateClient("phone", v)}
+            placeholder="(786) 555-0100" />
 
-        <FormField label="EMAIL" type="email"
-          value={contactType === "prospect" ? prospect.email : client.email}
-          onChange={(v) => contactType === "prospect" ? updateProspect("email", v) : updateClient("email", v)}
-          placeholder="them@email.com" />
+          <FormField label="EMAIL" type="email"
+            value={contactType === "prospect" ? prospect.email : client.email}
+            onChange={(v) => contactType === "prospect" ? updateProspect("email", v) : updateClient("email", v)}
+            placeholder="them@email.com" />
 
-        <FormField label="ADDRESS"
-          value={contactType === "prospect" ? prospect.address : client.address}
-          onChange={(v) => contactType === "prospect" ? updateProspect("address", v) : updateClient("address", v)}
-          placeholder="123 SW 8th St, Miami" />
+          <FormField label="ADDRESS"
+            value={contactType === "prospect" ? prospect.address : client.address}
+            onChange={(v) => contactType === "prospect" ? updateProspect("address", v) : updateClient("address", v)}
+            placeholder="123 SW 8th St, Miami" />
 
-        {/* Prospect-specific */}
-        {contactType === "prospect" && (
-          <>
-            <FormField label="SERVICE INTEREST"
-              value={prospect.service}
-              onChange={(v) => updateProspect("service", v)}
-              placeholder="e.g. Weekly lawn care" />
+          {/* Prospect-specific */}
+          {contactType === "prospect" && (
+            <>
+              <FormField label="SERVICE INTEREST"
+                value={prospect.service}
+                onChange={(v) => updateProspect("service", v)}
+                placeholder="e.g. Weekly lawn care" />
 
-            <div className="mb-5">
-              <label className="text-[10px] font-semibold text-gray-400 tracking-widest block mb-1.5">NOTES</label>
-              <textarea
-                value={prospect.notes}
-                onChange={(e) => updateProspect("notes", e.target.value)}
-                rows={3}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[14px] outline-none focus:border-gray-400 transition-colors resize-none"
-                placeholder="Any notes about this prospect..."
-              />
-            </div>
-          </>
-        )}
-
-        {/* Client-specific */}
-        {contactType === "client" && (
-          <>
-            <FormField label="SERVICE TYPE"
-              value={client.serviceType}
-              onChange={(v) => updateClient("serviceType", v)}
-              placeholder="e.g. Weekly Lawn Care" />
-
-            <FormField label="MONTHLY RATE (MRR)" type="number"
-              value={client.mrr}
-              onChange={(v) => updateClient("mrr", v)}
-              placeholder="120" prefix="$" />
-
-            <div className="mb-5">
-              <label className="text-[10px] font-semibold text-gray-400 tracking-widest block mb-1.5">BILLING FREQUENCY</label>
-              <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-200">
-                {BILLING_OPTIONS.map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => updateClient("billingFrequency", opt)}
-                    className={`flex-1 py-2 rounded-[10px] text-[11px] font-semibold border-none cursor-pointer transition-all capitalize ${
-                      client.billingFrequency === opt ? "bg-brand-dark text-white" : "bg-transparent text-gray-500"
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
+              <div className="mb-3 sm:col-span-2">
+                <label className="text-[10px] font-semibold text-gray-400 tracking-widest block mb-1.5">NOTES</label>
+                <textarea
+                  value={prospect.notes}
+                  onChange={(e) => updateProspect("notes", e.target.value)}
+                  rows={3}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[14px] outline-none focus:border-gray-400 transition-colors resize-none"
+                  placeholder="Any notes about this prospect..."
+                />
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+
+          {/* Client-specific */}
+          {contactType === "client" && (
+            <>
+              <FormField label="SERVICE TYPE"
+                value={client.serviceType}
+                onChange={(v) => updateClient("serviceType", v)}
+                placeholder="e.g. Weekly Lawn Care" />
+
+              <FormField label="MONTHLY RATE (MRR)" type="number"
+                value={client.mrr}
+                onChange={(v) => updateClient("mrr", v)}
+                placeholder="120" prefix="$" />
+
+              <div className="mb-3 sm:col-span-2">
+                <label className="text-[10px] font-semibold text-gray-400 tracking-widest block mb-1.5">BILLING FREQUENCY</label>
+                <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-200">
+                  {BILLING_OPTIONS.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => updateClient("billingFrequency", opt)}
+                      className={`flex-1 py-2 rounded-[10px] text-[11px] font-semibold border-none cursor-pointer transition-all capitalize ${
+                        client.billingFrequency === opt ? "bg-brand-dark text-white" : "bg-transparent text-gray-500"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Submit */}
         <button
