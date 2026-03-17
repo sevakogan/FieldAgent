@@ -48,11 +48,34 @@ export interface Call {
 
 export type UserRole = "owner" | "crew" | "client";
 
+export type BusinessType =
+  | "lawn_care"
+  | "pool_service"
+  | "property_cleaning"
+  | "pressure_washing"
+  | "pest_control"
+  | "hvac"
+  | "window_cleaning"
+  | "handyman"
+  | "multi_service";
+
 export interface Company {
   readonly id: string;
   readonly name: string;
   readonly owner_id: string;
   readonly phone: string;
+  readonly business_type: BusinessType;
+  readonly created_at: string;
+}
+
+export interface CompanyService {
+  readonly id: string;
+  readonly company_id: string;
+  readonly name: string;
+  readonly default_price: number;
+  readonly category: string;
+  readonly sort_order: number;
+  readonly is_active: boolean;
   readonly created_at: string;
 }
 

@@ -6,6 +6,43 @@ import { Card } from "@/components/ui/card";
 import { Toggle } from "@/components/ui/toggle";
 import { InviteSheet } from "@/components/settings/invite-sheet";
 import { createClient } from "@/lib/supabase/client";
+import { getBusinessConfig } from "@/lib/service-catalog";
+import type { CompanyService } from "@/types";
+
+function EditablePrice({ price, onSave }: { price: number; onSave: (newPrice: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(String(price / 100));
+
+  if (!editing) {
+    return (
+      <span
+        className="text-[13px] font-medium cursor-pointer hover:text-brand-dark transition-colors"
+        onClick={() => { setValue(String(price / 100)); setEditing(true); }}
+      >
+        ${(price / 100).toFixed(0)}
+      </span>
+    );
+  }
+
+  return (
+    <input
+      type="number"
+      min="0"
+      step="1"
+      className="w-16 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-[13px] outline-none focus:border-gray-400 transition-colors"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => {
+        const cents = Math.round(parseFloat(value) * 100);
+        if (!isNaN(cents) && cents > 0) {
+          onSave(cents);
+        }
+        setEditing(false);
+      }}
+      autoFocus
+    />
+  );
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -16,6 +53,11 @@ export default function SettingsPage() {
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [businessType, setBusinessType] = useState("lawn_care");
+  const [services, setServices] = useState<CompanyService[]>([]);
+  const [newServiceName, setNewServiceName] = useState("");
+  const [newServicePrice, setNewServicePrice] = useState("");
+  const [addingService, setAddingService] = useState(false);
   const [notifications, setNotifications] = useState({
     sms: true,
     whatsapp: true,
@@ -43,10 +85,20 @@ export default function SettingsPage() {
         if (profile.company_id) {
           const { data: company } = await supabase
             .from("companies")
-            .select("name")
+            .select("name, business_type")
             .eq("id", profile.company_id)
             .single();
-          if (company) setBusinessName(company.name);
+          if (company) {
+            setBusinessName(company.name);
+            setBusinessType(company.business_type || "lawn_care");
+          }
+
+          const { data: companyServices } = await supabase
+            .from("company_services")
+            .select("*")
+            .eq("company_id", profile.company_id)
+            .order("sort_order");
+          if (companyServices) setServices(companyServices as CompanyService[]);
         }
       }
     };
@@ -80,6 +132,55 @@ export default function SettingsPage() {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const toggleService = async (serviceId: string) => {
+    const service = services.find((s) => s.id === serviceId);
+    if (!service) return;
+    const supabase = createClient();
+    await supabase
+      .from("company_services")
+      .update({ is_active: !service.is_active })
+      .eq("id", serviceId);
+    setServices((prev) =>
+      prev.map((s) => (s.id === serviceId ? { ...s, is_active: !s.is_active } : s))
+    );
+  };
+
+  const updateServicePrice = async (serviceId: string, newPrice: number) => {
+    const supabase = createClient();
+    await supabase
+      .from("company_services")
+      .update({ default_price: newPrice })
+      .eq("id", serviceId);
+    setServices((prev) =>
+      prev.map((s) => (s.id === serviceId ? { ...s, default_price: newPrice } : s))
+    );
+  };
+
+  const handleAddService = async () => {
+    if (!companyId || !newServiceName.trim() || !newServicePrice.trim()) return;
+    const priceInCents = Math.round(parseFloat(newServicePrice) * 100);
+    if (isNaN(priceInCents) || priceInCents <= 0) return;
+
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("company_services")
+      .insert({
+        company_id: companyId,
+        name: newServiceName.trim(),
+        default_price: priceInCents,
+        category: "",
+      })
+      .select("*")
+      .single();
+
+    if (data) {
+      setServices((prev) => [...prev, data as CompanyService]);
+      setNewServiceName("");
+      setNewServicePrice("");
+      setAddingService(false);
+    }
+  };
+
   return (
     <div className="max-w-lg">
       {/* Business Info */}
@@ -109,6 +210,76 @@ export default function SettingsPage() {
             onChange={(e) => setPhone(e.target.value)}
           />
         </div>
+      </Card>
+
+      {/* Business Type */}
+      <Card className="mb-4" padding="lg">
+        <h2 className="font-extrabold text-[15px] mb-4 tracking-tight">Business Type</h2>
+        <div className="flex items-center gap-2.5 mb-2">
+          <span className="text-lg">{getBusinessConfig(businessType).icon}</span>
+          <span className="bg-gray-100 text-gray-800 text-[12px] font-semibold px-3 py-1.5 rounded-full">
+            {getBusinessConfig(businessType).label}
+          </span>
+        </div>
+        <p className="text-[11px] text-gray-400 mt-2">Contact support to change your business type</p>
+      </Card>
+
+      {/* Services */}
+      <Card className="mb-4" padding="lg">
+        <h2 className="font-extrabold text-[15px] mb-4 tracking-tight">Services</h2>
+        {services.map((service) => (
+          <div key={service.id} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
+            <div>
+              <div className="font-semibold text-[13px]">{service.name}</div>
+              <div className="text-[11px] text-gray-400">{service.category}</div>
+            </div>
+            <div className="flex items-center gap-3">
+              <EditablePrice
+                price={service.default_price}
+                onSave={(newPrice) => updateServicePrice(service.id, newPrice)}
+              />
+              <Toggle checked={service.is_active} onChange={() => toggleService(service.id)} />
+            </div>
+          </div>
+        ))}
+        {addingService ? (
+          <div className="flex items-center gap-2 mt-3">
+            <input
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-[10px] px-3 py-2 text-[13px] outline-none focus:border-gray-400 transition-colors"
+              placeholder="Service name"
+              value={newServiceName}
+              onChange={(e) => setNewServiceName(e.target.value)}
+            />
+            <input
+              className="w-20 bg-gray-50 border border-gray-200 rounded-[10px] px-3 py-2 text-[13px] outline-none focus:border-gray-400 transition-colors"
+              placeholder="Price $"
+              value={newServicePrice}
+              onChange={(e) => setNewServicePrice(e.target.value)}
+              type="number"
+              min="0"
+              step="1"
+            />
+            <button
+              onClick={handleAddService}
+              className="bg-brand-dark text-white rounded-[10px] px-3.5 py-2 text-[12px] font-semibold cursor-pointer hover:opacity-85 transition-opacity"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => { setAddingService(false); setNewServiceName(""); setNewServicePrice(""); }}
+              className="text-gray-400 text-[12px] font-semibold cursor-pointer hover:text-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAddingService(true)}
+            className="w-full mt-3 bg-gray-50 border border-gray-200 rounded-xl py-2.5 text-[13px] font-semibold cursor-pointer hover:bg-gray-100 transition-colors"
+          >
+            + Add Service
+          </button>
+        )}
       </Card>
 
       {/* Team & Clients */}
