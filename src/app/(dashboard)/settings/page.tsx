@@ -5,44 +5,10 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Toggle } from "@/components/ui/toggle";
 import { InviteSheet } from "@/components/settings/invite-sheet";
+import { ServiceRow } from "@/components/settings/service-row";
+import { BusinessTypeSelector } from "@/components/settings/business-type-selector";
 import { createClient } from "@/lib/supabase/client";
-import { getBusinessConfig } from "@/lib/service-catalog";
-import type { CompanyService } from "@/types";
-
-function EditablePrice({ price, onSave }: { price: number; onSave: (newPrice: number) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(String(price / 100));
-
-  if (!editing) {
-    return (
-      <span
-        className="text-[13px] font-medium cursor-pointer hover:text-brand-dark transition-colors"
-        onClick={() => { setValue(String(price / 100)); setEditing(true); }}
-      >
-        ${(price / 100).toFixed(0)}
-      </span>
-    );
-  }
-
-  return (
-    <input
-      type="number"
-      min="0"
-      step="1"
-      className="w-16 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-[13px] outline-none focus:border-gray-400 transition-colors"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => {
-        const cents = Math.round(parseFloat(value) * 100);
-        if (!isNaN(cents) && cents > 0) {
-          onSave(cents);
-        }
-        setEditing(false);
-      }}
-      autoFocus
-    />
-  );
-}
+import type { BusinessType, CompanyService } from "@/types";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -53,7 +19,7 @@ export default function SettingsPage() {
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
   const [companyId, setCompanyId] = useState<string | null>(null);
-  const [businessType, setBusinessType] = useState("lawn_care");
+  const [businessType, setBusinessType] = useState<string>("lawn_care");
   const [services, setServices] = useState<CompanyService[]>([]);
   const [newServiceName, setNewServiceName] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
@@ -156,6 +122,58 @@ export default function SettingsPage() {
     );
   };
 
+  const updateServiceName = async (serviceId: string, newName: string) => {
+    const supabase = createClient();
+    await supabase
+      .from("company_services")
+      .update({ name: newName })
+      .eq("id", serviceId);
+    setServices((prev) =>
+      prev.map((s) => (s.id === serviceId ? { ...s, name: newName } : s))
+    );
+  };
+
+  const deleteService = async (serviceId: string) => {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("company_services")
+      .delete()
+      .eq("id", serviceId);
+    if (!error) {
+      setServices((prev) => prev.filter((s) => s.id !== serviceId));
+    }
+  };
+
+  const handleChangeBusinessType = async (newType: BusinessType) => {
+    if (!companyId) return;
+
+    const response = await fetch("/api/onboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        companyName: businessName,
+        fullName: ownerName,
+        phone,
+        businessType: newType,
+      }),
+    });
+
+    if (!response.ok) return;
+
+    setBusinessType(newType);
+
+    // Reload services from DB after re-seeding
+    const supabase = createClient();
+    const { data: companyServices } = await supabase
+      .from("company_services")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("sort_order");
+    if (companyServices) {
+      setServices(companyServices as CompanyService[]);
+    }
+  };
+
   const handleAddService = async () => {
     if (!companyId || !newServiceName.trim() || !newServicePrice.trim()) return;
     const priceInCents = Math.round(parseFloat(newServicePrice) * 100);
@@ -215,32 +233,27 @@ export default function SettingsPage() {
       {/* Business Type */}
       <Card className="mb-4" padding="lg">
         <h2 className="font-extrabold text-[15px] mb-4 tracking-tight">Business Type</h2>
-        <div className="flex items-center gap-2.5 mb-2">
-          <span className="text-lg">{getBusinessConfig(businessType).icon}</span>
-          <span className="bg-gray-100 text-gray-800 text-[12px] font-semibold px-3 py-1.5 rounded-full">
-            {getBusinessConfig(businessType).label}
-          </span>
-        </div>
-        <p className="text-[11px] text-gray-400 mt-2">Contact support to change your business type</p>
+        <BusinessTypeSelector
+          currentType={businessType}
+          onConfirm={handleChangeBusinessType}
+        />
       </Card>
 
       {/* Services */}
       <Card className="mb-4" padding="lg">
         <h2 className="font-extrabold text-[15px] mb-4 tracking-tight">Services</h2>
         {services.map((service) => (
-          <div key={service.id} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
-            <div>
-              <div className="font-semibold text-[13px]">{service.name}</div>
-              <div className="text-[11px] text-gray-400">{service.category}</div>
-            </div>
-            <div className="flex items-center gap-3">
-              <EditablePrice
-                price={service.default_price}
-                onSave={(newPrice) => updateServicePrice(service.id, newPrice)}
-              />
-              <Toggle checked={service.is_active} onChange={() => toggleService(service.id)} />
-            </div>
-          </div>
+          <ServiceRow
+            key={service.id}
+            name={service.name}
+            category={service.category}
+            price={service.default_price}
+            isActive={service.is_active}
+            onToggle={() => toggleService(service.id)}
+            onUpdatePrice={(newPrice) => updateServicePrice(service.id, newPrice)}
+            onUpdateName={(newName) => updateServiceName(service.id, newName)}
+            onDelete={() => deleteService(service.id)}
+          />
         ))}
         {addingService ? (
           <div className="flex items-center gap-2 mt-3">

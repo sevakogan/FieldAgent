@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ClientProfileSheet } from "@/components/contacts/client-profile-sheet";
+import { AddContactSheet } from "@/components/contacts/add-contact-sheet";
 import { formatCurrency, LEAD_STATUS_STYLES } from "@/lib/utils";
 import { LEADS, CLIENTS, KANBAN_COLUMNS } from "@/lib/mock-data";
 import type { Lead, Client } from "@/types";
@@ -17,16 +18,29 @@ export default function ContactsPage() {
   const [view, setView] = useState<"list" | "board">("list");
   const [expandedLead, setExpandedLead] = useState<number | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
+  const [localLeads, setLocalLeads] = useState<readonly Lead[]>(LEADS);
+  const [localClients, setLocalClients] = useState<readonly Client[]>(CLIENTS);
 
   const filteredLeads = useMemo(
-    () => LEADS.filter((l) => l.name.toLowerCase().includes(search.toLowerCase())),
-    [search],
+    () => localLeads.filter((l) => l.name.toLowerCase().includes(search.toLowerCase())),
+    [search, localLeads],
   );
 
   const filteredClients = useMemo(
-    () => CLIENTS.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())),
-    [search],
+    () => localClients.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())),
+    [search, localClients],
   );
+
+  const handleAddProspect = (lead: Lead) => {
+    setLocalLeads((prev) => [lead, ...prev]);
+    setTab("prospects");
+  };
+
+  const handleAddClient = (client: Client) => {
+    setLocalClients((prev) => [client, ...prev]);
+    setTab("clients");
+  };
 
   return (
     <>
@@ -67,6 +81,13 @@ export default function ContactsPage() {
               ))}
             </div>
           )}
+          <button
+            onClick={() => setAddSheetOpen(true)}
+            className="bg-brand-dark text-white border-none rounded-xl px-4 py-2 text-[13px] font-bold cursor-pointer hover:opacity-85 transition-opacity flex items-center gap-1.5 shrink-0"
+          >
+            <span className="text-lg leading-none">+</span>
+            <span className="hidden sm:inline">Add Contact</span>
+          </button>
         </div>
       </div>
 
@@ -122,6 +143,14 @@ export default function ContactsPage() {
 
       {/* Client Profile Bottom Sheet */}
       <ClientProfileSheet client={selectedClient} onClose={() => setSelectedClient(null)} />
+
+      {/* Add Contact Sheet */}
+      <AddContactSheet
+        open={addSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        onAddProspect={handleAddProspect}
+        onAddClient={handleAddClient}
+      />
     </>
   );
 }

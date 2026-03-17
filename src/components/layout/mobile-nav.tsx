@@ -4,11 +4,11 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 
 const NAV_ITEMS = [
-  { href: "/",         label: "Home",     icon: "📊" },
-  { href: "/contacts", label: "Contacts", icon: "👥" },
-  { href: "/jobs",     label: "Jobs",     icon: "🔧" },
-  { href: "/business", label: "Business", icon: "💰" },
-  { href: "/settings", label: "Settings", icon: "⚙️" },
+  { href: "/dashboard", label: "Home",     icon: "📊" },
+  { href: "/contacts",  label: "Contacts", icon: "👥" },
+  { href: "/jobs",      label: "Jobs",     icon: "🔧" },
+  { href: "/business",  label: "Business", icon: "💰" },
+  { href: "/settings",  label: "Settings", icon: "⚙️" },
 ] as const;
 
 export function MobileNav() {

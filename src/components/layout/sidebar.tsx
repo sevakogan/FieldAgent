@@ -6,11 +6,12 @@ import { formatCurrency } from "@/lib/utils";
 import { CLIENTS } from "@/lib/mock-data";
 
 const NAV_ITEMS = [
-  { href: "/",         label: "Dashboard", icon: "📊" },
-  { href: "/contacts", label: "Contacts",  icon: "👥" },
-  { href: "/jobs",     label: "Jobs",      icon: "🔧" },
-  { href: "/business", label: "Business",  icon: "💰" },
-  { href: "/settings", label: "Settings",  icon: "⚙️" },
+  { href: "/dashboard", label: "Dashboard", icon: "📊" },
+  { href: "/contacts",  label: "Contacts",  icon: "👥" },
+  { href: "/jobs",      label: "Jobs",      icon: "🔧" },
+  { href: "/business",  label: "Business",  icon: "💰" },
+  { href: "/referrals", label: "Referrals", icon: "🎁" },
+  { href: "/settings",  label: "Settings",  icon: "⚙️" },
 ] as const;
 
 export function Sidebar() {
