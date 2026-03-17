@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import type { Lead, Client } from "@/types";
 type Tab = "prospects" | "clients";
 
 export default function ContactsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("prospects");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "board">("list");
@@ -136,7 +138,7 @@ export default function ContactsPage() {
       {tab === "clients" && (
         <div className="flex flex-col gap-2">
           {filteredClients.map((client) => (
-            <ClientRow key={client.id} client={client} onSelect={() => setSelectedClient(client)} />
+            <ClientRow key={client.id} client={client} onSelect={() => router.push(`/clients/${client.id}`)} />
           ))}
         </div>
       )}

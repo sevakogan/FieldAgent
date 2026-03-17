@@ -35,6 +35,7 @@ export interface Job {
   readonly st: "done" | "active" | "upcoming";
   readonly total: number;
   readonly photos: number;
+  readonly propertyId?: number;
 }
 
 export interface Call {
@@ -116,4 +117,41 @@ export interface JobRequest {
   readonly owner_amount: number | null;
   readonly status: JobRequestStatus;
   readonly created_at: string;
+}
+
+// ── Client Detail: Properties & Invoices ────────────────────────
+
+export interface Property {
+  readonly id: number;
+  readonly clientId: number;
+  readonly address: string;
+  readonly nickname: string;
+  readonly services: string[];
+  readonly monthlyRate: number;
+  readonly isActive: boolean;
+}
+
+export interface InvoiceItem {
+  readonly description: string;
+  readonly quantity: number;
+  readonly unitPrice: number;
+  readonly total: number;
+}
+
+export type InvoiceStatus = "paid" | "unpaid" | "overdue" | "partial";
+
+export interface Invoice {
+  readonly id: number;
+  readonly clientId: number;
+  readonly propertyId: number;
+  readonly jobId: number | null;
+  readonly date: string;
+  readonly dueDate: string;
+  readonly items: readonly InvoiceItem[];
+  readonly subtotal: number;
+  readonly tax: number;
+  readonly total: number;
+  readonly status: InvoiceStatus;
+  readonly paidDate: string | null;
+  readonly paymentMethod: string | null;
 }

@@ -98,7 +98,7 @@ export default function BusinessPage() {
           {sortedClients.map((client, i) => (
             <Link
               key={client.id}
-              href="/contacts"
+              href={`/clients/${client.id}`}
               className="flex items-center gap-3.5 py-3 border-b border-gray-100 last:border-0 rounded-lg px-2 -mx-2 transition-all duration-150 hover:bg-gray-50 hover:shadow-sm cursor-pointer group"
             >
               <span className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center font-bold text-xs text-gray-500 shrink-0 group-hover:bg-brand/10 group-hover:text-brand transition-colors">

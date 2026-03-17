@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +17,17 @@ interface ClientProfileSheetProps {
 const JOB_BADGE = { done: "success", active: "warning", upcoming: "info" } as const;
 
 export function ClientProfileSheet({ client, onClose }: ClientProfileSheetProps) {
+  const router = useRouter();
+
   if (!client) return null;
 
   const clientJobs = JOBS.filter((j) => j.client === client.name);
   const lifetime = client.mrr * 14;
+
+  const handleNavigateToProfile = () => {
+    onClose();
+    router.push(`/clients/${client.id}`);
+  };
 
   return (
     <BottomSheet open={!!client} onClose={onClose} title={client.name}>
@@ -27,7 +36,13 @@ export function ClientProfileSheet({ client, onClose }: ClientProfileSheetProps)
         <Avatar initials={client.ini} size="lg" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-black text-xl tracking-tight">{client.name}</span>
+            <Link
+              href={`/clients/${client.id}`}
+              onClick={(e) => { e.preventDefault(); handleNavigateToProfile(); }}
+              className="font-black text-xl tracking-tight hover:text-brand transition-colors no-underline text-inherit"
+            >
+              {client.name}
+            </Link>
             {client.tag && (
               <span className="bg-yellow-50 text-yellow-700 rounded-md px-2 py-0.5 text-[10px] font-bold">
                 {client.tag}
@@ -39,6 +54,15 @@ export function ClientProfileSheet({ client, onClose }: ClientProfileSheetProps)
           </div>
         </div>
       </div>
+
+      {/* View Full Profile Link */}
+      <Link
+        href={`/clients/${client.id}`}
+        onClick={(e) => { e.preventDefault(); handleNavigateToProfile(); }}
+        className="flex items-center justify-center text-[13px] font-semibold text-brand hover:text-brand/80 transition-colors no-underline mb-5"
+      >
+        View Full Profile →
+      </Link>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2.5 mb-5">
