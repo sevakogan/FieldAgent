@@ -8,15 +8,15 @@ interface StatCardProps {
 
 export function StatCard({ label, value, accent }: StatCardProps) {
   return (
-    <Card>
-      <div className="text-[10px] font-semibold text-gray-400 tracking-widest mb-3">
-        {label.toUpperCase()}
+    <Card padding="sm">
+      <div className="text-[11px] font-semibold text-[#8E8E93] tracking-[0.5px] mb-2 uppercase">
+        {label}
       </div>
-      <div className="text-3xl font-black tracking-tight leading-none">
+      <div className="text-[28px] font-bold tracking-[-0.5px] leading-none text-black">
         {value}
       </div>
       {accent && (
-        <div className="text-xs font-semibold text-brand mt-2">{accent}</div>
+        <div className="text-[12px] font-medium text-[#007AFF] mt-2">{accent}</div>
       )}
     </Card>
   );

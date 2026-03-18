@@ -4,17 +4,17 @@ interface BadgeProps {
 }
 
 const VARIANTS = {
-  default: "bg-gray-100 text-gray-600",
-  success: "bg-emerald-100 text-emerald-800",
-  warning: "bg-yellow-100 text-yellow-800",
-  danger:  "bg-red-100 text-red-700",
-  info:    "bg-blue-100 text-blue-700",
-  purple:  "bg-purple-100 text-purple-700",
+  default: "bg-[#E5E5EA] text-[#636366]",
+  success: "bg-[#E8F9ED] text-[#1C7A35]",
+  warning: "bg-[#FFF3E0] text-[#C65000]",
+  danger:  "bg-[#FFE5E3] text-[#C0271A]",
+  info:    "bg-[#E3F0FF] text-[#0055C4]",
+  purple:  "bg-[#EEE6FF] text-[#5A2D9C]",
 } as const;
 
 export function Badge({ children, variant = "default" }: BadgeProps) {
   return (
-    <span className={`${VARIANTS[variant]} rounded-md px-2 py-0.5 text-[10px] font-bold`}>
+    <span className={`${VARIANTS[variant]} rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-tight`}>
       {children}
     </span>
   );
