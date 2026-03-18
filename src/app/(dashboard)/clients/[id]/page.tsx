@@ -212,6 +212,18 @@ export default function ClientDetailPage({
               Active since {client.last} &middot; {client.props} {client.props === 1 ? "property" : "properties"}
             </div>
           </div>
+          {/* Desktop inline actions */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            <button className="bg-brand-dark text-white rounded-xl px-4 py-2 text-[13px] font-semibold hover:opacity-85 transition-opacity">
+              + New Job
+            </button>
+            <button className="bg-purple-50 text-purple-700 rounded-xl px-4 py-2 text-[13px] font-semibold hover:opacity-85 transition-opacity">
+              Invoice
+            </button>
+            <a href={`tel:${client.phone}`} className="bg-green-50 text-green-700 rounded-xl px-4 py-2 text-[13px] font-semibold hover:opacity-85 transition-opacity no-underline">
+              Call
+            </a>
+          </div>
         </div>
       </Card>
 
@@ -381,9 +393,9 @@ export default function ClientDetailPage({
         })}
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions — mobile only */}
       <div
-        className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-100 px-4 py-3 flex gap-2 z-50"
+        className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-100 px-4 py-3 flex gap-2 z-50 md:hidden"
         style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
       >
         <QuickActionButton
