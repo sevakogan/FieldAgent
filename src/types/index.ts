@@ -1,51 +1,3 @@
-export type LeadStatus = "new" | "contacted" | "quoted" | "won" | "lost";
-
-export interface Lead {
-  readonly id: number;
-  readonly name: string;
-  readonly phone: string;
-  readonly service: string;
-  readonly value: number;
-  readonly status: LeadStatus;
-  readonly ago: string;
-  readonly es: boolean;
-}
-
-export interface Client {
-  readonly id: number;
-  readonly ini: string;
-  readonly name: string;
-  readonly phone: string;
-  readonly props: number;
-  readonly mrr: number;
-  readonly bal: number;
-  readonly tag: "VIP" | "Monthly" | null;
-  readonly last: string;
-}
-
-export interface Job {
-  readonly id: number;
-  readonly ini: string;
-  readonly client: string;
-  readonly addr: string;
-  readonly svc: string;
-  readonly worker: string;
-  readonly date: string;
-  readonly time: string;
-  readonly st: "done" | "active" | "upcoming";
-  readonly total: number;
-  readonly photos: number;
-  readonly propertyId?: number;
-}
-
-export interface Call {
-  readonly name: string;
-  readonly num: string;
-  readonly dur: string;
-  readonly out: boolean;
-  readonly ago: string;
-}
-
 // ── User Management ──────────────────────────────────────────────
 
 export type UserRole = "owner" | "crew" | "client";
@@ -119,39 +71,98 @@ export interface JobRequest {
   readonly created_at: string;
 }
 
-// ── Client Detail: Properties & Invoices ────────────────────────
+// ── Core Business Entities (Supabase-backed) ─────────────────────
+
+export type LeadStatus = "new" | "contacted" | "quoted" | "won" | "lost";
+
+export interface Lead {
+  readonly id: string;
+  readonly company_id: string;
+  readonly name: string;
+  readonly phone: string | null;
+  readonly service: string | null;
+  readonly value: number;           // cents
+  readonly status: LeadStatus;
+  readonly spanish_speaker: boolean;
+  readonly created_at: string;
+}
+
+export interface Client {
+  readonly id: string;
+  readonly company_id: string;
+  readonly name: string;
+  readonly phone: string | null;
+  readonly email: string | null;
+  readonly tag: "VIP" | "Monthly" | null;
+  readonly created_at: string;
+}
 
 export interface Property {
-  readonly id: number;
-  readonly clientId: number;
+  readonly id: string;
+  readonly company_id: string;
+  readonly client_id: string;
   readonly address: string;
-  readonly nickname: string;
+  readonly nickname: string | null;
   readonly services: string[];
-  readonly monthlyRate: number;
-  readonly isActive: boolean;
+  readonly monthly_rate: number;    // cents
+  readonly is_active: boolean;
+  readonly created_at: string;
+}
+
+export type JobStatus = "upcoming" | "active" | "done";
+
+export interface Job {
+  readonly id: string;
+  readonly company_id: string;
+  readonly client_id: string;
+  readonly property_id: string | null;
+  readonly service: string;
+  readonly worker: string | null;
+  readonly date: string;            // ISO date string
+  readonly time: string | null;
+  readonly status: JobStatus;
+  readonly total: number;           // cents
+  readonly photos: number;
+  readonly notes: string | null;
+  readonly created_at: string;
+  // Joined fields (when queried with joins)
+  readonly clients?: Pick<Client, "id" | "name">;
+  readonly properties?: Pick<Property, "id" | "address" | "nickname">;
 }
 
 export interface InvoiceItem {
   readonly description: string;
   readonly quantity: number;
-  readonly unitPrice: number;
-  readonly total: number;
+  readonly unit_price: number;      // cents
+  readonly total: number;           // cents
 }
 
 export type InvoiceStatus = "paid" | "unpaid" | "overdue" | "partial";
 
 export interface Invoice {
-  readonly id: number;
-  readonly clientId: number;
-  readonly propertyId: number;
-  readonly jobId: number | null;
+  readonly id: string;
+  readonly company_id: string;
+  readonly client_id: string;
+  readonly property_id: string | null;
+  readonly job_id: string | null;
   readonly date: string;
-  readonly dueDate: string;
+  readonly due_date: string;
   readonly items: readonly InvoiceItem[];
-  readonly subtotal: number;
-  readonly tax: number;
-  readonly total: number;
+  readonly subtotal: number;        // cents
+  readonly tax: number;             // cents
+  readonly total: number;           // cents
   readonly status: InvoiceStatus;
-  readonly paidDate: string | null;
-  readonly paymentMethod: string | null;
+  readonly paid_date: string | null;
+  readonly payment_method: string | null;
+  readonly created_at: string;
+}
+
+export interface Call {
+  readonly id: string;
+  readonly company_id: string;
+  readonly name: string | null;
+  readonly number: string | null;
+  readonly duration: string | null;
+  readonly outbound: boolean;
+  readonly created_at: string;
 }

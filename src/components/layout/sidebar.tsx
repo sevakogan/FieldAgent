@@ -2,9 +2,8 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Suspense } from "react";
-import { formatCurrency } from "@/lib/utils";
-import { CLIENTS } from "@/lib/mock-data";
+import { Suspense, useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
   { href: "/dashboard",          label: "Dashboard", icon: "📊" },
@@ -19,8 +18,23 @@ const NAV_ITEMS = [
 function SidebarContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const mrr = CLIENTS.reduce((sum, c) => sum + c.mrr, 0);
   const currentView = searchParams.get("view");
+  const [companyName, setCompanyName] = useState("My Business");
+  const [clientCount, setClientCount] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase.from("profiles").select("company_id").eq("id", user.id).single();
+      if (!profile) return;
+      const { data: company } = await supabase.from("companies").select("name").eq("id", profile.company_id).single();
+      if (company) setCompanyName(company.name);
+      const { count } = await supabase.from("clients").select("*", { count: "exact", head: true }).eq("company_id", profile.company_id);
+      setClientCount(count ?? 0);
+    })();
+  }, []);
 
   const isNavActive = (href: string) => {
     if (href.includes("?")) {
@@ -28,7 +42,6 @@ function SidebarContent() {
       const params = new URLSearchParams(query);
       return pathname === path && params.get("view") === currentView;
     }
-    // For /jobs without query, only active when no view param
     if (href === "/jobs") return pathname === "/jobs" && !currentView;
     return pathname === href;
   };
@@ -37,12 +50,10 @@ function SidebarContent() {
     <aside className="hidden md:flex w-[220px] fixed top-0 left-0 bottom-0 bg-brand-dark flex-col p-5 z-50">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-2 mb-7">
-        <div className="w-[34px] h-[34px] bg-white rounded-[10px] flex items-center justify-center text-lg shrink-0">
-          🌿
-        </div>
+        <div className="w-[34px] h-[34px] bg-white rounded-[10px] flex items-center justify-center text-lg shrink-0">🌿</div>
         <div>
           <div className="font-extrabold text-sm text-white tracking-tight">FieldPay</div>
-          <div className="text-[11px] text-white/30 mt-0.5">John&apos;s Lawn Care</div>
+          <div className="text-[11px] text-white/30 mt-0.5">{companyName}</div>
         </div>
       </div>
 
@@ -55,9 +66,7 @@ function SidebarContent() {
               key={item.href}
               href={item.href}
               className={`flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-[13.5px] font-medium transition-all ${
-                isActive
-                  ? "bg-white/12 text-white font-semibold"
-                  : "text-white/45 hover:bg-white/7 hover:text-white/85"
+                isActive ? "bg-white/12 text-white font-semibold" : "text-white/45 hover:bg-white/7 hover:text-white/85"
               }`}
             >
               <span className="text-base">{item.icon}</span>
@@ -69,13 +78,11 @@ function SidebarContent() {
 
       <div className="flex-1" />
 
-      {/* MRR widget */}
+      {/* Clients widget */}
       <div className="bg-white/6 rounded-[14px] p-4 mb-3">
-        <div className="text-[10px] font-semibold tracking-[1.5px] text-white/30 mb-2">MRR</div>
-        <div className="text-[28px] font-black text-white tracking-tight leading-none">
-          {formatCurrency(mrr)}
-        </div>
-        <div className="text-[11px] text-white/30 mt-1.5">{CLIENTS.length} clients</div>
+        <div className="text-[10px] font-semibold tracking-[1.5px] text-white/30 mb-2">CLIENTS</div>
+        <div className="text-[28px] font-black text-white tracking-tight leading-none">{clientCount}</div>
+        <div className="text-[11px] text-white/30 mt-1.5">active clients</div>
       </div>
     </aside>
   );

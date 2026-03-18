@@ -9,7 +9,7 @@ import type { Job } from "@/types";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const HOUR_LABELS = Array.from({ length: 14 }, (_, i) => i + 6); // 6 AM to 7 PM
-const STATUS_ICONS: Record<Job["st"], string> = { done: "checkmark.circle.fill", active: "wrench.fill", upcoming: "calendar" };
+const STATUS_ICONS: Record<Job["status"], string> = { done: "checkmark.circle.fill", active: "wrench.fill", upcoming: "calendar" };
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -81,7 +81,7 @@ function getServiceTextColor(service: string): string {
 
 interface CalendarViewProps {
   readonly jobs: readonly Job[];
-  readonly onJobDateChange: (jobId: number, newDate: string) => void;
+  readonly onJobDateChange: (jobId: string, newDate: string) => void;
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ export function CalendarView({ jobs, onJobDateChange }: CalendarViewProps) {
 
   const selectedDayJobs = useMemo(() => {
     const dayJobs = jobsByDate.get(selectedDate) ?? [];
-    return [...dayJobs].sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+    return [...dayJobs].sort((a, b) => parseTimeToMinutes(a.time ?? "") - parseTimeToMinutes(b.time ?? ""));
   }, [jobsByDate, selectedDate]);
 
   // Week summary stats
@@ -163,7 +163,7 @@ export function CalendarView({ jobs, onJobDateChange }: CalendarViewProps) {
 
   // ── Drag & Drop ─────────────────────────────────────────────
 
-  const handleDragStart = useCallback((e: DragEvent, jobId: number) => {
+  const handleDragStart = useCallback((e: DragEvent, jobId: string) => {
     e.dataTransfer.setData("text/plain", String(jobId));
     e.dataTransfer.effectAllowed = "move";
     if (e.currentTarget instanceof HTMLElement) {
@@ -192,8 +192,8 @@ export function CalendarView({ jobs, onJobDateChange }: CalendarViewProps) {
     (e: DragEvent, dateKey: string) => {
       e.preventDefault();
       setDragOverDate(null);
-      const jobId = parseInt(e.dataTransfer.getData("text/plain"), 10);
-      if (!isNaN(jobId)) {
+      const jobId = e.dataTransfer.getData("text/plain");
+      if (jobId) {
         onJobDateChange(jobId, dateKey);
         setSelectedDate(dateKey);
       }
@@ -310,7 +310,7 @@ export function CalendarView({ jobs, onJobDateChange }: CalendarViewProps) {
                             <div
                               key={job.id}
                               className={`w-1 h-1 rounded-full ${
-                                isToday ? "bg-white/80" : getServiceColor(job.svc)
+                                isToday ? "bg-white/80" : getServiceColor(job.service)
                               }`}
                             />
                           ))}
@@ -414,15 +414,15 @@ export function CalendarView({ jobs, onJobDateChange }: CalendarViewProps) {
 
 interface JobCardProps {
   readonly job: Job;
-  readonly onDragStart: (e: DragEvent, jobId: number) => void;
+  readonly onDragStart: (e: DragEvent, jobId: string) => void;
   readonly onDragEnd: (e: DragEvent) => void;
 }
 
 function JobCard({ job, onDragStart, onDragEnd }: JobCardProps) {
-  const status = JOB_STATUS_STYLES[job.st];
-  const borderColor = getServiceBorderColor(job.svc);
-  const bgColor = getServiceBgColor(job.svc);
-  const textColor = getServiceTextColor(job.svc);
+  const status = JOB_STATUS_STYLES[job.status];
+  const borderColor = getServiceBorderColor(job.service);
+  const bgColor = getServiceBgColor(job.service);
+  const textColor = getServiceTextColor(job.service);
 
   return (
     <div
@@ -450,24 +450,24 @@ function JobCard({ job, onDragStart, onDragEnd }: JobCardProps) {
 
         {/* Service icon circle */}
         <div className={`w-10 h-10 rounded-xl ${bgColor} flex items-center justify-center shrink-0`}>
-          <ServiceIcon service={job.svc} className={textColor} />
+          <ServiceIcon service={job.service} className={textColor} />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-[15px] font-semibold text-gray-900 truncate">
-              {job.client}
+              {job.clients?.name ?? ""}
             </span>
-            <StatusPill status={job.st} label={status.label} />
+            <StatusPill status={job.status} label={status.label} />
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[13px] text-gray-500 truncate">{job.svc}</span>
+            <span className="text-[13px] text-gray-500 truncate">{job.service}</span>
             <span className="text-gray-300">·</span>
-            <span className="text-[13px] text-gray-400">{job.time}</span>
+            <span className="text-[13px] text-gray-400">{job.time ?? ""}</span>
           </div>
           <div className="text-[11px] text-gray-300 mt-0.5 truncate">
-            {job.worker}
+            {job.worker ?? ""}
           </div>
         </div>
 
@@ -482,13 +482,13 @@ function JobCard({ job, onDragStart, onDragEnd }: JobCardProps) {
 
 // ── Status Pill ──────────────────────────────────────────────────
 
-const STATUS_PILL_STYLES: Record<Job["st"], string> = {
+const STATUS_PILL_STYLES: Record<Job["status"], string> = {
   done: "bg-emerald-50 text-emerald-600",
   active: "bg-amber-50 text-amber-600",
   upcoming: "bg-blue-50 text-blue-600",
 };
 
-function StatusPill({ status, label }: { readonly status: Job["st"]; readonly label: string }) {
+function StatusPill({ status, label }: { readonly status: Job["status"]; readonly label: string }) {
   return (
     <span
       className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide shrink-0 ${STATUS_PILL_STYLES[status]}`}

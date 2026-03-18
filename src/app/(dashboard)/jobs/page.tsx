@@ -1,19 +1,21 @@
 "use client";
 
-import { useState, useCallback, useMemo, Suspense } from "react";
+import { useState, useCallback, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { CalendarView } from "@/components/jobs/calendar-view";
 import { formatCurrency, JOB_STATUS_STYLES } from "@/lib/utils";
 import { getServiceColor } from "@/lib/service-colors";
-import { JOBS, CLIENTS } from "@/lib/mock-data";
-import type { Job } from "@/types";
+import { getAuthContext } from "@/lib/db/auth";
+import { getJobs, createJob, updateJob } from "@/lib/db/jobs";
+import { getClients } from "@/lib/db/clients";
+import type { Job, Client, JobStatus } from "@/types";
 
-const STATUS_DOT_COLORS = {
+const STATUS_DOT_COLORS: Record<JobStatus, string> = {
   done: "text-emerald-500",
   active: "text-yellow-500",
   upcoming: "text-blue-500",
-} as const;
+};
 
 type ViewMode = "list" | "calendar";
 
@@ -54,30 +56,46 @@ function formatTodayDate(): string {
   });
 }
 
-interface InlineClient {
-  readonly name: string;
-  readonly phone: string;
-}
-
-const EMPTY_INLINE_CLIENT: InlineClient = { name: "", phone: "" };
-
 function JobsPageContent() {
   const searchParams = useSearchParams();
   const initialView = searchParams.get("view") === "calendar" ? "calendar" : "list";
 
-  const [jobs, setJobs] = useState<readonly Job[]>(JOBS);
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [form, setForm] = useState<NewJobForm>(EMPTY_FORM);
-  const [localClients, setLocalClients] = useState(CLIENTS);
-  const [showAddClient, setShowAddClient] = useState(false);
-  const [inlineClient, setInlineClient] = useState<InlineClient>(EMPTY_INLINE_CLIENT);
+
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      const auth = await getAuthContext();
+      if (!auth) { setError("Not authenticated"); setLoading(false); return; }
+      setCompanyId(auth.companyId);
+      const [jobsData, clientsData] = await Promise.all([
+        getJobs(auth.companyId),
+        getClients(auth.companyId),
+      ]);
+      setJobs(jobsData);
+      setClients(clientsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load jobs");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const sorted = useMemo(
     () =>
       [...jobs].sort((a, b) => {
-        const order = { active: 0, upcoming: 1, done: 2 };
-        return order[a.st] - order[b.st];
+        const order: Record<JobStatus, number> = { active: 0, upcoming: 1, done: 2 };
+        return order[a.status] - order[b.status];
       }),
     [jobs],
   );
@@ -91,8 +109,6 @@ function JobsPageContent() {
 
   const handleOpen = useCallback(() => {
     setForm(EMPTY_FORM);
-    setShowAddClient(false);
-    setInlineClient(EMPTY_INLINE_CLIENT);
     setSheetOpen(true);
   }, []);
 
@@ -100,69 +116,63 @@ function JobsPageContent() {
     setSheetOpen(false);
   }, []);
 
-  const handleSubmit = useCallback(() => {
-    if (!form.clientId || !form.svc || !form.date || !form.time) return;
+  const handleSubmit = useCallback(async () => {
+    if (!form.clientId || !form.svc || !form.date || !form.time || !companyId) return;
+    setSaving(true);
+    try {
+      const newJob = await createJob(companyId, {
+        client_id: form.clientId,
+        service: form.svc,
+        date: form.date,
+        time: formatTimeDisplay(form.time),
+        worker: form.worker || "You",
+        total: parseInt(form.total, 10) || 0,
+        notes: form.notes || undefined,
+      });
+      // Re-fetch to get joined client/property data
+      const refreshed = await getJobs(companyId);
+      setJobs(refreshed);
+      setSheetOpen(false);
+      setForm(EMPTY_FORM);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create job");
+    } finally {
+      setSaving(false);
+    }
+  }, [form, companyId]);
 
-    const client = localClients.find((c) => c.id === parseInt(form.clientId, 10));
-    if (!client) return;
-
-    const newJob: Job = {
-      id: Math.max(0, ...jobs.map((j) => j.id)) + 1,
-      ini: client.ini,
-      client: client.name,
-      addr: "TBD",
-      svc: form.svc,
-      worker: form.worker || "You",
-      date: form.date,
-      time: formatTimeDisplay(form.time),
-      st: "upcoming",
-      total: parseInt(form.total, 10) || 0,
-      photos: 0,
-    };
-
-    setJobs((prev) => [...prev, newJob]);
-    setSheetOpen(false);
-    setForm(EMPTY_FORM);
-  }, [form, jobs, localClients]);
-
-  const handleSaveInlineClient = useCallback(() => {
-    if (!inlineClient.name.trim()) return;
-
-    const initials = inlineClient.name
-      .trim()
-      .split(" ")
-      .map((w) => w[0]?.toUpperCase() ?? "")
-      .slice(0, 2)
-      .join("");
-
-    const newId = Math.max(0, ...localClients.map((c) => c.id)) + 1;
-
-    const newClient: (typeof CLIENTS)[number] = {
-      id: newId,
-      ini: initials || "??",
-      name: inlineClient.name.trim(),
-      phone: inlineClient.phone.trim(),
-      props: 1,
-      mrr: 0,
-      bal: 0,
-      tag: null,
-      last: "Today",
-    };
-
-    setLocalClients((prev) => [...prev, newClient]);
-    updateField("clientId", String(newId));
-    setInlineClient(EMPTY_INLINE_CLIENT);
-    setShowAddClient(false);
-  }, [inlineClient, localClients, updateField]);
-
-  const handleJobDateChange = useCallback((jobId: number, newDate: string) => {
-    setJobs((prev) =>
-      prev.map((job) => (job.id === jobId ? { ...job, date: newDate } : job)),
-    );
+  const handleJobStatusChange = useCallback(async (jobId: string, status: JobStatus) => {
+    try {
+      await updateJob(jobId, { status });
+      setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, status } : j)));
+    } catch (err) {
+      console.error("Failed to update job status:", err);
+    }
   }, []);
+
+  const handleJobDateChange = useCallback(async (jobId: string, newDate: string) => {
+    try {
+      await updateJob(jobId, { date: newDate });
+      setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, date: newDate } : j)));
+    } catch (err) {
+      console.error("Failed to reschedule job:", err);
+    }
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-full -m-5 md:-m-7 p-5 md:p-7 bg-[#f2f2f7] flex items-center justify-center">
+        <div className="text-gray-400 text-[15px]">Loading jobs...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full -m-5 md:-m-7 p-5 md:p-7 bg-[#f2f2f7]">
+      {error && (
+        <div className="bg-red-50 text-red-700 rounded-xl px-4 py-3 text-[13px] mb-4">{error}</div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-start">
@@ -178,28 +188,18 @@ function JobsPageContent() {
           </button>
         </div>
 
-        {/* Segmented control */}
         <div className="flex bg-gray-200/70 rounded-lg p-0.5 mt-4 w-fit">
-          <button
-            onClick={() => setViewMode("list")}
-            className={`px-5 py-1.5 rounded-[7px] text-[13px] font-semibold transition-all ${
-              viewMode === "list"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            List
-          </button>
-          <button
-            onClick={() => setViewMode("calendar")}
-            className={`px-5 py-1.5 rounded-[7px] text-[13px] font-semibold transition-all ${
-              viewMode === "calendar"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Calendar
-          </button>
+          {(["list", "calendar"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`px-5 py-1.5 rounded-[7px] text-[13px] font-semibold transition-all capitalize ${
+                viewMode === mode ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {mode.charAt(0).toUpperCase() + mode.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -207,119 +207,76 @@ function JobsPageContent() {
         <CalendarView jobs={jobs} onJobDateChange={handleJobDateChange} />
       ) : (
         <div className="bg-white rounded-2xl overflow-hidden">
-          {sorted.map((job, index) => {
-            const status = JOB_STATUS_STYLES[job.st];
-            const serviceColorClass = getServiceColor(job.svc);
-            const dotColor = serviceColorClass
-              .replace("bg-", "text-")
-              .replace("-500", "-500");
+          {sorted.length === 0 ? (
+            <p className="text-gray-400 text-[15px] px-4 py-8 text-center">No jobs yet. Tap + New Job to get started.</p>
+          ) : (
+            sorted.map((job, index) => {
+              const status = JOB_STATUS_STYLES[job.status];
+              const serviceColorClass = getServiceColor(job.service);
+              const clientName = job.clients?.name ?? "";
 
-            return (
-              <div
-                key={job.id}
-                className={`flex items-center gap-3 px-4 min-h-[56px] cursor-pointer hover:bg-gray-50 transition-colors ${
-                  index < sorted.length - 1 ? "border-b border-gray-100" : ""
-                }`}
-              >
-                {/* Colored dot */}
-                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${serviceColorClass}`} />
+              return (
+                <div
+                  key={job.id}
+                  className={`flex items-center gap-3 px-4 min-h-[56px] cursor-pointer hover:bg-gray-50 transition-colors ${
+                    index < sorted.length - 1 ? "border-b border-gray-100" : ""
+                  }`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${serviceColorClass}`} />
 
-                {/* Center content */}
-                <div className="flex-1 min-w-0 py-2.5">
-                  <span className="font-semibold text-[15px] text-gray-900 block leading-tight">
-                    {job.client}
-                  </span>
-                  <span className="text-[13px] text-gray-500 block leading-tight mt-0.5 truncate">
-                    {job.svc} &middot; {job.time}
-                  </span>
-                </div>
-
-                {/* Right side */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-right">
-                    <span className="font-semibold text-[15px] text-gray-900 block leading-tight">
-                      {formatCurrency(job.total)}
-                    </span>
-                    <span className={`text-[11px] font-medium block leading-tight mt-0.5 ${STATUS_DOT_COLORS[job.st]}`}>
-                      {status.label}
+                  <div className="flex-1 min-w-0 py-2.5">
+                    <span className="font-semibold text-[15px] text-gray-900 block leading-tight">{clientName}</span>
+                    <span className="text-[13px] text-gray-500 block leading-tight mt-0.5 truncate">
+                      {job.service} &middot; {job.time ?? ""}
                     </span>
                   </div>
-                  <span className="text-gray-300 text-[18px] font-light ml-1">&rsaquo;</span>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <span className="font-semibold text-[15px] text-gray-900 block leading-tight">
+                        {formatCurrency(job.total)}
+                      </span>
+                      <span className={`text-[11px] font-medium block leading-tight mt-0.5 ${STATUS_DOT_COLORS[job.status]}`}>
+                        {status.label}
+                      </span>
+                    </div>
+
+                    {/* Quick status toggle */}
+                    {job.status !== "done" && (
+                      <button
+                        onClick={() => handleJobStatusChange(job.id, job.status === "upcoming" ? "active" : "done")}
+                        className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-xs transition-colors shrink-0"
+                        title={job.status === "upcoming" ? "Mark Active" : "Mark Done"}
+                      >
+                        {job.status === "upcoming" ? "▶" : "✓"}
+                      </button>
+                    )}
+
+                    <span className="text-gray-300 text-[18px] font-light ml-1">&rsaquo;</span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       )}
 
+      {/* New Job Bottom Sheet */}
       <BottomSheet open={sheetOpen} onClose={handleClose} title="New Job">
         <div className="flex flex-col gap-5">
-          {/* Client section */}
-          <div className="bg-white rounded-2xl overflow-hidden">
-            <label className="block px-4 py-3">
-              <span className="text-[13px] font-medium text-gray-500 block mb-1.5">Client</span>
-              <select
-                value={form.clientId}
-                onChange={(e) => updateField("clientId", e.target.value)}
-                className="w-full rounded-xl border-none bg-gray-50 px-3 py-2.5 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-              >
-                <option value="">Select a client...</option>
-                {localClients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {/* Inline add client */}
-            {!showAddClient ? (
-              <button
-                type="button"
-                onClick={() => setShowAddClient(true)}
-                className="text-[13px] font-medium text-blue-500 hover:text-blue-600 transition-colors cursor-pointer bg-transparent border-none px-4 pb-3 pt-0 text-left"
-              >
-                + Add new client
-              </button>
-            ) : (
-              <div className="px-4 pb-3">
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <div className="grid grid-cols-2 gap-3 mb-2">
-                    <input
-                      type="text"
-                      value={inlineClient.name}
-                      onChange={(e) => setInlineClient((prev) => ({ ...prev, name: e.target.value }))}
-                      placeholder="Name"
-                      className="w-full rounded-lg border-none bg-white px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                    />
-                    <input
-                      type="tel"
-                      value={inlineClient.phone}
-                      onChange={(e) => setInlineClient((prev) => ({ ...prev, phone: e.target.value }))}
-                      placeholder="Phone"
-                      className="w-full rounded-lg border-none bg-white px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSaveInlineClient}
-                      disabled={!inlineClient.name.trim()}
-                      className="bg-brand-dark text-white rounded-lg px-3 py-1.5 text-[13px] font-semibold cursor-pointer hover:opacity-85 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Save Client
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShowAddClient(false); setInlineClient(EMPTY_INLINE_CLIENT); }}
-                      className="text-gray-500 hover:text-gray-700 bg-transparent border-none text-[13px] font-semibold cursor-pointer transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+          {/* Client select */}
+          <div className="bg-white rounded-2xl px-4 py-3">
+            <span className="text-[13px] font-medium text-gray-500 block mb-1.5">Client</span>
+            <select
+              value={form.clientId}
+              onChange={(e) => updateField("clientId", e.target.value)}
+              className="w-full rounded-xl border-none bg-gray-50 px-3 py-2.5 text-[15px] outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+            >
+              <option value="">Select a client...</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Service type */}
@@ -393,13 +350,12 @@ function JobsPageContent() {
             />
           </div>
 
-          {/* Submit */}
           <button
             onClick={handleSubmit}
-            disabled={!form.clientId || !form.svc || !form.date || !form.time}
+            disabled={!form.clientId || !form.svc || !form.date || !form.time || saving}
             className="w-full bg-brand-dark text-white rounded-2xl py-3.5 text-[17px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Create Job
+            {saving ? "Creating..." : "Create Job"}
           </button>
         </div>
       </BottomSheet>
