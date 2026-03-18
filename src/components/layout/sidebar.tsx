@@ -84,6 +84,18 @@ function SidebarContent() {
         <div className="text-[28px] font-black text-white tracking-tight leading-none">{clientCount}</div>
         <div className="text-[11px] text-white/30 mt-1.5">active clients</div>
       </div>
+
+      {/* Build info footer */}
+      <div className="px-1 pb-1">
+        <div className="text-[10px] text-white/20 leading-relaxed">
+          <span className="font-semibold text-white/30">v{process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0"}</span>
+          <span className="mx-1.5 text-white/15">·</span>
+          <span>{process.env.NEXT_PUBLIC_BUILD_DATE ?? "—"}</span>
+        </div>
+        <div className="text-[9px] text-white/15 mt-0.5 font-mono">
+          #{process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}
+        </div>
+      </div>
     </aside>
   );
 }
