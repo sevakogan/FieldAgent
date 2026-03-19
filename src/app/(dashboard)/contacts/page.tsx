@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useRealtime } from "@/hooks/useRealtime";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ClientProfileSheet } from "@/components/contacts/client-profile-sheet";
@@ -71,6 +72,7 @@ export default function ContactsPage() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useRealtime(["leads", "clients"], companyId, loadData);
 
   const filteredLeads = useMemo(
     () => leads.filter((l) => l.name.toLowerCase().includes(search.toLowerCase())),

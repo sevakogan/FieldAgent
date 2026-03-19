@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
@@ -13,6 +13,7 @@ import { getClients } from "@/lib/db/clients";
 import { getJobs } from "@/lib/db/jobs";
 import { getLeads } from "@/lib/db/leads";
 import type { Client, Job, Lead } from "@/types";
+import { useRealtime } from "@/hooks/useRealtime";
 
 const JOB_BADGE_VARIANT = {
   done: "success",
@@ -30,22 +31,25 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const auth = await getAuthContext();
-      if (!auth) { setLoading(false); return; }
-      const [c, j, l] = await Promise.all([
-        getClients(auth.companyId),
-        getJobs(auth.companyId),
-        getLeads(auth.companyId),
-      ]);
-      setClients(c);
-      setJobs(j);
-      setLeads(l);
-      setLoading(false);
-    })();
+  const loadData = useCallback(async () => {
+    const auth = await getAuthContext();
+    if (!auth) { setLoading(false); return; }
+    setCompanyId(auth.companyId);
+    const [c, j, l] = await Promise.all([
+      getClients(auth.companyId),
+      getJobs(auth.companyId),
+      getLeads(auth.companyId),
+    ]);
+    setClients(c);
+    setJobs(j);
+    setLeads(l);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+  useRealtime(["clients", "jobs", "leads"], companyId, loadData);
 
   const todayKey = new Date().toISOString().split("T")[0];
   const todayJobs = jobs.filter((j) => j.date === todayKey);

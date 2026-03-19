@@ -2,8 +2,9 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useRealtime } from "@/hooks/useRealtime";
 
 const NAV_ITEMS = [
   {
@@ -77,20 +78,23 @@ function SidebarContent() {
   const currentView = searchParams.get("view");
   const [companyName, setCompanyName] = useState("My Business");
   const [clientCount, setClientCount] = useState(0);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase.from("profiles").select("company_id").eq("id", user.id).single();
-      if (!profile) return;
-      const { data: company } = await supabase.from("companies").select("name").eq("id", profile.company_id).single();
-      if (company) setCompanyName(company.name);
-      const { count } = await supabase.from("clients").select("*", { count: "exact", head: true }).eq("company_id", profile.company_id);
-      setClientCount(count ?? 0);
-    })();
+  const loadCounts = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: profile } = await supabase.from("profiles").select("company_id").eq("id", user.id).single();
+    if (!profile) return;
+    setCompanyId(profile.company_id);
+    const { data: company } = await supabase.from("companies").select("name").eq("id", profile.company_id).single();
+    if (company) setCompanyName(company.name);
+    const { count } = await supabase.from("clients").select("*", { count: "exact", head: true }).eq("company_id", profile.company_id);
+    setClientCount(count ?? 0);
   }, []);
+
+  useEffect(() => { loadCounts(); }, [loadCounts]);
+  useRealtime("clients", companyId, loadCounts);
 
   const isNavActive = (href: string) => {
     if (href.includes("?")) {
