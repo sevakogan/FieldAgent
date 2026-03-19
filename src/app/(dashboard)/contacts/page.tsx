@@ -7,8 +7,8 @@ import { ClientProfileSheet } from "@/components/contacts/client-profile-sheet";
 import { AddContactSheet } from "@/components/contacts/add-contact-sheet";
 import { formatCurrency, LEAD_STATUS_STYLES } from "@/lib/utils";
 import { getAuthContext } from "@/lib/db/auth";
-import { getClients } from "@/lib/db/clients";
-import { getLeads, updateLeadStatus } from "@/lib/db/leads";
+import { getClients, createClientRecord } from "@/lib/db/clients";
+import { getLeads, updateLeadStatus, deleteLead } from "@/lib/db/leads";
 import type { Lead, Client, LeadStatus } from "@/types";
 
 // Kanban columns (static config — no DB)
@@ -88,6 +88,21 @@ export default function ContactsPage() {
       setLeads((prev) => prev.map((l) => (l.id === leadId ? updated : l)));
     } catch (err) {
       console.error("Failed to update lead status:", err);
+    }
+  };
+
+  const handleConvertToClient = async (lead: Lead) => {
+    if (!companyId) return;
+    try {
+      await createClientRecord(companyId, {
+        name: lead.name,
+        phone: lead.phone ?? undefined,
+      });
+      await deleteLead(lead.id);
+      setLeads((prev) => prev.filter((l) => l.id !== lead.id));
+      setExpandedLead(null);
+    } catch (err) {
+      console.error("Failed to convert lead:", err);
     }
   };
 
@@ -196,7 +211,14 @@ export default function ContactsPage() {
                 <p className="text-gray-400 text-[15px] px-4 py-6 text-center">No prospects yet. Tap + to add one.</p>
               ) : (
                 filteredLeads.map((lead, idx) => (
-                  <LeadRow key={lead.id} lead={lead} isLast={idx === filteredLeads.length - 1} />
+                  <LeadRow
+                    key={lead.id}
+                    lead={lead}
+                    isLast={idx === filteredLeads.length - 1}
+                    expanded={expandedLead === lead.id}
+                    onToggle={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)}
+                    onConvert={() => handleConvertToClient(lead)}
+                  />
                 ))
               )}
             </div>
@@ -276,23 +298,56 @@ function KanbanCard({
   );
 }
 
-function LeadRow({ lead, isLast }: { readonly lead: Lead; readonly isLast: boolean }) {
+function LeadRow({
+  lead, isLast, expanded, onToggle, onConvert,
+}: {
+  readonly lead: Lead;
+  readonly isLast: boolean;
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
+  readonly onConvert: () => void;
+}) {
   return (
-    <div className={`flex items-center gap-3.5 px-4 py-3 min-h-[52px] ${!isLast ? "border-b border-gray-100" : ""}`}>
-      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-[15px] shrink-0">👤</div>
-      <div className="flex-1 min-w-0">
-        <div className="font-semibold text-[15px]">
-          {lead.name}
-          {lead.spanish_speaker && <span className="text-[11px] ml-1">🇪🇸</span>}
+    <div
+      className={`px-4 cursor-pointer active:bg-gray-50 transition-colors ${!isLast || expanded ? "border-b border-gray-100" : ""}`}
+      onClick={onToggle}
+    >
+      <div className="flex items-center gap-3.5 py-3 min-h-[52px]">
+        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-[15px] shrink-0">👤</div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-[15px]">
+            {lead.name}
+            {lead.spanish_speaker && <span className="text-[11px] ml-1">🇪🇸</span>}
+          </div>
+          <div className="text-[13px] text-gray-400 truncate">{lead.service ?? "New inquiry"}</div>
         </div>
-        <div className="text-[13px] text-gray-400 truncate">{lead.service ?? "New inquiry"}</div>
+        <div className="text-right shrink-0 flex items-center gap-2">
+          <Badge variant={lead.status === "new" ? "success" : lead.status === "contacted" ? "info" : "warning"}>
+            {lead.status}
+          </Badge>
+          <span className="font-bold text-[15px]">{formatCurrency(lead.value)}</span>
+        </div>
       </div>
-      <div className="text-right shrink-0 flex items-center gap-2">
-        <Badge variant={lead.status === "new" ? "success" : lead.status === "contacted" ? "info" : "warning"}>
-          {lead.status}
-        </Badge>
-        <span className="font-bold text-[15px]">{formatCurrency(lead.value)}</span>
-      </div>
+
+      {expanded && (
+        <div className="pb-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={onConvert}
+            className="flex items-center gap-1.5 bg-[#007AFF] text-white border-none rounded-full px-4 py-2 text-[13px] font-semibold cursor-pointer hover:opacity-85 transition-opacity"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            Convert to Client
+          </button>
+          <button
+            onClick={() => onToggle()}
+            className="bg-gray-100 text-gray-500 border-none rounded-full px-4 py-2 text-[13px] font-semibold cursor-pointer hover:bg-gray-200 transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     </div>
   );
 }
