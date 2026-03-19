@@ -61,6 +61,30 @@ export default function DashboardPage() {
 
   return (
     <>
+      {/* Quick Actions — top row */}
+      <div className="flex gap-2 mb-5">
+        {[
+          { icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          ), label: "New Job",    bg: "bg-[#E8F9ED]", fg: "text-[#1C7A35]", href: "/jobs" },
+          { icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          ), label: "Add Client", bg: "bg-[#E8F0FE]", fg: "text-[#1A56DB]", href: "/contacts" },
+          { icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          ), label: "Message",    bg: "bg-[#F3E8FF]", fg: "text-[#7C3AED]", href: "/contacts" },
+        ].map((action) => (
+          <Link
+            key={action.label}
+            href={action.href}
+            className={`${action.bg} ${action.fg} flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-semibold hover:opacity-80 transition-opacity`}
+          >
+            {action.icon}
+            {action.label}
+          </Link>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-3 md:gap-4 mb-5">
         <StatCard label="Monthly Revenue" value={formatCurrency(clients.length)} accent={`${clients.length} clients`} />
         <StatCard label="Jobs Today" value={String(todayJobs.length)} accent={`${newLeads} new leads`} />
@@ -100,25 +124,6 @@ export default function DashboardPage() {
         )}
       </Card>
 
-      <Card padding="lg">
-        <h2 className="font-extrabold text-[15px] tracking-tight mb-3.5">Quick Actions</h2>
-        <div className="grid grid-cols-3 gap-2.5">
-          {[
-            { icon: "➕", label: "New Job",    bg: "bg-green-50",  fg: "text-green-700",  href: "/jobs" },
-            { icon: "👤", label: "Add Client", bg: "bg-blue-50",   fg: "text-blue-700",   href: "/contacts" },
-            { icon: "💬", label: "Message",    bg: "bg-purple-50", fg: "text-purple-700", href: "/contacts" },
-          ].map((action) => (
-            <Link
-              key={action.label}
-              href={action.href}
-              className={`${action.bg} rounded-[14px] p-4 flex flex-col items-center gap-2 text-center hover:-translate-y-0.5 hover:shadow-md transition-all`}
-            >
-              <span className="text-2xl">{action.icon}</span>
-              <span className={`${action.fg} font-bold text-[12px]`}>{action.label}</span>
-            </Link>
-          ))}
-        </div>
-      </Card>
     </>
   );
 }

@@ -14,62 +14,64 @@ interface AddContactSheetProps {
   readonly onSuccess: () => void;
 }
 
-const INITIAL_PROSPECT = { name: "", phone: "", service: "", notes: "" };
-const INITIAL_CLIENT = { name: "", phone: "", email: "" };
+const SERVICE_PILLS = [
+  "Lawn Care",
+  "Pool Service",
+  "Pressure Washing",
+  "Cleaning",
+  "Pest Control",
+  "HVAC",
+  "Window Cleaning",
+  "Handyman",
+  "Irrigation",
+  "Landscaping",
+];
+
+const INITIAL_FORM = { name: "", phone: "", job: "", address: "", services: [] as string[], notes: "" };
 
 export function AddContactSheet({ open, companyId, onClose, onSuccess }: AddContactSheetProps) {
   const [contactType, setContactType] = useState<ContactType>("prospect");
-  const [prospect, setProspect] = useState(INITIAL_PROSPECT);
-  const [client, setClient] = useState(INITIAL_CLIENT);
+  const [form, setForm] = useState(INITIAL_FORM);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const reset = () => {
-    setProspect(INITIAL_PROSPECT);
-    setClient(INITIAL_CLIENT);
-    setError("");
-    setContactType("prospect");
-  };
+  const set = (field: keyof typeof INITIAL_FORM) => (v: string) =>
+    setForm((f) => ({ ...f, [field]: v }));
 
-  const handleClose = () => {
-    reset();
-    onClose();
-  };
+  const toggleService = (s: string) =>
+    setForm((f) => ({
+      ...f,
+      services: f.services.includes(s)
+        ? f.services.filter((x) => x !== s)
+        : [...f.services, s],
+    }));
+
+  const reset = () => { setForm(INITIAL_FORM); setError(""); setContactType("prospect"); };
+  const handleClose = () => { reset(); onClose(); };
 
   const handleSubmit = async () => {
     setError("");
-
-    if (contactType === "prospect") {
-      if (!prospect.name.trim()) { setError("Name is required"); return; }
-      setLoading(true);
-      try {
-        await createLead(companyId, {
-          name: prospect.name.trim(),
-          phone: prospect.phone.trim() || undefined,
-          service: prospect.service.trim() || undefined,
-        });
-        onSuccess();
-        handleClose();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to add prospect");
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!client.name.trim()) { setError("Name is required"); return; }
+    if (!form.name.trim()) { setError("Name is required"); return; }
     setLoading(true);
     try {
-      await createClientRecord(companyId, {
-        name: client.name.trim(),
-        phone: client.phone.trim() || undefined,
-        email: client.email.trim() || undefined,
-      });
+      const serviceStr = form.services.join(", ") || form.job.trim() || undefined;
+      if (contactType === "prospect") {
+        await createLead(companyId, {
+          name: form.name.trim(),
+          phone: form.phone.trim() || undefined,
+          service: serviceStr,
+        });
+      } else {
+        await createClientRecord(companyId, {
+          name: form.name.trim(),
+          phone: form.phone.trim() || undefined,
+          email: undefined,
+        });
+      }
       onSuccess();
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add client");
+      setError(err instanceof Error ? err.message : "Failed to add contact");
     } finally {
       setLoading(false);
     }
@@ -77,7 +79,7 @@ export function AddContactSheet({ open, companyId, onClose, onSuccess }: AddCont
 
   return (
     <BottomSheet open={open} onClose={handleClose} title="Add Contact">
-      <div className="p-5 pt-0 max-h-[70vh] overflow-y-auto">
+      <div className="p-5 pt-0 max-h-[80vh] overflow-y-auto">
         {error && (
           <div className="bg-red-50 text-red-700 rounded-xl px-4 py-3 text-[13px] font-medium mb-4">{error}</div>
         )}
@@ -98,61 +100,52 @@ export function AddContactSheet({ open, companyId, onClose, onSuccess }: AddCont
           ))}
         </div>
 
-        {/* Form fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0">
-          <FormField
-            label="NAME"
-            value={contactType === "prospect" ? prospect.name : client.name}
-            onChange={(v) =>
-              contactType === "prospect"
-                ? setProspect((p) => ({ ...p, name: v }))
-                : setClient((c) => ({ ...c, name: v }))
-            }
-            placeholder="Full name"
+        {/* Name + Phone */}
+        <div className="grid grid-cols-2 gap-x-3">
+          <FormField label="NAME"  value={form.name}  onChange={set("name")}  placeholder="Full name" />
+          <FormField label="PHONE" value={form.phone} onChange={set("phone")} placeholder="(786) 555-0100" type="tel" />
+        </div>
+
+        {/* Job + Address */}
+        <div className="grid grid-cols-2 gap-x-3">
+          <FormField label="JOB"     value={form.job}     onChange={set("job")}     placeholder="e.g. Property manager" />
+          <FormField label="ADDRESS" value={form.address} onChange={set("address")} placeholder="123 Main St" />
+        </div>
+
+        {/* Service multi-select pills */}
+        <div className="mb-3">
+          <label className="text-[10px] font-semibold text-gray-400 tracking-widest block mb-2">SERVICE</label>
+          <div className="flex flex-wrap gap-2">
+            {SERVICE_PILLS.map((s) => {
+              const active = form.services.includes(s);
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleService(s)}
+                  className={`px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-all cursor-pointer ${
+                    active
+                      ? "bg-brand-dark text-white border-brand-dark"
+                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                  }`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div className="mb-4">
+          <label className="text-[10px] font-semibold text-gray-400 tracking-widest block mb-1.5">NOTES</label>
+          <textarea
+            value={form.notes}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+            rows={3}
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[14px] outline-none focus:border-gray-400 transition-colors resize-none"
+            placeholder="Any notes about this contact..."
           />
-
-          <FormField
-            label="PHONE"
-            type="tel"
-            value={contactType === "prospect" ? prospect.phone : client.phone}
-            onChange={(v) =>
-              contactType === "prospect"
-                ? setProspect((p) => ({ ...p, phone: v }))
-                : setClient((c) => ({ ...c, phone: v }))
-            }
-            placeholder="(786) 555-0100"
-          />
-
-          {contactType === "client" && (
-            <FormField
-              label="EMAIL"
-              type="email"
-              value={client.email}
-              onChange={(v) => setClient((c) => ({ ...c, email: v }))}
-              placeholder="them@email.com"
-            />
-          )}
-
-          {contactType === "prospect" && (
-            <>
-              <FormField
-                label="SERVICE INTEREST"
-                value={prospect.service}
-                onChange={(v) => setProspect((p) => ({ ...p, service: v }))}
-                placeholder="e.g. Weekly lawn care"
-              />
-              <div className="mb-3 sm:col-span-2">
-                <label className="text-[10px] font-semibold text-gray-400 tracking-widest block mb-1.5">NOTES</label>
-                <textarea
-                  value={prospect.notes}
-                  onChange={(e) => setProspect((p) => ({ ...p, notes: e.target.value }))}
-                  rows={3}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[14px] outline-none focus:border-gray-400 transition-colors resize-none"
-                  placeholder="Any notes about this prospect..."
-                />
-              </div>
-            </>
-          )}
         </div>
 
         <button
@@ -169,11 +162,7 @@ export function AddContactSheet({ open, companyId, onClose, onSuccess }: AddCont
 }
 
 function FormField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
+  label, value, onChange, placeholder, type = "text",
 }: {
   readonly label: string;
   readonly value: string;
