@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — FieldAgent",
-  description: "FieldAgent privacy policy. How we collect, use, and protect your data.",
+  title: "Privacy Policy — KleanHQ",
+  description: "KleanHQ privacy policy. How we collect, use, and protect your data.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
       <div className="space-y-8 text-gray-700 leading-relaxed">
         <Section title="1. Who We Are">
           <p>
-            FieldAgent is operated by TheLevelTeam LLC ("we", "us", "our"). We provide a
+            KleanHQ is operated by TheLevelTeam LLC ("we", "us", "our"). We provide a
             field service management platform that helps businesses manage leads, clients,
             jobs, and revenue.
           </p>
@@ -28,7 +28,7 @@ export default function PrivacyPolicyPage() {
               business details provided during registration.
             </li>
             <li>
-              <strong>Usage data:</strong> How you interact with FieldAgent, including pages
+              <strong>Usage data:</strong> How you interact with KleanHQ, including pages
               visited, features used, and actions taken.
             </li>
             <li>
@@ -49,7 +49,7 @@ export default function PrivacyPolicyPage() {
         <Section title="3. How We Use Your Information">
           <p>We use your information to:</p>
           <ul className="list-disc pl-6 mt-2 space-y-1">
-            <li>Provide, maintain, and improve the FieldAgent platform.</li>
+            <li>Provide, maintain, and improve the KleanHQ platform.</li>
             <li>Send operational notifications (task assignments, status updates, schedule changes).</li>
             <li>Send one-time referral invitations on behalf of existing users.</li>
             <li>Respond to your requests and provide customer support.</li>
@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
         <Section title="4. SMS Messaging">
           <p>
             By creating an account and providing your phone number, you consent to receive
-            SMS messages from FieldAgent. These messages include:
+            SMS messages from KleanHQ. These messages include:
           </p>
           <ul className="list-disc pl-6 mt-2 space-y-1">
             <li>Task assignment and status notifications</li>
@@ -87,7 +87,7 @@ export default function PrivacyPolicyPage() {
           <ul className="list-disc pl-6 mt-2 space-y-1">
             <li>
               <strong>Service providers:</strong> Third-party services that help us operate
-              FieldAgent (e.g., hosting, SMS delivery via Twilio, analytics).
+              KleanHQ (e.g., hosting, SMS delivery via Twilio, analytics).
             </li>
             <li>
               <strong>Legal requirements:</strong> When required by law, regulation, or legal
@@ -131,7 +131,7 @@ export default function PrivacyPolicyPage() {
 
         <Section title="9. Children's Privacy">
           <p>
-            FieldAgent is not intended for use by anyone under the age of 18. We do not
+            KleanHQ is not intended for use by anyone under the age of 18. We do not
             knowingly collect information from children.
           </p>
         </Section>
@@ -139,7 +139,7 @@ export default function PrivacyPolicyPage() {
         <Section title="10. Changes to This Policy">
           <p>
             We may update this policy from time to time. We will notify you of significant
-            changes via the app or email. Continued use of FieldAgent after changes
+            changes via the app or email. Continued use of KleanHQ after changes
             constitutes acceptance of the updated policy.
           </p>
         </Section>
@@ -151,7 +151,7 @@ export default function PrivacyPolicyPage() {
           <p className="mt-2">
             <strong>TheLevelTeam LLC</strong>
             <br />
-            Email: support@fieldagent.app
+            Email: support@kleanhq.com
             <br />
             Phone: +1 (786) 655-4411
           </p>

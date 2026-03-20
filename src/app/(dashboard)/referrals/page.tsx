@@ -54,7 +54,7 @@ const ME: Me = {
   ini:                  "JM",
   tier:                 getTier(8),
   referralCode:         "JOHN-4X9K",
-  referralLink:         "fieldpay.app/join?ref=JOHN-4X9K",
+  referralLink:         "kleanhq.com/join?ref=JOHN-4X9K",
   daysEarned:           30,
   nextBillingDate:      "Apr 6, 2026",
   payingOwnerReferrals: 3,

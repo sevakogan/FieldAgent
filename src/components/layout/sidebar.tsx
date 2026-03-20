@@ -117,7 +117,7 @@ function SidebarContent() {
           </svg>
         </div>
         <div>
-          <div className="font-bold text-[14px] text-white tracking-[-0.3px]">FieldPay</div>
+          <div className="font-bold text-[14px] text-white tracking-[-0.3px]">KleanHQ</div>
           <div className="text-[11px] text-white/40 mt-0.5 truncate max-w-[130px]">{companyName}</div>
         </div>
       </div>

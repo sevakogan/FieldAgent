@@ -1,4 +1,4 @@
-# FieldPay User Management & Roles Design
+# KleanHQ User Management & Roles Design
 
 **Date:** 2026-03-16
 **Status:** Approved

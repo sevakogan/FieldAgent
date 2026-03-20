@@ -79,7 +79,7 @@ export default function InvitePage() {
           <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl mx-auto mb-4">
             🌿
           </div>
-          <h1 className="font-black text-2xl tracking-tight">FieldPay</h1>
+          <h1 className="font-black text-2xl tracking-tight">KleanHQ</h1>
         </div>
 
         <div className="bg-white rounded-3xl shadow-sm p-7">

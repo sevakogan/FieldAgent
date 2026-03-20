@@ -14,12 +14,13 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            );
+            for (const { name, value, options } of cookiesToSet) {
+              cookieStore.set(name, value, options);
+            }
           } catch {
-            // Called from a Server Component — safe to ignore when
-            // middleware is refreshing sessions.
+            // setAll is called from a Server Component where cookies
+            // cannot be set. This can be safely ignored if middleware
+            // is refreshing user sessions.
           }
         },
       },

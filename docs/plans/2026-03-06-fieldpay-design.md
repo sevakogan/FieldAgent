@@ -1,12 +1,12 @@
-# FieldPay CRM — Design Document
+# KleanHQ CRM — Design Document
 
 **Date**: 2026-03-06
 **Status**: Approved
-**Location**: `/Users/seva/Documents/Claude - Code/FieldPay`
+**Location**: `/Users/seva/Documents/Claude - Code/KleanHQ`
 
 ## Overview
 
-FieldPay is a field service CRM for lawn care and home service businesses. It manages leads, clients, jobs, revenue, reviews, and includes a built-in Twilio-powered business phone (calls, SMS, WhatsApp).
+KleanHQ is a field service CRM for lawn care and home service businesses. It manages leads, clients, jobs, revenue, reviews, and includes a built-in Twilio-powered business phone (calls, SMS, WhatsApp).
 
 ## Stack
 

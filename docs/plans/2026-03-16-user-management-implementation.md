@@ -363,7 +363,7 @@ export default function ResetPasswordPage() {
           <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl mx-auto mb-4">
             🌿
           </div>
-          <h1 className="font-black text-2xl tracking-tight">FieldPay</h1>
+          <h1 className="font-black text-2xl tracking-tight">KleanHQ</h1>
         </div>
 
         <div className="bg-white rounded-3xl shadow-sm p-7">
@@ -577,7 +577,7 @@ export default function OnboardPage() {
           <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl mx-auto mb-4">
             🌿
           </div>
-          <h1 className="font-black text-2xl tracking-tight">Welcome to FieldPay</h1>
+          <h1 className="font-black text-2xl tracking-tight">Welcome to KleanHQ</h1>
           <p className="text-sm text-gray-400 mt-1">Set up your business</p>
         </div>
 
@@ -1035,7 +1035,7 @@ export default function InvitePage() {
           <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl mx-auto mb-4">
             🌿
           </div>
-          <h1 className="font-black text-2xl tracking-tight">FieldPay</h1>
+          <h1 className="font-black text-2xl tracking-tight">KleanHQ</h1>
         </div>
 
         <div className="bg-white rounded-3xl shadow-sm p-7">
@@ -1390,7 +1390,7 @@ export default function CrewLayout({
   return (
     <div className="min-h-dvh bg-gray-50">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 px-5 py-3.5">
-        <h1 className="font-black text-lg tracking-tight">🌿 FieldPay</h1>
+        <h1 className="font-black text-lg tracking-tight">🌿 KleanHQ</h1>
       </header>
       <main className="p-5 pb-20 md:pb-5 animate-fade-in">
         {children}
@@ -1501,7 +1501,7 @@ export default function ClientLayout({
   return (
     <div className="min-h-dvh bg-gray-50">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 px-5 py-3.5">
-        <h1 className="font-black text-lg tracking-tight">🌿 FieldPay</h1>
+        <h1 className="font-black text-lg tracking-tight">🌿 KleanHQ</h1>
       </header>
       <main className="p-5 pb-20 md:pb-5 animate-fade-in">
         {children}

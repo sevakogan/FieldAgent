@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms and Conditions — FieldAgent",
-  description: "FieldAgent terms and conditions governing use of the platform.",
+  title: "Terms and Conditions — KleanHQ",
+  description: "KleanHQ terms and conditions governing use of the platform.",
 };
 
 export default function TermsPage() {
@@ -14,7 +14,7 @@ export default function TermsPage() {
       <div className="space-y-8 text-gray-700 leading-relaxed">
         <Section title="1. Agreement to Terms">
           <p>
-            By accessing or using FieldAgent ("the Service"), operated by TheLevelTeam LLC
+            By accessing or using KleanHQ ("the Service"), operated by TheLevelTeam LLC
             ("we", "us", "our"), you agree to be bound by these Terms and Conditions. If you
             do not agree, do not use the Service.
           </p>
@@ -22,14 +22,14 @@ export default function TermsPage() {
 
         <Section title="2. Description of Service">
           <p>
-            FieldAgent is a field service management platform that enables businesses to
+            KleanHQ is a field service management platform that enables businesses to
             manage leads, clients, jobs, scheduling, and revenue. The Service includes a web
             application and SMS notifications.
           </p>
         </Section>
 
         <Section title="3. Account Registration">
-          <p>To use FieldAgent, you must:</p>
+          <p>To use KleanHQ, you must:</p>
           <ul className="list-disc pl-6 mt-2 space-y-1">
             <li>Be at least 18 years of age.</li>
             <li>Provide accurate and complete registration information.</li>
@@ -44,12 +44,12 @@ export default function TermsPage() {
         <Section title="4. SMS Messaging Terms">
           <p>
             By providing your phone number and creating an account, you consent to receive
-            SMS messages from FieldAgent. This is a core part of how the Service operates.
+            SMS messages from KleanHQ. This is a core part of how the Service operates.
           </p>
 
           <div className="mt-3 rounded-lg bg-gray-100 p-4 space-y-2">
             <p>
-              <strong>Program Name:</strong> FieldAgent Notifications
+              <strong>Program Name:</strong> KleanHQ Notifications
             </p>
             <p>
               <strong>Message Types:</strong> Task assignments, status updates, schedule
@@ -68,7 +68,7 @@ export default function TermsPage() {
             </p>
             <p>
               <strong>Help:</strong> Reply <strong>HELP</strong> to any message for
-              assistance, or contact support@fieldagent.app.
+              assistance, or contact support@kleanhq.com.
             </p>
             <p>
               <strong>Opt-In:</strong> Reply <strong>START</strong> to re-subscribe to SMS
@@ -84,7 +84,7 @@ export default function TermsPage() {
 
         <Section title="5. Referral Invitations">
           <p>
-            Existing users may invite others to FieldAgent by providing their phone number.
+            Existing users may invite others to KleanHQ by providing their phone number.
             Invitees will receive a <strong>single, one-time SMS invitation</strong>. By
             submitting someone&apos;s phone number for a referral, you confirm that you have
             their consent to be contacted.
@@ -105,7 +105,7 @@ export default function TermsPage() {
 
         <Section title="7. Intellectual Property">
           <p>
-            All content, features, and functionality of FieldAgent — including text,
+            All content, features, and functionality of KleanHQ — including text,
             graphics, logos, and software — are owned by TheLevelTeam LLC and protected by
             intellectual property laws. You may not copy, modify, or distribute any part of
             the Service without our written consent.
@@ -114,7 +114,7 @@ export default function TermsPage() {
 
         <Section title="8. Data and Privacy">
           <p>
-            Your use of FieldAgent is also governed by our{" "}
+            Your use of KleanHQ is also governed by our{" "}
             <a href="/privacy" className="text-blue-600 underline hover:text-blue-800">
               Privacy Policy
             </a>
@@ -124,7 +124,7 @@ export default function TermsPage() {
 
         <Section title="9. Service Availability">
           <p>
-            We strive to keep FieldAgent available at all times but do not guarantee
+            We strive to keep KleanHQ available at all times but do not guarantee
             uninterrupted access. We may modify, suspend, or discontinue the Service at any
             time without notice. We are not liable for any downtime or service interruptions.
           </p>
@@ -134,7 +134,7 @@ export default function TermsPage() {
           <p>
             To the maximum extent permitted by law, TheLevelTeam LLC shall not be liable for
             any indirect, incidental, special, consequential, or punitive damages arising
-            from your use of FieldAgent. Our total liability shall not exceed the amount you
+            from your use of KleanHQ. Our total liability shall not exceed the amount you
             paid us in the 12 months preceding the claim.
           </p>
         </Section>
@@ -166,7 +166,7 @@ export default function TermsPage() {
         <Section title="14. Changes to Terms">
           <p>
             We may update these Terms from time to time. We will notify you of material
-            changes via the app or email. Continued use of FieldAgent after changes
+            changes via the app or email. Continued use of KleanHQ after changes
             constitutes acceptance of the updated Terms.
           </p>
         </Section>
@@ -176,7 +176,7 @@ export default function TermsPage() {
           <p className="mt-2">
             <strong>TheLevelTeam LLC</strong>
             <br />
-            Email: support@fieldagent.app
+            Email: support@kleanhq.com
             <br />
             Phone: +1 (786) 655-4411
           </p>

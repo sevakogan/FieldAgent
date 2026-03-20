@@ -1,115 +1,109 @@
-import type { Metadata } from "next";
-import { LandingContent } from "@/components/landing/landing-page";
-
-export const metadata: Metadata = {
-  title: "FieldPay — Field Service CRM for Lawn, Pool, Cleaning & More",
-  description:
-    "Schedule jobs, send invoices, and manage your crew — all from one app. Built for lawn care, pool service, property cleaning, pressure washing, pest control, HVAC, and more.",
-  keywords: [
-    "field service management",
-    "lawn care software",
-    "pool service CRM",
-    "property cleaning management",
-    "pressure washing software",
-    "field service CRM",
-    "job scheduling app",
-    "invoicing software",
-    "crew management",
-    "pest control software",
-    "HVAC service management",
-    "window cleaning software",
-    "handyman business software",
-    "field service invoicing",
-    "service business management",
-  ],
-  openGraph: {
-    title: "FieldPay — The Operating System for Field Service",
-    description:
-      "Schedule jobs, send invoices, and manage your crew. One app for lawn care, pool service, property cleaning, pressure washing, and more.",
-    type: "website",
-    locale: "en_US",
-    siteName: "FieldPay",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "FieldPay — Field Service CRM",
-    description:
-      "Schedule jobs, send invoices, manage your crew. Built for lawn care, pool service, property cleaning, and more.",
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
-  alternates: {
-    canonical: "https://fieldpay.app",
-  },
-};
-
-const SOFTWARE_APP_JSON_LD = JSON.stringify({
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "FieldPay",
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
-  description:
-    "Field service CRM for lawn care, pool service, property cleaning, pressure washing, pest control, HVAC, and more. Schedule jobs, send invoices, manage crews.",
-  offers: [
-    {
-      "@type": "Offer",
-      price: "20",
-      priceCurrency: "USD",
-      name: "Starter",
-      description: "1-10 properties",
-    },
-    {
-      "@type": "Offer",
-      price: "40",
-      priceCurrency: "USD",
-      name: "Growth",
-      description: "11-30 properties",
-    },
-    {
-      "@type": "Offer",
-      price: "79",
-      priceCurrency: "USD",
-      name: "Pro",
-      description: "31-75 properties",
-    },
-  ],
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "4.9",
-    ratingCount: "500",
-  },
-});
-
-const ORGANIZATION_JSON_LD = JSON.stringify({
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "TheLevelTeam LLC",
-  brand: {
-    "@type": "Brand",
-    name: "FieldPay",
-  },
-  description:
-    "Field service management software for lawn care, pool service, property cleaning, and more.",
-});
+import Hero from "@/components/landing/Hero";
+import Features from "@/components/landing/Features";
+import HowItWorks from "@/components/landing/HowItWorks";
+import FullFeatureList from "@/components/landing/FullFeatureList";
+import AIPreview from "@/components/landing/AIPreview";
+import AppWalkthrough from "@/components/landing/AppWalkthrough";
+import { MarketplacePreview } from "@/components/landing/MarketplacePreview";
+import { IntegrationsMarquee } from "@/components/landing/IntegrationsMarquee";
+import { PricingPreview } from "@/components/landing/PricingPreview";
+import { StatsCounter } from "@/components/landing/StatsCounter";
+import { WaitlistForm } from "@/components/landing/WaitlistForm";
+import { LiveCounter } from "@/components/landing/LiveCounter";
+import { Footer } from "@/components/landing/Footer";
+import { CookieConsent } from "@/components/landing/CookieConsent";
+import { FloatingOrbs } from "@/components/effects/FloatingOrbs";
+import { CursorGlow } from "@/components/effects/CursorGlow";
+import { GrainOverlay } from "@/components/effects/GrainOverlay";
+import { ScrollProgress } from "@/components/effects/ScrollProgress";
+import { GridPattern } from "@/components/effects/GridPattern";
+import { FloatingIcons } from "@/components/effects/FloatingIcons";
 
 export default function LandingPage() {
   return (
     <>
-      {/* eslint-disable-next-line -- Static JSON-LD, no XSS risk */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SOFTWARE_APP_JSON_LD }} />
-      {/* eslint-disable-next-line -- Static JSON-LD, no XSS risk */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ORGANIZATION_JSON_LD }} />
-      <LandingContent />
+      {/* Global visual effects */}
+      <ScrollProgress />
+      <FloatingOrbs />
+      <CursorGlow />
+      <GrainOverlay />
+      <GridPattern />
+      <FloatingIcons />
+
+      {/* Page sections */}
+      <main className="relative z-10">
+        <Hero />
+
+        <LiveCounter />
+
+        {/* Flow: white → light blue */}
+        <div className="h-24 bg-gradient-to-b from-[#F2F2F7] via-[#EAF3FF] to-[#E0EEFF]" />
+
+        <section id="features" className="py-16 md:py-24 bg-gradient-to-b from-[#E0EEFF] to-[#E8F0FE]">
+          <Features />
+        </section>
+
+        {/* Flow: light blue → lavender */}
+        <div className="h-24 bg-gradient-to-b from-[#E8F0FE] via-[#E8E4F8] to-[#F0E6FF]" />
+
+        <section id="how-it-works" className="py-16 md:py-24 bg-gradient-to-b from-[#F0E6FF] to-[#F5EEFF]">
+          <HowItWorks />
+        </section>
+
+        {/* Flow: lavender → peach */}
+        <div className="h-24 bg-gradient-to-b from-[#F5EEFF] via-[#FFF0E8] to-[#FFF0E0]" />
+
+        <section id="full-features" className="py-16 md:py-24 bg-gradient-to-b from-[#FFF0E0] to-[#FFECD6]">
+          <FullFeatureList />
+        </section>
+
+        {/* Flow: peach → soft pink */}
+        <div className="h-24 bg-gradient-to-b from-[#FFECD6] via-[#FFE4E8] to-[#FFE0EA]" />
+
+        <section id="ai" className="py-16 md:py-24 bg-gradient-to-b from-[#FFE0EA] to-[#FFD6E8]">
+          <AIPreview />
+          <AppWalkthrough />
+        </section>
+
+        {/* Flow: pink → mint */}
+        <div className="h-24 bg-gradient-to-b from-[#FFD6E8] via-[#E8F5F0] to-[#E0F5EE]" />
+
+        <section id="marketplace" className="py-16 md:py-24 bg-gradient-to-b from-[#E0F5EE] to-[#D6F0EA]">
+          <MarketplacePreview />
+        </section>
+
+        {/* Flow: mint → sky */}
+        <div className="h-24 bg-gradient-to-b from-[#D6F0EA] via-[#E0F0FF] to-[#E4F0FF]" />
+
+        <section id="integrations" className="py-12 md:py-20 bg-gradient-to-b from-[#E4F0FF] to-[#EAF0FF]">
+          <IntegrationsMarquee />
+        </section>
+
+        {/* Flow: sky → light violet */}
+        <div className="h-24 bg-gradient-to-b from-[#EAF0FF] via-[#EDE6FF] to-[#F0E8FF]" />
+
+        <section id="pricing" className="py-16 md:py-24 bg-gradient-to-b from-[#F0E8FF] to-[#F2EAFF]">
+          <PricingPreview />
+        </section>
+
+        {/* Flow: violet → warm white */}
+        <div className="h-24 bg-gradient-to-b from-[#F2EAFF] via-[#FFF5F0] to-[#FFF8F5]" />
+
+        <section id="stats" className="py-12 md:py-20 bg-gradient-to-b from-[#FFF8F5] to-[#FFF5F0]">
+          <StatsCounter />
+        </section>
+
+        {/* Flow: warm white → blue for CTA */}
+        <div className="h-24 bg-gradient-to-b from-[#FFF5F0] via-[#EAF0FF] to-[#E0ECFF]" />
+
+        <section id="waitlist" className="py-16 md:py-24 bg-gradient-to-b from-[#E0ECFF] to-[#F2F2F7]">
+          <WaitlistForm />
+        </section>
+
+        <Footer />
+      </main>
+
+      <CookieConsent />
     </>
   );
 }

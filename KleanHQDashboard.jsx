@@ -1,16 +1,16 @@
 /**
- * FieldPay Dashboard — UI Prototype v1.0
+ * KleanHQ Dashboard — UI Prototype v1.0
  * ─────────────────────────────────────────────────────────────────
  * Claude Code setup:
- *   npx create-next-app@latest fieldpay --app --tailwind --typescript
- *   cd fieldpay
- *   cp FieldPayDashboard.jsx app/page.jsx   (or src/app/page.jsx)
+ *   npx create-next-app@latest kleanhq --app --tailwind --typescript
+ *   cd kleanhq
+ *   cp KleanHQDashboard.jsx app/page.jsx   (or src/app/page.jsx)
  *   npm run dev → open http://localhost:3000
  *
  * Or drop into any Vite/React project:
- *   npm create vite@latest fieldpay -- --template react
- *   cd fieldpay && npm install
- *   cp FieldPayDashboard.jsx src/App.jsx
+ *   npm create vite@latest kleanhq -- --template react
+ *   cd kleanhq && npm install
+ *   cp KleanHQDashboard.jsx src/App.jsx
  *   Update src/main.jsx: import App from './App'
  *   npm run dev
  *
@@ -165,7 +165,7 @@ function Dialer({ onClose }) {
 }
 
 // ── MAIN APP ──────────────────────────────────────────────────────
-export default function FieldPayDashboard() {
+export default function KleanHQDashboard() {
   const [pg, setPg]         = useState("dashboard");
   const [dial, setDial]     = useState(false);
   const [lv, setLv]         = useState("board");        // leads view: board | list
@@ -245,7 +245,7 @@ export default function FieldPayDashboard() {
         <div style={{ display:"flex", alignItems:"center", gap:10, padding:"2px 8px", marginBottom:28 }}>
           <div style={{ width:34, height:34, background:"#fff", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🌿</div>
           <div>
-            <div style={{ fontWeight:800, fontSize:14, color:"#fff", letterSpacing:-0.3 }}>FieldPay</div>
+            <div style={{ fontWeight:800, fontSize:14, color:"#fff", letterSpacing:-0.3 }}>KleanHQ</div>
             <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:1 }}>John's Lawn Care</div>
           </div>
         </div>

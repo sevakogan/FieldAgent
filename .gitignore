@@ -6,3 +6,4 @@ firebase-debug.log
 tsconfig.tsbuildinfo
 next-env.d.ts
 .vercel
+.DS_Store

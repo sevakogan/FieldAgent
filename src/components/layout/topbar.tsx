@@ -15,7 +15,7 @@ const PAGE_TITLES: Record<string, string> = {
 export function Topbar() {
   const pathname = usePathname();
   const { open } = useDialer();
-  const title = PAGE_TITLES[pathname] ?? "FieldPay";
+  const title = PAGE_TITLES[pathname] ?? "KleanHQ";
 
   return (
     <header className="bg-white/80 backdrop-blur-xl border-b border-[#E5E5EA] px-5 md:px-7 py-3 flex items-center justify-between sticky top-0 z-40">

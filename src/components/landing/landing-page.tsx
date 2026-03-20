@@ -395,7 +395,7 @@ export function LandingContent() {
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl backdrop-saturate-150 border-b border-black/[0.04]">
         <div className="max-w-[980px] mx-auto px-6 h-12 flex items-center justify-between">
           <Link href="/" className="font-semibold text-[21px] tracking-[-0.02em] text-[#1d1d1f] no-underline">
-            FieldPay
+            KleanHQ
           </Link>
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-xs text-[#1d1d1f]/60 hover:text-[#1d1d1f] transition-colors no-underline">Features</a>
@@ -472,7 +472,7 @@ export function LandingContent() {
             Built for every field service.
           </h2>
           <p className="text-[#86868b] text-lg md:text-[21px] leading-[1.38] text-center max-w-[500px] mx-auto mb-14">
-            If you go to the job, FieldPay goes with you.
+            If you go to the job, KleanHQ goes with you.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {INDUSTRIES.map((ind) => (
@@ -549,11 +549,11 @@ export function LandingContent() {
         </div>
       </section>
 
-      {/* Why FieldPay */}
+      {/* Why KleanHQ */}
       <section className="bg-white py-24 md:py-32">
         <div className="max-w-[980px] mx-auto px-6">
           <h2 className="font-semibold text-[40px] md:text-[56px] leading-[1.07] tracking-[-0.035em] text-[#1d1d1f] text-center mb-4">
-            Why FieldPay.
+            Why KleanHQ.
           </h2>
           <p className="text-[#86868b] text-lg md:text-[21px] leading-[1.38] text-center max-w-[500px] mx-auto mb-16">
             Built by operators, for operators.

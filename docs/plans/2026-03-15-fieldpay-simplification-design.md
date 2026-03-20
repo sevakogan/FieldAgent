@@ -1,11 +1,11 @@
-# FieldPay Mobile-First Simplification Design
+# KleanHQ Mobile-First Simplification Design
 
 **Date:** 2026-03-15
 **Status:** Approved
 
 ## Goal
 
-Simplify FieldPay from 8 pages to 5, reduce client JS bundle by ~37%, and optimize for mobile-first field workers.
+Simplify KleanHQ from 8 pages to 5, reduce client JS bundle by ~37%, and optimize for mobile-first field workers.
 
 ## Navigation Change
 

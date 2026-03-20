@@ -1,29 +1,56 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-brand:           #007AFF;   /* iOS blue */
-  --color-brand-dark:      #1C1C1E;   /* iOS systemBackground dark */
-  --color-ios-bg:          #F2F2F7;   /* iOS grouped background */
+  --color-brand:           #007AFF;
+  --color-brand-dark:      #1C1C1E;
+  --color-ios-bg:          #F2F2F7;
   --color-ios-surface:     #FFFFFF;
   --color-ios-separator:   #E5E5EA;
   --color-ios-green:       #34C759;
   --color-ios-red:         #FF3B30;
   --color-ios-orange:      #FF9500;
   --color-ios-label:       #000000;
-  --color-ios-label2:      #636366;   /* secondary label */
-  --color-ios-label3:      #AEAEB2;   /* tertiary label */
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  --color-ios-label2:      #636366;
+  --color-ios-label3:      #AEAEB2;
+  --color-secondary:       #AF52DE;
+  --color-coral:           #FF6B6B;
+  --color-mint:            #5AC8FA;
+  --color-peach:           #FF9F0A;
+  --color-yellow:          #FFD60A;
+  --color-rose:            #FF2D55;
+  --color-pink:            #FF6B9D;
+  --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-heading: "Outfit", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+:root {
+  --gradient-brand: linear-gradient(135deg, #5AC8FA, #007AFF, #AF52DE, #FF6B9D);
 }
 
 body {
   background-color: #F2F2F7;
-  color: #000000;
+  color: #1C1C1E;
   -webkit-font-smoothing: antialiased;
+  background-image: linear-gradient(
+    135deg,
+    #F2F2F7 0%,
+    #E6F6FE 15%,
+    #E8F0FE 30%,
+    #F0EAFF 45%,
+    #FFEFF4 60%,
+    #E6F6FE 75%,
+    #F2F2F7 100%
+  );
+  background-size: 400% 400%;
+  animation: bodyGradientShift 30s ease-in-out infinite;
 }
 
 /* iOS-style hairline scrollbar */
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-thumb { background: #C7C7CC; border-radius: 3px; }
+
+/* Smooth scroll */
+html { scroll-behavior: smooth; }
 
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(6px); }
@@ -40,6 +67,82 @@ body {
   to   { opacity: 1; transform: scale(1); }
 }
 
+/* Marquee animation for integrations */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Mesh gradient animation */
+@keyframes mesh-shift {
+  0%, 100% { background-position: 0% 50%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+}
+
+/* Float animation for icons */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(180deg); }
+}
+
+/* Gradient border rotation */
+@keyframes gradient-rotate {
+  from { --angle: 0deg; }
+  to { --angle: 360deg; }
+}
+
+/* Body background animation */
+@keyframes bodyGradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  25% { background-position: 50% 0%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 100%; }
+}
+
+/* Shimmer effect */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Color pulse */
+@keyframes colorPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Gradient text animation */
+@keyframes gradientText {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Glow pulse */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(0,122,255,0.3), 0 0 60px rgba(175,82,222,0.15); }
+  50% { box-shadow: 0 0 40px rgba(0,122,255,0.5), 0 0 80px rgba(175,82,222,0.3); }
+}
+
 .animate-fade-in    { animation: fade-in 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 .animate-slide-up   { animation: slide-up 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
 .animate-scale-in   { animation: ios-scale-in 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+.animate-marquee    { animation: marquee 30s linear infinite; }
+.animate-float      { animation: float 20s ease-in-out infinite; }
+.animate-shimmer    { animation: shimmer 3s linear infinite; }
+.animate-glow-pulse { animation: glowPulse 3s ease-in-out infinite; }
+
+/* Logo glow pulse */
+@keyframes logoGlow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.08); }
+}
+.animate-logo-glow { animation: logoGlow 3s ease-in-out infinite; }
+.animate-gradient-text {
+  background-size: 200% auto;
+  animation: gradientText 4s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

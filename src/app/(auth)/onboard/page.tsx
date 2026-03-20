@@ -70,7 +70,7 @@ export default function OnboardPage() {
           <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl mx-auto mb-4">
             {selectedConfig?.icon ?? "🌿"}
           </div>
-          <h1 className="font-black text-2xl tracking-tight">Welcome to FieldPay</h1>
+          <h1 className="font-black text-2xl tracking-tight">Welcome to KleanHQ</h1>
           <p className="text-sm text-gray-400 mt-1">
             {step === 1 ? "What type of business?" : "Set up your business"}
           </p>

@@ -1,4 +1,4 @@
-# FieldPay CRM — Implementation Plan (Phase 1)
+# KleanHQ CRM — Implementation Plan (Phase 1)
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -8,21 +8,21 @@
 
 **Tech Stack:** Next.js 16.1.6, React 19, TypeScript, Tailwind v4, Supabase SSR (`@supabase/ssr`), Vitest + Testing Library
 
-**Design doc:** `docs/plans/2026-03-06-fieldpay-design.md`
-**Prototype reference:** `FieldPayDashboard.jsx` (inline-styles prototype — use as visual spec only)
+**Design doc:** `docs/plans/2026-03-06-kleanhq-design.md`
+**Prototype reference:** `KleanHQDashboard.jsx` (inline-styles prototype — use as visual spec only)
 
 ---
 
 ## Task 1: Scaffold Next.js Project
 
 **Files:**
-- Create: `/Users/seva/Documents/Claude - Code/FieldPay/` (entire project)
+- Create: `/Users/seva/Documents/Claude - Code/KleanHQ/` (entire project)
 
 **Step 1: Create Next.js app**
 
 ```bash
 cd "/Users/seva/Documents/Claude - Code"
-npx create-next-app@latest FieldPay --app --tailwind --typescript --src-dir --no-import-alias --eslint
+npx create-next-app@latest KleanHQ --app --tailwind --typescript --src-dir --no-import-alias --eslint
 ```
 
 When prompted, accept defaults. The `--no-import-alias` flag is fine — we'll configure `@/*` manually.
@@ -30,7 +30,7 @@ When prompted, accept defaults. The `--no-import-alias` flag is fine — we'll c
 **Step 2: Verify scaffolding works**
 
 ```bash
-cd "/Users/seva/Documents/Claude - Code/FieldPay"
+cd "/Users/seva/Documents/Claude - Code/KleanHQ"
 npm run build
 ```
 
@@ -573,7 +573,7 @@ git commit -m "feat: add TypeScript types and utility functions"
 
 File: `supabase-schema.sql`:
 ```sql
--- FieldPay CRM Schema
+-- KleanHQ CRM Schema
 -- Run this in Supabase SQL Editor
 
 -- Enable UUID extension
@@ -1013,7 +1013,7 @@ export function Sidebar({ mrr, clientCount, newLeadCount, onOpenDialer }: Sideba
           🌿
         </div>
         <div>
-          <div className="font-extrabold text-sm text-white tracking-tight">FieldPay</div>
+          <div className="font-extrabold text-sm text-white tracking-tight">KleanHQ</div>
           <div className="text-[11px] text-white/30 mt-0.5">John&apos;s Lawn Care</div>
         </div>
       </div>
@@ -1090,7 +1090,7 @@ interface TopbarProps {
 
 export function Topbar({ onOpenDialer }: TopbarProps) {
   const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] || "FieldPay";
+  const title = PAGE_TITLES[pathname] || "KleanHQ";
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -1218,7 +1218,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FieldPay — Field Service CRM",
+  title: "KleanHQ — Field Service CRM",
   description: "Manage leads, clients, jobs, and revenue for your field service business.",
 };
 

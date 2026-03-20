@@ -1,12 +1,35 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/auth", "/invite", "/pricing", "/privacy", "/terms"];
+// ── Rate Limiting ────────────────────────────────────────────────
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const RATE_LIMIT_MAX = 5;
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+interface RateLimitEntry {
+  readonly count: number;
+  readonly resetAt: number;
+}
 
-  const supabase = createServerClient(
+const rateLimitMap = new Map<string, RateLimitEntry>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const existing = rateLimitMap.get(ip);
+
+  if (!existing || now > existing.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+
+  if (existing.count >= RATE_LIMIT_MAX) return true;
+
+  rateLimitMap.set(ip, { ...existing, count: existing.count + 1 });
+  return false;
+}
+
+// ── Supabase Client Factory ──────────────────────────────────────
+function createMiddlewareClient(request: NextRequest, response: NextResponse) {
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -15,83 +38,65 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
+          for (const { name, value } of cookiesToSet) {
+            request.cookies.set(name, value);
+          }
+          for (const { name, value, options } of cookiesToSet) {
+            response.cookies.set(name, value, options);
+          }
         },
       },
     },
   );
+}
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+// ── Middleware ────────────────────────────────────────────────────
+const ADMIN_EMAIL = "seva@thelevelteam.com";
 
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Allow public paths (exact match for "/" to avoid matching everything)
-  const isPublic = pathname === "/" || PUBLIC_PATHS.slice(1).some((p) => pathname.startsWith(p));
-  if (isPublic) {
-    if (user && pathname === "/login") {
+  // Rate limit signup API
+  if (pathname === "/api/waitlist/signup") {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      request.headers.get("x-real-ip") ??
+      "unknown";
+
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 },
+      );
+    }
+    return NextResponse.next();
+  }
+
+  // Admin route protection (except login page)
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    const supabaseResponse = NextResponse.next({ request });
+    const supabase = createMiddlewareClient(request, supabaseResponse);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
       const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
+      url.pathname = "/admin/login";
       return NextResponse.redirect(url);
     }
+
     return supabaseResponse;
   }
 
-  // Unauthenticated → login
-  if (!user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
-
-  // Allow onboarding and API routes
-  if (pathname.startsWith("/onboard") || pathname.startsWith("/api")) {
-    return supabaseResponse;
-  }
-
-  // Fetch profile for role-based routing
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  // No profile → onboarding
-  if (!profile) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/onboard";
-    return NextResponse.redirect(url);
-  }
-
-  const role = profile.role;
-
-  // Role-based route protection
-  if (role === "crew") {
-    if (!pathname.startsWith("/crew") && !pathname.startsWith("/settings")) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/crew";
-      return NextResponse.redirect(url);
-    }
-  } else if (role === "client") {
-    if (!pathname.startsWith("/client") && !pathname.startsWith("/settings")) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/client";
-      return NextResponse.redirect(url);
-    }
-  }
-
-  return supabaseResponse;
+  // Everything else passes through (waitlist is public)
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/api/waitlist/signup",
+    "/admin/:path*",
   ],
 };

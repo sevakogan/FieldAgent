@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260" fill="none">
+  <defs>
+    <linearGradient id="dropGrad" x1="100" y1="0" x2="100" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5AC8FA"/>
+      <stop offset="35%" stop-color="#007AFF"/>
+      <stop offset="65%" stop-color="#AF52DE"/>
+      <stop offset="100%" stop-color="#FF6B9D"/>
+    </linearGradient>
+    <linearGradient id="innerGrad" x1="100" y1="100" x2="100" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#AF52DE"/>
+      <stop offset="100%" stop-color="#FF6B9D"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer drop shape -->
+  <path d="M100 8C100 8 30 110 30 165C30 204 61 235 100 235C139 235 170 204 170 165C170 110 100 8 100 8Z" stroke="url(#dropGrad)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Inner swirl/droplet -->
+  <path d="M100 120C100 120 72 155 72 175C72 190 84 200 100 200C116 200 128 188 128 175C128 158 108 145 100 120Z" stroke="url(#innerGrad)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

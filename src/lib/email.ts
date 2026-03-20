@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const FROM_EMAIL = process.env.FROM_EMAIL ?? "FieldPay <noreply@fieldpay.app>";
+const FROM_EMAIL = process.env.FROM_EMAIL ?? "KleanHQ <noreply@kleanhq.com>";
 
 let _resend: Resend | null = null;
 
@@ -49,7 +49,7 @@ export function welcomeEmailHtml(email: string): string {
   <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:20px;overflow:hidden;">
     <div style="background:#1d1d1f;padding:40px 32px;text-align:center;">
       <div style="font-size:36px;margin-bottom:12px;">🌿</div>
-      <h1 style="color:#fff;font-size:28px;font-weight:800;margin:0;">Welcome to FieldPay</h1>
+      <h1 style="color:#fff;font-size:28px;font-weight:800;margin:0;">Welcome to KleanHQ</h1>
     </div>
     <div style="padding:32px;">
       <p style="color:#1d1d1f;font-size:16px;line-height:1.6;margin:0 0 16px;">
@@ -64,7 +64,7 @@ export function welcomeEmailHtml(email: string): string {
         <li>Invite your first client</li>
       </ol>
       <div style="text-align:center;margin:32px 0;">
-        <a href="https://fieldpay-live.vercel.app/onboard"
+        <a href="https://kleanhq.com/onboard"
            style="background:#0071e3;color:#fff;text-decoration:none;padding:14px 32px;border-radius:980px;font-weight:600;font-size:16px;display:inline-block;">
           Get Started
         </a>
@@ -75,7 +75,7 @@ export function welcomeEmailHtml(email: string): string {
     </div>
     <div style="border-top:1px solid #f0f0f0;padding:20px 32px;text-align:center;">
       <p style="color:#86868b;font-size:12px;margin:0;">
-        © 2026 TheLevelTeam LLC · FieldPay
+        © 2026 TheLevelTeam LLC · KleanHQ
       </p>
     </div>
   </div>

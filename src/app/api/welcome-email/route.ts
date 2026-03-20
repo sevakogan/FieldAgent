@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     const result = await sendEmail({
       to: email,
-      subject: "Welcome to FieldPay — let's get you set up",
+      subject: "Welcome to KleanHQ — let's get you set up",
       html: welcomeEmailHtml(email),
     });
 

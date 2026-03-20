@@ -3,12 +3,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "FieldPay — Field Service CRM",
-    template: "%s | FieldPay",
+    default: "KleanHQ — Field Service CRM",
+    template: "%s | KleanHQ",
   },
   description:
     "Schedule jobs, send invoices, and manage your crew. Built for lawn care, pool service, property cleaning, pressure washing, and more.",
-  metadataBase: new URL("https://fieldpay.app"),
+  metadataBase: new URL("https://kleanhq.com"),
 };
 
 export const viewport: Viewport = {
