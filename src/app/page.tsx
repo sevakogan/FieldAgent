@@ -103,6 +103,15 @@ export default function LandingPage() {
         <Footer />
       </main>
 
+      {/* Hidden admin access */}
+      <a
+        href="/gate"
+        className="fixed bottom-4 right-4 z-50 w-10 h-10 rounded-full bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100"
+        aria-label="Admin"
+      >
+        <span className="text-xs text-black/30">⚙</span>
+      </a>
+
       <CookieConsent />
     </>
   );

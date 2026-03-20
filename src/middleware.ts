@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { checkGate } from "@/lib/gate";
 
 // ── Rate Limiting ────────────────────────────────────────────────
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -72,8 +73,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Admin route protection (except login page)
-  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+  // Waitlist admin route protection (except login page)
+  if (pathname.startsWith("/waitlist-admin") && pathname !== "/waitlist-admin/login") {
     const supabaseResponse = NextResponse.next({ request });
     const supabase = createMiddlewareClient(request, supabaseResponse);
 
@@ -83,11 +84,22 @@ export async function middleware(request: NextRequest) {
 
     if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
       const url = request.nextUrl.clone();
-      url.pathname = "/admin/login";
+      url.pathname = "/waitlist-admin/login";
       return NextResponse.redirect(url);
     }
 
     return supabaseResponse;
+  }
+
+  // Platform gate — require password cookie for all platform routes
+  const platformPrefixes = ["/dashboard", "/worker", "/portal", "/reseller"]
+  if (platformPrefixes.some((prefix) => pathname.startsWith(prefix))) {
+    if (!checkGate(request)) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/gate"
+      return NextResponse.redirect(url)
+    }
+    return NextResponse.next()
   }
 
   // Everything else passes through (waitlist is public)
@@ -97,6 +109,10 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/api/waitlist/signup",
-    "/admin/:path*",
+    "/waitlist-admin/:path*",
+    "/dashboard/:path*",
+    "/worker/:path*",
+    "/portal/:path*",
+    "/reseller/:path*",
   ],
 };
