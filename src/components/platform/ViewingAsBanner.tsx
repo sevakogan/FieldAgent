@@ -3,17 +3,30 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getViewAsCompany, clearViewAsCompany, type CompanyOption } from '@/lib/actions/godmode'
+import { getOrCreateCompany } from '@/lib/actions/bootstrap'
 
 export default function ViewingAsBanner() {
   const router = useRouter()
   const [company, setCompany] = useState<CompanyOption | null>(null)
+  const [isOwnCompany, setIsOwnCompany] = useState(false)
   const [clearing, setClearing] = useState(false)
 
   useEffect(() => {
-    getViewAsCompany().then(setCompany)
+    async function load() {
+      const [viewAs, ownData] = await Promise.all([
+        getViewAsCompany(),
+        getOrCreateCompany(),
+      ])
+      setCompany(viewAs)
+      if (viewAs && ownData.company.id === viewAs.id) {
+        setIsOwnCompany(true)
+      }
+    }
+    load()
   }, [])
 
-  if (!company) return null
+  // Don't show banner for own company or when not viewing as anyone
+  if (!company || isOwnCompany) return null
 
   const handleExit = async () => {
     setClearing(true)

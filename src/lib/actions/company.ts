@@ -145,6 +145,7 @@ export async function getCalendarJobs(year: number, month: number): Promise<Acti
   scheduled_time: string | null
   address_street: string
   worker_name: string | null
+  price: number | null
 }[]>> {
   try {
     const companyId = await getCompanyId()
@@ -155,7 +156,7 @@ export async function getCalendarJobs(year: number, month: number): Promise<Acti
 
     const { data: jobs, error } = await supabase
       .from('jobs')
-      .select('id, service_type_id, status, scheduled_date, scheduled_time, assigned_worker_id, address_id')
+      .select('id, service_type_id, status, scheduled_date, scheduled_time, assigned_worker_id, address_id, price')
       .eq('company_id', companyId)
       .gte('scheduled_date', startDate)
       .lte('scheduled_date', endDate)
@@ -196,6 +197,7 @@ export async function getCalendarJobs(year: number, month: number): Promise<Acti
       scheduled_time: j.scheduled_time,
       address_street: addressMap.get(j.address_id) ?? '',
       worker_name: j.assigned_worker_id ? (workerMap.get(j.assigned_worker_id) ?? null) : null,
+      price: j.price ?? null,
     }))
 
     return { success: true, data: rows }
