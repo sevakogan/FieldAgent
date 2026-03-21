@@ -266,6 +266,45 @@ export async function createJob(data: {
       return { success: false, error: `Failed to create job: ${error?.message}` }
     }
 
+    // Auto-create pending invoice for this job
+    try {
+      // Get the client_id from the address
+      const { data: address } = await supabase
+        .from('addresses')
+        .select('client_id')
+        .eq('id', data.address_id)
+        .single()
+
+      if (address?.client_id) {
+        // Generate invoice number: INV-{timestamp}
+        const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`
+
+        await supabase.from('invoices').insert({
+          company_id: companyId,
+          client_id: address.client_id,
+          job_id: job.id,
+          invoice_number: invoiceNumber,
+          subtotal: data.price,
+          expenses_total: 0,
+          tax_amount: 0,
+          tip_amount: 0,
+          processing_fee: 0,
+          total: data.price,
+          status: 'pending',
+          due_date: data.scheduled_date,
+          items: JSON.stringify([{
+            description: 'Service',
+            quantity: 1,
+            unit_price: data.price,
+            total: data.price,
+          }]),
+        })
+      }
+    } catch (invoiceErr) {
+      // Log but don't fail the job creation
+      console.error('Auto-invoice creation failed:', invoiceErr)
+    }
+
     return { success: true, data: { id: job.id } }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to create job' }
@@ -322,14 +361,55 @@ export async function updateJobStatus(id: string, status: string): Promise<Actio
     const companyId = await getCompanyId()
     const supabase = createAdminClient()
 
+    // Build update with timestamp fields
+    const updateData: Record<string, unknown> = { status }
+    const now = new Date().toISOString()
+
+    if (status === 'driving') updateData.drive_started_at = now
+    if (status === 'arrived') updateData.arrived_at = now
+    if (status === 'in_progress') updateData.started_at = now
+    if (status === 'completed') updateData.ended_at = now
+
     const { error } = await supabase
       .from('jobs')
-      .update({ status })
+      .update(updateData)
       .eq('id', id)
       .eq('company_id', companyId)
 
     if (error) {
       return { success: false, error: `Failed to update job status: ${error.message}` }
+    }
+
+    // When job moves to pending_review → invoice stays pending (waiting for client approval)
+    // When job is completed → update the invoice total with final amounts (expenses, tips)
+    if (status === 'completed' || status === 'charged') {
+      try {
+        // Get job details for final total
+        const { data: job } = await supabase
+          .from('jobs')
+          .select('price, expenses_total, tax_amount, tip_amount')
+          .eq('id', id)
+          .single()
+
+        if (job) {
+          const finalTotal = (job.price ?? 0) + (job.expenses_total ?? 0) + (job.tax_amount ?? 0) + (job.tip_amount ?? 0)
+
+          await supabase
+            .from('invoices')
+            .update({
+              subtotal: job.price,
+              expenses_total: job.expenses_total ?? 0,
+              tax_amount: job.tax_amount ?? 0,
+              tip_amount: job.tip_amount ?? 0,
+              total: finalTotal,
+              ...(status === 'charged' ? { status: 'paid', paid_at: now } : {}),
+            })
+            .eq('job_id', id)
+            .eq('status', 'pending')
+        }
+      } catch (invoiceErr) {
+        console.error('Invoice update on job status change failed:', invoiceErr)
+      }
     }
 
     return { success: true }
