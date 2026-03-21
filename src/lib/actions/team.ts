@@ -174,6 +174,13 @@ export async function getTeamMember(id: string): Promise<ActionResult<TeamMember
   }
 }
 
+export type ServicePayConfig = {
+  service_id: string
+  enabled: boolean
+  pay_type: string
+  pay_rate: number | null
+}
+
 export async function inviteTeamMember(data: {
   full_name: string
   email: string
@@ -181,6 +188,7 @@ export async function inviteTeamMember(data: {
   role: 'lead' | 'worker'
   pay_type?: string
   pay_rate?: number
+  service_pay?: ServicePayConfig[]
 }): Promise<ActionResult<{ id: string }>> {
   try {
     if (!data.full_name.trim()) {
@@ -232,6 +240,12 @@ export async function inviteTeamMember(data: {
         pay_type: data.pay_type ?? null,
         pay_rate: data.pay_rate ?? null,
         status: 'invited',
+        availability: data.service_pay ? { services: Object.fromEntries(
+          data.service_pay.filter(s => s.enabled).map(s => [s.service_id, {
+            pay_type: s.pay_type,
+            pay_rate: s.pay_rate,
+          }])
+        ) } : null,
       })
       .select('id')
       .single()
