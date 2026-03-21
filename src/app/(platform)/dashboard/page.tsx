@@ -1,46 +1,128 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-
-const STATS = [
-  { label: 'Jobs Today', value: '12', trend: '+3', color: '#007AFF' },
-  { label: 'Revenue (MTD)', value: '$8,420', trend: '+12%', color: '#34C759' },
-  { label: 'Pending Reviews', value: '5', trend: '-2', color: '#AF52DE' },
-  { label: 'Active Workers', value: '4', trend: '', color: '#5AC8FA' },
-]
-
-const RECENT_JOBS = [
-  { id: '1', address: '123 Ocean Dr, Miami Beach', service: 'Pool Cleaning', worker: 'Carlos M.', status: 'in_progress', time: '9:00 AM' },
-  { id: '2', address: '456 Collins Ave, Miami', service: 'Lawn Care', worker: 'Miguel R.', status: 'scheduled', time: '10:30 AM' },
-  { id: '3', address: '789 Brickell Key', service: 'Deep Clean', worker: 'Ana S.', status: 'completed', time: '8:00 AM' },
-  { id: '4', address: '321 Coral Way', service: 'Pressure Wash', worker: 'Carlos M.', status: 'pending_review', time: '11:00 AM' },
-  { id: '5', address: '555 NE 15th St', service: 'Pool Cleaning', worker: 'Miguel R.', status: 'scheduled', time: '1:00 PM' },
-]
+import Link from 'next/link'
+import {
+  getDashboardStats,
+  getRecentJobs,
+  getRecentActivity,
+  type DashboardStats,
+  type RecentJob,
+  type ActivityEntry,
+} from '@/lib/actions/dashboard'
 
 const STATUS_COLORS: Record<string, string> = {
-  scheduled: '#007AFF', in_progress: '#FFD60A', completed: '#34C759',
-  pending_review: '#AF52DE', cancelled: '#FF6B6B',
+  scheduled: '#007AFF',
+  driving: '#FF9F0A',
+  arrived: '#FF9F0A',
+  in_progress: '#FFD60A',
+  completed: '#34C759',
+  charged: '#34C759',
+  pending_review: '#AF52DE',
+  cancelled: '#FF6B6B',
+  requested: '#8E8E93',
+  approved: '#5AC8FA',
+  revision_needed: '#FF6B6B',
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  scheduled: 'Scheduled', in_progress: 'In Progress', completed: 'Completed',
-  pending_review: 'Pending Review', cancelled: 'Cancelled',
+  scheduled: 'Scheduled',
+  driving: 'Driving',
+  arrived: 'Arrived',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  charged: 'Charged',
+  pending_review: 'Pending Review',
+  cancelled: 'Cancelled',
+  requested: 'Requested',
+  approved: 'Approved',
+  revision_needed: 'Revision Needed',
 }
 
-const ACTIVITY = [
-  { text: 'Payment received from Maria G. — $150.00', time: '2 min ago' },
-  { text: 'Carlos M. completed job at 789 Brickell Key', time: '15 min ago' },
-  { text: 'New client added: James Wilson', time: '1 hr ago' },
-  { text: 'Invoice #1082 sent to Beachside Rentals', time: '2 hrs ago' },
-]
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+}
+
+function formatTime(time: string | null): string {
+  if (!time) return ''
+  try {
+    const [hours, minutes] = time.split(':')
+    const h = parseInt(hours, 10)
+    const ampm = h >= 12 ? 'PM' : 'AM'
+    const h12 = h % 12 || 12
+    return `${h12}:${minutes} ${ampm}`
+  } catch {
+    return time
+  }
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hr${hours > 1 ? 's' : ''} ago`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days > 1 ? 's' : ''} ago`
+}
 
 export default function DashboardOverview() {
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [jobs, setJobs] = useState<RecentJob[]>([])
+  const [activity, setActivity] = useState<ActivityEntry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const [statsResult, jobsResult, activityResult] = await Promise.all([
+        getDashboardStats(),
+        getRecentJobs(),
+        getRecentActivity(),
+      ])
+
+      if (statsResult.success && statsResult.data) {
+        setStats(statsResult.data)
+      }
+      if (jobsResult.success && jobsResult.data) {
+        setJobs(jobsResult.data)
+      }
+      if (activityResult.success && activityResult.data) {
+        setActivity(activityResult.data)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const statCards = [
+    { label: 'Jobs Today', value: stats?.jobsToday ?? 0, color: '#007AFF', format: (v: number) => String(v) },
+    { label: 'Revenue (MTD)', value: stats?.revenueMTD ?? 0, color: '#34C759', format: formatCurrency },
+    { label: 'Pending Reviews', value: stats?.pendingReviews ?? 0, color: '#AF52DE', format: (v: number) => String(v) },
+    { label: 'Active Workers', value: stats?.activeWorkers ?? 0, color: '#5AC8FA', format: (v: number) => String(v) },
+  ]
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-[#1C1C1E] mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-[#1C1C1E]">Dashboard</h1>
+        <div className="flex gap-2">
+          <Link href="/dashboard/jobs/new" className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors">
+            + New Job
+          </Link>
+          <Link href="/dashboard/clients/new" className="px-4 py-2 bg-white text-[#007AFF] border border-[#007AFF] rounded-xl text-sm font-medium hover:bg-[#007AFF]/5 transition-colors">
+            + Add Client
+          </Link>
+          <Link href="/dashboard/quotes/new" className="px-4 py-2 bg-white text-[#8E8E93] border border-[#E5E5EA] rounded-xl text-sm font-medium hover:bg-[#F2F2F7] transition-colors">
+            + Quote
+          </Link>
+        </div>
+      </div>
 
+      {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {STATS.map((stat, i) => (
+        {statCards.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
@@ -49,47 +131,110 @@ export default function DashboardOverview() {
             className="bg-white rounded-2xl p-4 border border-[#E5E5EA]"
           >
             <p className="text-sm text-[#8E8E93] mb-1">{stat.label}</p>
-            <p className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
-            {stat.trend && <p className="text-xs text-[#34C759] mt-1">{stat.trend}</p>}
+            {loading ? (
+              <div className="h-8 w-20 bg-[#F2F2F7] rounded animate-pulse" />
+            ) : (
+              <p className="text-2xl font-bold" style={{ color: stat.color }}>
+                {stat.format(stat.value)}
+              </p>
+            )}
           </motion.div>
         ))}
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
+        {/* Today's Jobs */}
         <div className="md:col-span-2 bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
           <div className="p-4 border-b border-[#E5E5EA] flex justify-between items-center">
             <h2 className="font-semibold text-[#1C1C1E]">Today&apos;s Jobs</h2>
-            <a href="/dashboard/jobs" className="text-sm text-[#007AFF]">View All</a>
+            <Link href="/dashboard/jobs" className="text-sm text-[#007AFF]">
+              View All
+            </Link>
           </div>
           <div className="divide-y divide-[#E5E5EA]">
-            {RECENT_JOBS.map((job) => (
-              <a key={job.id} href={`/dashboard/jobs/${job.id}`} className="flex items-center justify-between p-4 hover:bg-[#F2F2F7] transition-colors">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-[#1C1C1E]">{job.address}</p>
-                  <p className="text-xs text-[#8E8E93]">{job.service} · {job.worker} · {job.time}</p>
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-4 flex items-center gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-48 bg-[#F2F2F7] rounded animate-pulse" />
+                    <div className="h-3 w-32 bg-[#F2F2F7] rounded animate-pulse" />
+                  </div>
+                  <div className="h-6 w-20 bg-[#F2F2F7] rounded-full animate-pulse" />
                 </div>
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: STATUS_COLORS[job.status] + '20', color: STATUS_COLORS[job.status] }}>
-                  {STATUS_LABELS[job.status]}
-                </span>
-              </a>
-            ))}
+              ))
+            ) : jobs.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-[#8E8E93] text-sm">No jobs scheduled for today</p>
+                <Link
+                  href="/dashboard/jobs"
+                  className="text-[#007AFF] text-sm mt-2 inline-block"
+                >
+                  View all jobs
+                </Link>
+              </div>
+            ) : (
+              jobs.map((job) => (
+                <Link
+                  key={job.id}
+                  href={`/dashboard/jobs/${job.id}`}
+                  className="flex items-center justify-between p-4 hover:bg-[#F2F2F7] transition-colors"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-[#1C1C1E]">{job.address_street}</p>
+                    <p className="text-xs text-[#8E8E93]">
+                      {job.service_name}
+                      {job.worker_name ? ` \u00B7 ${job.worker_name}` : ''}
+                      {job.scheduled_time ? ` \u00B7 ${formatTime(job.scheduled_time)}` : ''}
+                    </p>
+                  </div>
+                  <span
+                    className="text-xs px-2.5 py-1 rounded-full font-medium"
+                    style={{
+                      backgroundColor: (STATUS_COLORS[job.status] ?? '#8E8E93') + '20',
+                      color: STATUS_COLORS[job.status] ?? '#8E8E93',
+                    }}
+                  >
+                    {STATUS_LABELS[job.status] ?? job.status}
+                  </span>
+                </Link>
+              ))
+            )}
           </div>
         </div>
 
+        {/* Recent Activity */}
         <div className="bg-white rounded-2xl border border-[#E5E5EA]">
           <div className="p-4 border-b border-[#E5E5EA]">
             <h2 className="font-semibold text-[#1C1C1E]">Recent Activity</h2>
           </div>
           <div className="p-4 space-y-4">
-            {ACTIVITY.map((item, i) => (
-              <div key={i} className="flex gap-3">
-                <div className="w-2 h-2 rounded-full bg-[#007AFF] mt-1.5 shrink-0" />
-                <div>
-                  <p className="text-sm text-[#1C1C1E]">{item.text}</p>
-                  <p className="text-xs text-[#AEAEB2]">{item.time}</p>
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="w-2 h-2 rounded-full bg-[#F2F2F7] mt-1.5 shrink-0" />
+                  <div className="space-y-1 flex-1">
+                    <div className="h-3 w-full bg-[#F2F2F7] rounded animate-pulse" />
+                    <div className="h-2.5 w-16 bg-[#F2F2F7] rounded animate-pulse" />
+                  </div>
                 </div>
+              ))
+            ) : activity.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-[#8E8E93]">No recent activity</p>
               </div>
-            ))}
+            ) : (
+              activity.map((item) => (
+                <div key={item.id} className="flex gap-3">
+                  <div className="w-2 h-2 rounded-full bg-[#007AFF] mt-1.5 shrink-0" />
+                  <div>
+                    <p className="text-sm text-[#1C1C1E]">
+                      {item.action} {item.entity_type}
+                    </p>
+                    <p className="text-xs text-[#AEAEB2]">{timeAgo(item.created_at)}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getWorkerJobDetail, updateWorkerJobStatus } from '@/lib/actions/worker';
+import type { WorkerJobDetail } from '@/lib/actions/worker';
 
 type Step =
   | 'DRIVING'
@@ -43,6 +45,29 @@ const STEP_COLORS: Record<Step, string> = {
   COMPLETE: '#34C759',
 };
 
+// Map DB status to UI step
+function statusToStep(status: string): Step {
+  switch (status) {
+    case 'driving': return 'DRIVING';
+    case 'arrived': return 'ARRIVED';
+    case 'in_progress': return 'IN_PROGRESS';
+    case 'completed':
+    case 'charged': return 'COMPLETE';
+    default: return 'DRIVING';
+  }
+}
+
+// Map UI step to DB status for transitions
+function stepToDbStatus(step: Step): string | null {
+  switch (step) {
+    case 'DRIVING': return 'driving';
+    case 'ARRIVED': return 'arrived';
+    case 'IN_PROGRESS': return 'in_progress';
+    case 'COMPLETE': return 'completed';
+    default: return null;
+  }
+}
+
 interface ChecklistItem {
   readonly id: string;
   readonly label: string;
@@ -54,28 +79,6 @@ interface Expense {
   readonly description: string;
   readonly amount: number;
 }
-
-const MOCK_JOB = {
-  id: 'j-002',
-  clientName: 'Marcus Chen',
-  address: '890 Oak Avenue, Apt 4B, Portland, OR 97205',
-  service: 'Standard Clean - 2BR Apartment',
-  time: '11:30 AM',
-  duration: '2h',
-  amount: 120,
-  notes: 'Please use fragrance-free products. Dog-friendly home.',
-} as const;
-
-const INITIAL_CHECKLIST: readonly ChecklistItem[] = [
-  { id: 'c1', label: 'Vacuum all rooms', checked: false },
-  { id: 'c2', label: 'Mop hard floors', checked: false },
-  { id: 'c3', label: 'Clean kitchen surfaces', checked: false },
-  { id: 'c4', label: 'Sanitize bathrooms', checked: false },
-  { id: 'c5', label: 'Dust all surfaces', checked: false },
-  { id: 'c6', label: 'Empty trash cans', checked: false },
-  { id: 'c7', label: 'Make beds', checked: false },
-  { id: 'c8', label: 'Wipe mirrors & glass', checked: false },
-] as const;
 
 function ProgressBar({ currentStep }: { readonly currentStep: Step }) {
   const currentIndex = STEPS.indexOf(currentStep);
@@ -110,14 +113,25 @@ function ProgressBar({ currentStep }: { readonly currentStep: Step }) {
   );
 }
 
-function DrivingStep({ onNext }: { readonly onNext: () => void }) {
+function DrivingStep({
+  job,
+  onNext,
+}: {
+  readonly job: WorkerJobDetail;
+  readonly onNext: () => void;
+}) {
+  const fullAddress = [job.street, job.unit, job.city, job.state, job.zip].filter(Boolean).join(', ');
+  const durationText = job.estimatedDuration
+    ? `${Math.floor(job.estimatedDuration / 60)}h${job.estimatedDuration % 60 > 0 ? ` ${job.estimatedDuration % 60}m` : ''}`
+    : 'N/A';
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <h3 className="text-sm font-bold text-gray-900 mb-1">Destination</h3>
-        <p className="text-sm text-[#8E8E93] mb-4">{MOCK_JOB.address}</p>
+        <p className="text-sm text-[#8E8E93] mb-4">{fullAddress}</p>
         <a
-          href={`https://maps.apple.com/?daddr=${encodeURIComponent(MOCK_JOB.address)}`}
+          href={`https://maps.apple.com/?daddr=${encodeURIComponent(fullAddress)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 w-full py-3 bg-[#5AC8FA] text-white font-semibold text-sm rounded-xl no-underline hover:opacity-90 transition-opacity"
@@ -133,26 +147,22 @@ function DrivingStep({ onNext }: { readonly onNext: () => void }) {
         <h3 className="text-sm font-bold text-gray-900 mb-1">Job Details</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-[#8E8E93]">Client</span>
-            <span className="font-medium text-gray-900">{MOCK_JOB.clientName}</span>
-          </div>
-          <div className="flex justify-between">
             <span className="text-[#8E8E93]">Service</span>
-            <span className="font-medium text-gray-900">{MOCK_JOB.service}</span>
+            <span className="font-medium text-gray-900">{job.serviceName}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#8E8E93]">Duration</span>
-            <span className="font-medium text-gray-900">{MOCK_JOB.duration}</span>
+            <span className="text-[#8E8E93]">Est. Duration</span>
+            <span className="font-medium text-gray-900">{durationText}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-[#8E8E93]">Pay</span>
-            <span className="font-bold text-gray-900">${MOCK_JOB.amount}</span>
+            <span className="font-bold text-gray-900">${job.price}</span>
           </div>
         </div>
-        {MOCK_JOB.notes && (
+        {job.serviceDescription && (
           <div className="mt-3 p-3 bg-[#FFD60A]/10 rounded-xl">
             <p className="text-xs font-semibold text-[#FFD60A] mb-0.5">Note</p>
-            <p className="text-xs text-gray-700">{MOCK_JOB.notes}</p>
+            <p className="text-xs text-gray-700">{job.serviceDescription}</p>
           </div>
         )}
       </div>
@@ -167,7 +177,15 @@ function DrivingStep({ onNext }: { readonly onNext: () => void }) {
   );
 }
 
-function ArrivedStep({ onNext }: { readonly onNext: () => void }) {
+function ArrivedStep({
+  job,
+  onNext,
+}: {
+  readonly job: WorkerJobDetail;
+  readonly onNext: () => void;
+}) {
+  const fullAddress = [job.street, job.city, job.state].filter(Boolean).join(', ');
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-center">
@@ -178,7 +196,7 @@ function ArrivedStep({ onNext }: { readonly onNext: () => void }) {
           </svg>
         </div>
         <h3 className="text-lg font-bold text-gray-900 mb-1">You&apos;ve Arrived</h3>
-        <p className="text-sm text-[#8E8E93]">{MOCK_JOB.address}</p>
+        <p className="text-sm text-[#8E8E93]">{fullAddress}</p>
       </div>
 
       <button
@@ -211,7 +229,7 @@ function PhotoStep({
       <div className="bg-white rounded-2xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <h3 className="text-sm font-bold text-gray-900 mb-3">{label}</h3>
         <div className="grid grid-cols-3 gap-2 mb-3">
-          {photos.map((p, i) => (
+          {photos.map((p) => (
             <div
               key={p}
               className="aspect-square rounded-xl flex items-center justify-center text-white text-xs font-bold"
@@ -252,8 +270,29 @@ function PhotoStep({
   );
 }
 
-function InProgressStep({ onNext }: { readonly onNext: () => void }) {
-  const [checklist, setChecklist] = useState<readonly ChecklistItem[]>(INITIAL_CHECKLIST);
+function InProgressStep({
+  job,
+  onNext,
+}: {
+  readonly job: WorkerJobDetail;
+  readonly onNext: () => void;
+}) {
+  const rawItems = Array.isArray(job.checklistItems) ? job.checklistItems : [];
+  const initialChecklist: ChecklistItem[] = rawItems.map((item: unknown, i: number) => {
+    if (typeof item === 'string') {
+      return { id: `c-${i}`, label: item, checked: false };
+    }
+    if (typeof item === 'object' && item !== null && 'label' in item) {
+      return { id: `c-${i}`, label: String((item as { label: unknown }).label), checked: false };
+    }
+    return { id: `c-${i}`, label: `Task ${i + 1}`, checked: false };
+  });
+
+  const [checklist, setChecklist] = useState<readonly ChecklistItem[]>(
+    initialChecklist.length > 0
+      ? initialChecklist
+      : [{ id: 'c-0', label: 'Complete service', checked: false }]
+  );
   const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
@@ -425,7 +464,7 @@ function ExpensesStep({ onNext }: { readonly onNext: () => void }) {
   );
 }
 
-function CompleteStep() {
+function CompleteStep({ job }: { readonly job: WorkerJobDetail }) {
   const router = useRouter();
 
   return (
@@ -446,16 +485,16 @@ function CompleteStep() {
 
         <div className="bg-[#F2F2F7] rounded-xl p-4 space-y-2 text-left">
           <div className="flex justify-between text-sm">
-            <span className="text-[#8E8E93]">Client</span>
-            <span className="font-medium text-gray-900">{MOCK_JOB.clientName}</span>
+            <span className="text-[#8E8E93]">Service</span>
+            <span className="font-medium text-gray-900">{job.serviceName}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-[#8E8E93]">Service</span>
-            <span className="font-medium text-gray-900">{MOCK_JOB.service}</span>
+            <span className="text-[#8E8E93]">Address</span>
+            <span className="font-medium text-gray-900">{job.street}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-[#8E8E93]">Earnings</span>
-            <span className="font-bold text-[#34C759]">${MOCK_JOB.amount}</span>
+            <span className="font-bold text-[#34C759]">${job.price}</span>
           </div>
         </div>
       </div>
@@ -472,31 +511,93 @@ function CompleteStep() {
 
 export default function JobExecutionPage() {
   const params = useParams();
+  const jobId = params.id as string;
+  const [job, setJob] = useState<WorkerJobDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<Step>('DRIVING');
+  const [updating, setUpdating] = useState(false);
 
-  const goToNext = useCallback(() => {
-    setCurrentStep((prev) => {
-      const currentIndex = STEPS.indexOf(prev);
-      return currentIndex < STEPS.length - 1 ? STEPS[currentIndex + 1] : prev;
+  useEffect(() => {
+    getWorkerJobDetail(jobId).then((res) => {
+      if (res.success && res.data) {
+        setJob(res.data);
+        // Resume from current DB status
+        const step = statusToStep(res.data.status);
+        setCurrentStep(step);
+      } else {
+        setError(res.error ?? 'Job not found');
+      }
+      setLoading(false);
     });
-  }, []);
+  }, [jobId]);
+
+  const goToNext = useCallback(async () => {
+    if (!job || updating) return;
+
+    const currentIndex = STEPS.indexOf(currentStep);
+    const nextStep = currentIndex < STEPS.length - 1 ? STEPS[currentIndex + 1] : currentStep;
+
+    // Determine if we need to update DB status
+    const dbStatus = stepToDbStatus(nextStep);
+    if (dbStatus) {
+      setUpdating(true);
+      const result = await updateWorkerJobStatus(job.id, dbStatus);
+      setUpdating(false);
+
+      if (!result.success) {
+        console.error('Failed to update status:', result.error);
+        // Still advance the UI — the status update is best-effort
+      }
+    }
+
+    setCurrentStep(nextStep);
+  }, [job, currentStep, updating]);
+
+  if (loading) {
+    return (
+      <div className="p-5 max-w-lg mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/2" />
+          <div className="h-3 bg-gray-200 rounded w-1/3" />
+          <div className="h-2 bg-gray-200 rounded-full w-full mt-6" />
+          <div className="bg-white rounded-2xl p-5 space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-1/4" />
+            <div className="h-3 bg-gray-200 rounded w-3/4" />
+            <div className="h-10 bg-gray-200 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !job) {
+    return (
+      <div className="p-5 max-w-lg mx-auto">
+        <div className="bg-white rounded-2xl p-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <p className="text-sm font-semibold text-gray-900 mb-1">Job not found</p>
+          <p className="text-xs text-[#8E8E93]">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderStep = () => {
     switch (currentStep) {
       case 'DRIVING':
-        return <DrivingStep onNext={goToNext} />;
+        return <DrivingStep job={job} onNext={goToNext} />;
       case 'ARRIVED':
-        return <ArrivedStep onNext={goToNext} />;
+        return <ArrivedStep job={job} onNext={goToNext} />;
       case 'BEFORE_PHOTOS':
         return <PhotoStep label="Before Photos" color="#AF52DE" onNext={goToNext} />;
       case 'IN_PROGRESS':
-        return <InProgressStep onNext={goToNext} />;
+        return <InProgressStep job={job} onNext={goToNext} />;
       case 'EXPENSES':
         return <ExpensesStep onNext={goToNext} />;
       case 'AFTER_PHOTOS':
         return <PhotoStep label="After Photos" color="#AF52DE" onNext={goToNext} />;
       case 'COMPLETE':
-        return <CompleteStep />;
+        return <CompleteStep job={job} />;
       default:
         return null;
     }
@@ -507,10 +608,10 @@ export default function JobExecutionPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
         <div className="flex-1">
-          <h1 className="text-lg font-black text-gray-900">{MOCK_JOB.clientName}</h1>
-          <p className="text-xs text-[#8E8E93]">{MOCK_JOB.service}</p>
+          <h1 className="text-lg font-black text-gray-900">{job.serviceName}</h1>
+          <p className="text-xs text-[#8E8E93]">{job.street}, {job.city}</p>
         </div>
-        <span className="text-sm font-bold text-gray-900">${MOCK_JOB.amount}</span>
+        <span className="text-sm font-bold text-gray-900">${job.price}</span>
       </div>
 
       <ProgressBar currentStep={currentStep} />

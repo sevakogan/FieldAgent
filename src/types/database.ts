@@ -294,13 +294,25 @@ export interface WorkerPayout {
   created_at: string
 }
 
+export interface QuoteLineItem {
+  description: string
+  quantity: number
+  unit_price: number
+}
+
 export interface Quote {
   id: string
   company_id: string
   client_id: string
-  address_id: string
-  services: unknown[]
+  address_id: string | null
+  service_type_id: string | null
+  title: string | null
+  description: string | null
+  line_items: QuoteLineItem[] | null
+  subtotal: number
+  tax_amount: number
   total: number
+  valid_until: string | null
   deposit_required: boolean
   deposit_percentage: number | null
   deposit_amount: number | null
@@ -308,8 +320,10 @@ export interface Quote {
   photos: string[] | null
   expires_at: string | null
   status: QuoteStatus
+  sent_at: string | null
   accepted_at: string | null
   deposit_paid_at: string | null
+  services: unknown[]
   created_at: string
   updated_at: string
 }

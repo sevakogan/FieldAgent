@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchResellerReferrals } from "@/lib/actions/reseller";
 
-const REFERRAL_LINK = "https://kleanhq.com/r/CTECH25";
+interface Referral {
+  id: string;
+  referred_email: string;
+  referral_code: string;
+  status: string;
+  reward_value: number;
+  created_at: string;
+}
 
-const REFERRALS = [
-  { id: "1", referred: "Sparkle Clean Co.", contact: "Maria Johnson", code: "CTECH25", status: "converted", reward: 75, date: "2024-08-15" },
-  { id: "2", referred: "Fresh Start LLC", contact: "James Lee", code: "CTECH25", status: "converted", reward: 75, date: "2024-09-01" },
-  { id: "3", referred: "GreenClean Atlanta", contact: "Nadia Ross", code: "CTECH25", status: "converted", reward: 75, date: "2024-08-30" },
-  { id: "4", referred: "CleanPro Services", contact: "Tom Wilson", code: "CTECH25", status: "pending", reward: 0, date: "2024-10-01" },
-  { id: "5", referred: "Pending Signup", contact: "Unknown", code: "CTECH25", status: "pending", reward: 0, date: "2024-10-03" },
-  { id: "6", referred: "Expired Lead", contact: "Jane Smith", code: "CTECH25", status: "expired", reward: 0, date: "2024-06-15" },
-] as const;
+interface ReferralsData {
+  referrals: Referral[];
+  resellerSlug: string;
+}
 
 const STATUS_STYLES: Record<string, string> = {
   converted: "bg-[#34C759]/10 text-[#34C759]",
@@ -19,17 +23,61 @@ const STATUS_STYLES: Record<string, string> = {
   expired: "bg-[#8E8E93]/10 text-[#8E8E93]",
 };
 
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function ResellerReferralsPage() {
+  const [data, setData] = useState<ReferralsData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    fetchResellerReferrals().then((result) => {
+      setData(result);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-2 border-[#AF52DE] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="text-center py-20">
+        <div className="w-16 h-16 rounded-2xl bg-[#AF52DE]/10 flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-[#AF52DE]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+        </div>
+        <h2 className="text-[18px] font-bold text-[#1C1C1E] mb-1">No Reseller Account Found</h2>
+        <p className="text-[13px] text-[#8E8E93]">Contact support to set up your reseller account.</p>
+      </div>
+    );
+  }
+
+  const { referrals, resellerSlug } = data;
+  const referralLink = `https://kleanhq.com/r/${resellerSlug}`;
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(REFERRAL_LINK);
+    navigator.clipboard.writeText(referralLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const totalRewards = REFERRALS.filter((r) => r.status === "converted").reduce((sum, r) => sum + r.reward, 0);
-  const conversionRate = Math.round((REFERRALS.filter((r) => r.status === "converted").length / REFERRALS.length) * 100);
+  const totalReferrals = referrals.length;
+  const convertedCount = referrals.filter((r) => r.status === "converted").length;
+  const conversionRate = totalReferrals > 0 ? Math.round((convertedCount / totalReferrals) * 100) : 0;
+  const totalRewards = referrals.reduce((sum, r) => sum + (r.reward_value ?? 0), 0);
 
   return (
     <>
@@ -43,7 +91,7 @@ export default function ResellerReferralsPage() {
         <div className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-wider mb-2">Your Referral Link</div>
         <div className="flex gap-2">
           <div className="flex-1 h-10 px-4 rounded-xl bg-[#F2F2F7] border border-[#E5E5EA] flex items-center">
-            <span className="text-[13px] font-mono text-[#1C1C1E] truncate">{REFERRAL_LINK}</span>
+            <span className="text-[13px] font-mono text-[#1C1C1E] truncate">{referralLink}</span>
           </div>
           <button
             onClick={handleCopy}
@@ -59,7 +107,7 @@ export default function ResellerReferralsPage() {
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-2xl p-5 border border-[#E5E5EA]">
           <div className="text-[12px] text-[#8E8E93] font-medium mb-1">Total Referrals</div>
-          <div className="text-[22px] font-bold text-[#1C1C1E]">{REFERRALS.length}</div>
+          <div className="text-[22px] font-bold text-[#1C1C1E]">{totalReferrals}</div>
         </div>
         <div className="bg-white rounded-2xl p-5 border border-[#E5E5EA]">
           <div className="text-[12px] text-[#8E8E93] font-medium mb-1">Conversion Rate</div>
@@ -71,40 +119,53 @@ export default function ResellerReferralsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#F2F2F7]">
-          <h2 className="text-[16px] font-bold text-[#1C1C1E]">Referral History</h2>
+      {referrals.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#AF52DE]/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-[#AF52DE]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+          </div>
+          <h3 className="text-[15px] font-bold text-[#1C1C1E] mb-1">No referrals yet</h3>
+          <p className="text-[13px] text-[#8E8E93]">Share your referral link to start earning rewards.</p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[#F2F2F7]">
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Referred</th>
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Status</th>
-                <th className="text-right text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Reward</th>
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {REFERRALS.map((r) => (
-                <tr key={r.id} className="border-b border-[#F2F2F7] last:border-0 hover:bg-[#F9F9FB] transition-colors">
-                  <td className="px-5 py-3.5">
-                    <div className="text-[13px] font-semibold text-[#1C1C1E]">{r.referred}</div>
-                    <div className="text-[11px] text-[#8E8E93]">{r.contact}</div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[r.status]}`}>
-                      {r.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-right text-[13px] font-semibold text-[#1C1C1E]">{r.reward > 0 ? `$${r.reward}` : "—"}</td>
-                  <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{r.date}</td>
+      ) : (
+        <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#F2F2F7]">
+            <h2 className="text-[16px] font-bold text-[#1C1C1E]">Referral History</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#F2F2F7]">
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Referred Email</th>
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Code</th>
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Status</th>
+                  <th className="text-right text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Reward</th>
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {referrals.map((r) => (
+                  <tr key={r.id} className="border-b border-[#F2F2F7] last:border-0 hover:bg-[#F9F9FB] transition-colors">
+                    <td className="px-5 py-3.5 text-[13px] font-semibold text-[#1C1C1E]">{r.referred_email}</td>
+                    <td className="px-5 py-3.5 text-[12px] font-mono text-[#8E8E93]">{r.referral_code}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[r.status] ?? "bg-[#8E8E93]/10 text-[#8E8E93]"}`}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right text-[13px] font-semibold text-[#1C1C1E]">
+                      {r.reward_value > 0 ? `$${r.reward_value}` : "\u2014"}
+                    </td>
+                    <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{formatDate(r.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

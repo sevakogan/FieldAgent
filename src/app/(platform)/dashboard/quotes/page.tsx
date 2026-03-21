@@ -1,47 +1,156 @@
 'use client'
-import { useState } from 'react'
+
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { getQuotes, type QuoteRow } from '@/lib/actions/quotes'
+import type { QuoteStatus } from '@/types/database'
 
-const MOCK_DATA = [
-  { id: '1', name: 'Item 1', status: 'active', date: '2026-03-20', amount: '$150.00' },
-  { id: '2', name: 'Item 2', status: 'pending', date: '2026-03-19', amount: '$220.00' },
-  { id: '3', name: 'Item 3', status: 'completed', date: '2026-03-18', amount: '$85.00' },
-  { id: '4', name: 'Item 4', status: 'active', date: '2026-03-17', amount: '$340.00' },
-  { id: '5', name: 'Item 5', status: 'pending', date: '2026-03-16', amount: '$175.00' },
+const STATUS_COLORS: Record<string, string> = {
+  draft: '#8E8E93',
+  sent: '#007AFF',
+  accepted: '#34C759',
+  declined: '#FF6B6B',
+  expired: '#FF9F0A',
+}
+
+const STATUS_TABS: { label: string; value: string }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Draft', value: 'draft' },
+  { label: 'Sent', value: 'sent' },
+  { label: 'Accepted', value: 'accepted' },
+  { label: 'Declined', value: 'declined' },
 ]
 
-const STATUS_COLORS: Record<string, string> = { active: '#34C759', pending: '#FF9F0A', completed: '#007AFF' }
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+}
 
-export default function quotesPage() {
-  const [search, setSearch] = useState('')
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+export default function QuotesPage() {
+  const [quotes, setQuotes] = useState<QuoteRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('all')
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const result = await getQuotes({ status: activeTab })
+      if (result.success && result.data) {
+        setQuotes(result.data)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [activeTab])
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">quotes</h1>
-        <button className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors">+ Add New</button>
+        <h1 className="text-2xl font-bold text-[#1C1C1E]">Quotes</h1>
+        <Link
+          href="/dashboard/quotes/new"
+          className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
+        >
+          + New Quote
+        </Link>
       </div>
-      <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full md:w-80 px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+
+      {/* Status filter tabs */}
+      <div className="flex gap-2 mb-4 overflow-x-auto">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === tab.value
+                ? 'bg-[#007AFF] text-white'
+                : 'bg-white text-[#8E8E93] border border-[#E5E5EA] hover:bg-[#F2F2F7]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
       <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-        <table className="w-full">
-          <thead><tr className="border-b border-[#E5E5EA]">
-            <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Name</th>
-            <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
-            <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Date</th>
-            <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Amount</th>
-          </tr></thead>
-          <tbody className="divide-y divide-[#E5E5EA]">
-            {MOCK_DATA.filter(d => d.name.toLowerCase().includes(search.toLowerCase())).map((item, i) => (
-              <motion.tr key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="hover:bg-[#F2F2F7] cursor-pointer transition-colors">
-                <td className="p-4 text-sm font-medium text-[#1C1C1E]">{item.name}</td>
-                <td className="p-4"><span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: (STATUS_COLORS[item.status] || '#8E8E93') + '20', color: STATUS_COLORS[item.status] || '#8E8E93' }}>{item.status}</span></td>
-                <td className="p-4 text-sm text-[#8E8E93]">{item.date}</td>
-                <td className="p-4 text-sm text-right font-medium text-[#1C1C1E]">{item.amount}</td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="h-4 w-32 bg-[#F2F2F7] rounded animate-pulse mx-auto" />
+          </div>
+        ) : quotes.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-[#8E8E93] text-sm mb-2">No quotes yet</p>
+            <Link
+              href="/dashboard/quotes/new"
+              className="text-[#007AFF] text-sm font-medium"
+            >
+              Create your first quote
+            </Link>
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[#E5E5EA]">
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Title</th>
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Client</th>
+                <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Total</th>
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Valid Until</th>
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Created</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E5E5EA]">
+              {quotes.map((quote, i) => (
+                <motion.tr
+                  key={quote.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.03 }}
+                >
+                  <td className="p-4">
+                    <Link
+                      href={`/dashboard/quotes/${quote.id}`}
+                      className="text-sm font-medium text-[#1C1C1E] hover:text-[#007AFF] transition-colors"
+                    >
+                      {quote.title || 'Untitled Quote'}
+                    </Link>
+                  </td>
+                  <td className="p-4 text-sm text-[#3C3C43]">{quote.client_name}</td>
+                  <td className="p-4 text-sm text-right font-medium text-[#1C1C1E]">
+                    {formatCurrency(quote.total)}
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className="text-xs px-2.5 py-1 rounded-full font-medium capitalize"
+                      style={{
+                        backgroundColor: (STATUS_COLORS[quote.status] ?? '#8E8E93') + '20',
+                        color: STATUS_COLORS[quote.status] ?? '#8E8E93',
+                      }}
+                    >
+                      {quote.status}
+                    </span>
+                  </td>
+                  <td className="p-4 text-sm text-[#8E8E93] hidden md:table-cell">
+                    {formatDate(quote.valid_until)}
+                  </td>
+                  <td className="p-4 text-sm text-[#8E8E93] hidden md:table-cell">
+                    {formatDate(quote.created_at)}
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )

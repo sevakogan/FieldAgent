@@ -1,39 +1,52 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getPortalQuotes } from '@/lib/actions/portal';
+import type { PortalQuoteRow } from '@/lib/actions/portal';
 
-const MOCK_QUOTES = [
-  { id: 'q-1', service: 'Deep Clean', provider: 'SparkleClean Co.', amount: 285.00, date: '2026-03-18', expires: '2026-03-25', status: 'pending' as const, address: '742 Evergreen Terrace' },
-  { id: 'q-2', service: 'Window Washing (12 windows)', provider: 'ClearView Pros', amount: 180.00, date: '2026-03-17', expires: '2026-03-24', status: 'pending' as const, address: '742 Evergreen Terrace' },
-  { id: 'q-3', service: 'Carpet Cleaning', provider: 'FreshFloor Inc.', amount: 320.00, date: '2026-03-10', expires: '2026-03-17', status: 'accepted' as const, address: '123 Ocean Ave, Unit 4B' },
-  { id: 'q-4', service: 'Move-Out Clean', provider: 'SparkleClean Co.', amount: 450.00, date: '2026-03-05', expires: '2026-03-12', status: 'declined' as const, address: '456 Palm Drive' },
-  { id: 'q-5', service: 'Standard Clean', provider: 'SparkleClean Co.', amount: 150.00, date: '2026-02-28', expires: '2026-03-07', status: 'expired' as const, address: '742 Evergreen Terrace' },
-];
-
-const STATUS_STYLES = {
-  pending: 'bg-yellow-50 text-yellow-700',
+const STATUS_STYLES: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-600',
+  sent: 'bg-yellow-50 text-yellow-700',
   accepted: 'bg-green-50 text-green-700',
   declined: 'bg-red-50 text-red-700',
   expired: 'bg-gray-100 text-gray-500',
-} as const;
+};
 
-type QuoteStatus = keyof typeof STATUS_STYLES;
-const FILTER_OPTIONS: Array<{ value: QuoteStatus | 'all'; label: string }> = [
+const FILTER_OPTIONS = [
   { value: 'all', label: 'All' },
-  { value: 'pending', label: 'Pending' },
+  { value: 'sent', label: 'Pending' },
   { value: 'accepted', label: 'Accepted' },
   { value: 'declined', label: 'Declined' },
 ];
 
 export default function QuotesPage() {
-  const [filter, setFilter] = useState<QuoteStatus | 'all'>('all');
+  const [filter, setFilter] = useState('all');
+  const [quotes, setQuotes] = useState<PortalQuoteRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = filter === 'all' ? MOCK_QUOTES : MOCK_QUOTES.filter((q) => q.status === filter);
+  useEffect(() => {
+    setLoading(true);
+    getPortalQuotes(filter).then(result => {
+      setQuotes(result.success && result.data ? result.data : []);
+      setLoading(false);
+    });
+  }, [filter]);
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Quotes</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Quotes</h1>
+        <Link
+          href="/portal/request"
+          className="flex items-center gap-1.5 rounded-xl bg-[#AF52DE] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#AF52DE]/90 transition-colors"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Request New Quote
+        </Link>
+      </div>
 
       <div className="flex gap-2 overflow-x-auto">
         {FILTER_OPTIONS.map((opt) => (
@@ -49,41 +62,46 @@ export default function QuotesPage() {
         ))}
       </div>
 
-      <div className="space-y-3">
-        {filtered.length === 0 ? (
-          <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-            <p className="text-sm text-gray-400">No quotes found</p>
-          </div>
-        ) : (
-          filtered.map((quote) => (
-            <Link
-              key={quote.id}
-              href={`/portal/quotes/${quote.id}`}
-              className="block rounded-2xl bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900">{quote.service}</h3>
-                  <p className="text-sm text-gray-500">{quote.provider}</p>
-                  <p className="text-xs text-gray-400">{quote.address}</p>
-                  <p className="mt-1 text-xs text-gray-400">
-                    Received {new Date(quote.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    {quote.status === 'pending' && (
-                      <> &middot; Expires {new Date(quote.expires).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
-                    )}
-                  </p>
+      {loading ? (
+        <div className="flex h-32 items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#AF52DE] border-t-transparent" />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {quotes.length === 0 ? (
+            <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
+              <p className="text-sm text-gray-400">No quotes found</p>
+            </div>
+          ) : (
+            quotes.map((quote) => (
+              <Link
+                key={quote.id}
+                href={`/portal/quotes/${quote.id}`}
+                className="block rounded-2xl bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{quote.title ?? 'Quote'}</h3>
+                    <p className="text-sm text-gray-500">{quote.companyName}</p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Received {new Date(quote.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {quote.status === 'sent' && quote.validUntil && (
+                        <> &middot; Expires {new Date(quote.validUntil).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-gray-900">${quote.total.toFixed(2)}</p>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {quote.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-gray-900">${quote.amount.toFixed(2)}</p>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[quote.status]}`}>
-                    {quote.status}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))
-        )}
-      </div>
+              </Link>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

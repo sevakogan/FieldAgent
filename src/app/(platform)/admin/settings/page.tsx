@@ -1,40 +1,80 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { getAdminSettings, updateAdminSetting } from "@/lib/actions/admin";
 
-const INITIAL_SETTINGS = {
-  platformName: "KleanHQ",
-  supportEmail: "support@kleanhq.com",
-  defaultTimezone: "America/Los_Angeles",
-  maintenanceMode: false,
-  signupsEnabled: true,
-  waitlistEnabled: true,
-  maxTrialDays: 14,
-  defaultCurrency: "USD",
-  smtpHost: "smtp.sendgrid.net",
-  smtpPort: "587",
-  stripeMode: "live",
-  twilioEnabled: true,
-  analyticsEnabled: true,
-  referralReward: 50,
-  maxPromoDiscount: 50,
-} as const;
-
-type SettingKey = keyof typeof INITIAL_SETTINGS;
+type Setting = {
+  key: string;
+  value: string | null;
+  description: string | null;
+};
 
 export default function AdminSettingsPage() {
-  const [settings, setSettings] = useState(INITIAL_SETTINGS);
+  const [settings, setSettings] = useState<Setting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState<Map<string, string>>(new Map());
 
-  const updateSetting = (key: SettingKey, value: string | boolean | number) => {
-    setSettings({ ...settings, [key]: value });
+  const loadSettings = useCallback(() => {
+    getAdminSettings().then((result) => {
+      if (result.success && result.data) {
+        setSettings(result.data);
+      } else {
+        setError(result.error ?? "Unknown error");
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  const handleChange = (key: string, value: string) => {
+    setDirty(new Map(dirty).set(key, value));
     setSaved(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setSaving(true);
+    const entries = Array.from(dirty.entries());
+    for (const [key, value] of entries) {
+      await updateAdminSetting(key, value);
+    }
+    setDirty(new Map());
+    setSaving(false);
     setSaved(true);
+    loadSettings();
     setTimeout(() => setSaved(false), 2000);
   };
+
+  const getValue = (key: string): string => {
+    if (dirty.has(key)) return dirty.get(key)!;
+    const s = settings.find((s) => s.key === key);
+    return s?.value ?? "";
+  };
+
+  const isBooleanKey = (value: string | null): boolean => {
+    return value === "true" || value === "false";
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-[#8E8E93] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-[#FF3B30]/10 text-[#FF3B30] rounded-2xl p-5 text-[13px]">
+        Failed to load settings: {error}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -45,179 +85,66 @@ export default function AdminSettingsPage() {
         </div>
         <button
           onClick={handleSave}
+          disabled={dirty.size === 0 && !saving}
           className={`h-9 px-5 rounded-xl text-[13px] font-semibold transition-colors ${
-            saved ? "bg-[#34C759] text-white" : "bg-[#8E8E93] text-white hover:bg-[#636366]"
+            saved
+              ? "bg-[#34C759] text-white"
+              : dirty.size > 0
+                ? "bg-[#8E8E93] text-white hover:bg-[#636366]"
+                : "bg-[#E5E5EA] text-[#C7C7CC] cursor-not-allowed"
           }`}
         >
-          {saved ? "Saved!" : "Save Changes"}
+          {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
         </button>
       </div>
 
-      <div className="space-y-6">
-        {/* General */}
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
-          <h2 className="text-[16px] font-bold text-[#1C1C1E] mb-4">General</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Platform Name</label>
-              <input
-                type="text"
-                value={settings.platformName}
-                onChange={(e) => updateSetting("platformName", e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Support Email</label>
-              <input
-                type="email"
-                value={settings.supportEmail}
-                onChange={(e) => updateSetting("supportEmail", e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Default Timezone</label>
-              <select
-                value={settings.defaultTimezone}
-                onChange={(e) => updateSetting("defaultTimezone", e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              >
-                <option value="America/Los_Angeles">Pacific Time</option>
-                <option value="America/Denver">Mountain Time</option>
-                <option value="America/Chicago">Central Time</option>
-                <option value="America/New_York">Eastern Time</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Default Currency</label>
-              <select
-                value={settings.defaultCurrency}
-                onChange={(e) => updateSetting("defaultCurrency", e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              >
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="CAD">CAD</option>
-              </select>
-            </div>
-          </div>
+      {settings.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center">
+          <p className="text-[14px] font-semibold text-[#8E8E93]">No platform settings configured</p>
+          <p className="text-[12px] text-[#C7C7CC] mt-1">Add rows to the platform_settings table to manage configuration here.</p>
         </div>
-
-        {/* Access Control */}
+      ) : (
         <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
-          <h2 className="text-[16px] font-bold text-[#1C1C1E] mb-4">Access Control</h2>
-          <div className="space-y-4">
-            {[
-              { key: "maintenanceMode" as SettingKey, label: "Maintenance Mode", desc: "Disable all user access except super admins" },
-              { key: "signupsEnabled" as SettingKey, label: "Signups Enabled", desc: "Allow new company registrations" },
-              { key: "waitlistEnabled" as SettingKey, label: "Waitlist Enabled", desc: "Queue new signups instead of instant access" },
-            ].map((toggle) => (
-              <div key={toggle.key} className="flex items-center justify-between py-2">
-                <div>
-                  <div className="text-[13px] font-semibold text-[#1C1C1E]">{toggle.label}</div>
-                  <div className="text-[11px] text-[#8E8E93]">{toggle.desc}</div>
+          <div className="space-y-5">
+            {settings.map((setting) => {
+              const isBoolean = isBooleanKey(setting.value);
+              const currentVal = getValue(setting.key);
+
+              return (
+                <div key={setting.key} className="flex items-start justify-between gap-4 py-2 border-b border-[#F2F2F7] last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-semibold text-[#1C1C1E] font-mono">{setting.key}</div>
+                    {setting.description && (
+                      <div className="text-[11px] text-[#8E8E93] mt-0.5">{setting.description}</div>
+                    )}
+                  </div>
+                  <div className="shrink-0">
+                    {isBoolean ? (
+                      <button
+                        onClick={() => handleChange(setting.key, currentVal === "true" ? "false" : "true")}
+                        className={`w-12 h-7 rounded-full transition-colors relative ${
+                          currentVal === "true" ? "bg-[#34C759]" : "bg-[#E5E5EA]"
+                        }`}
+                      >
+                        <div className={`w-5 h-5 bg-white rounded-full shadow-sm absolute top-[4px] transition-transform ${
+                          currentVal === "true" ? "translate-x-[24px]" : "translate-x-[4px]"
+                        }`} />
+                      </button>
+                    ) : (
+                      <input
+                        type="text"
+                        value={currentVal}
+                        onChange={(e) => handleChange(setting.key, e.target.value)}
+                        className="w-64 h-9 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] font-mono focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
+                      />
+                    )}
+                  </div>
                 </div>
-                <button
-                  onClick={() => updateSetting(toggle.key, !settings[toggle.key])}
-                  className={`w-12 h-7 rounded-full transition-colors relative ${
-                    settings[toggle.key] ? "bg-[#34C759]" : "bg-[#E5E5EA]"
-                  }`}
-                >
-                  <div className={`w-5.5 h-5.5 bg-white rounded-full shadow-sm absolute top-[3px] transition-transform ${
-                    settings[toggle.key] ? "translate-x-[22px]" : "translate-x-[3px]"
-                  }`} />
-                </button>
-              </div>
-            ))}
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Trial Period (days)</label>
-              <input
-                type="number"
-                value={settings.maxTrialDays}
-                onChange={(e) => updateSetting("maxTrialDays", Number(e.target.value))}
-                className="w-32 h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              />
-            </div>
+              );
+            })}
           </div>
         </div>
-
-        {/* Integrations */}
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
-          <h2 className="text-[16px] font-bold text-[#1C1C1E] mb-4">Integrations</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Stripe Mode</label>
-              <select
-                value={settings.stripeMode}
-                onChange={(e) => updateSetting("stripeMode", e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              >
-                <option value="live">Live</option>
-                <option value="test">Test</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">SMTP Host</label>
-              <input
-                type="text"
-                value={settings.smtpHost}
-                onChange={(e) => updateSetting("smtpHost", e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              />
-            </div>
-          </div>
-          <div className="space-y-4 mt-4">
-            {[
-              { key: "twilioEnabled" as SettingKey, label: "Twilio SMS", desc: "SMS notifications for crews and clients" },
-              { key: "analyticsEnabled" as SettingKey, label: "Analytics Tracking", desc: "Platform-wide usage analytics" },
-            ].map((toggle) => (
-              <div key={toggle.key} className="flex items-center justify-between py-2">
-                <div>
-                  <div className="text-[13px] font-semibold text-[#1C1C1E]">{toggle.label}</div>
-                  <div className="text-[11px] text-[#8E8E93]">{toggle.desc}</div>
-                </div>
-                <button
-                  onClick={() => updateSetting(toggle.key, !settings[toggle.key])}
-                  className={`w-12 h-7 rounded-full transition-colors relative ${
-                    settings[toggle.key] ? "bg-[#34C759]" : "bg-[#E5E5EA]"
-                  }`}
-                >
-                  <div className={`w-5.5 h-5.5 bg-white rounded-full shadow-sm absolute top-[3px] transition-transform ${
-                    settings[toggle.key] ? "translate-x-[22px]" : "translate-x-[3px]"
-                  }`} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Referrals & Promos */}
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
-          <h2 className="text-[16px] font-bold text-[#1C1C1E] mb-4">Referrals & Promos</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Referral Reward ($)</label>
-              <input
-                type="number"
-                value={settings.referralReward}
-                onChange={(e) => updateSetting("referralReward", Number(e.target.value))}
-                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Max Promo Discount (%)</label>
-              <input
-                type="number"
-                value={settings.maxPromoDiscount}
-                onChange={(e) => updateSetting("maxPromoDiscount", Number(e.target.value))}
-                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </>
   );
 }

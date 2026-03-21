@@ -1,15 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { getAdminFeedback, updateFeedbackStatus } from "@/lib/actions/admin";
 
-const FEEDBACK = [
-  { id: "1", user: "Maria Johnson", company: "Sparkle Clean Co.", type: "feature", subject: "Route optimization for crews", message: "It would be great to have automatic route optimization when assigning multiple jobs to a crew for the day.", rating: 4, status: "reviewed", date: "2024-10-04" },
-  { id: "2", user: "James Lee", company: "Fresh Start LLC", type: "bug", subject: "Invoice PDF not downloading", message: "When I click download on an invoice, it shows a blank page instead of the PDF. Happens on Chrome and Safari.", rating: 2, status: "in_progress", date: "2024-10-03" },
-  { id: "3", user: "Sarah Davis", company: "Elite Maids Inc.", type: "feature", subject: "Client self-booking portal", message: "Clients should be able to book recurring cleanings through a portal without calling us every time.", rating: 5, status: "new", date: "2024-10-03" },
-  { id: "4", user: "Nadia Ross", company: "GreenClean Atlanta", type: "praise", subject: "Love the new scheduling view", message: "The calendar drag-and-drop scheduling is amazing! Our dispatchers save 30 minutes a day now.", rating: 5, status: "reviewed", date: "2024-10-02" },
-  { id: "5", user: "Tom Wilson", company: "CleanPro Services", type: "bug", subject: "SMS notifications delayed", message: "Client notification texts are arriving 15-20 minutes after the crew checks in. Used to be instant.", rating: 3, status: "new", date: "2024-10-01" },
-  { id: "6", user: "Amy Chen", company: "TidyUp Boston", type: "feature", subject: "Multi-language support", message: "Many of our crew members speak Spanish. Having the crew app in Spanish would be very helpful.", rating: 4, status: "backlog", date: "2024-09-28" },
-] as const;
+type FeedbackItem = {
+  id: string;
+  type: string | null;
+  title: string | null;
+  description: string | null;
+  status: string;
+  votes: number | null;
+  created_at: string;
+  user_name: string | null;
+  user_email: string | null;
+};
 
 const TYPE_STYLES: Record<string, string> = {
   feature: "bg-[#007AFF]/10 text-[#007AFF]",
@@ -25,12 +29,74 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default function AdminFeedbackPage() {
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filterType, setFilterType] = useState("all");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  const filtered = FEEDBACK.filter((f) => filterType === "all" || f.type === filterType);
+  const fetchFeedback = useCallback(async () => {
+    const result = await getAdminFeedback();
+    if (result.success && result.data) {
+      setFeedback(result.data);
+    } else {
+      setError(result.error ?? "Unknown error");
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchFeedback();
+  }, [fetchFeedback]);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const handleMarkReviewed = async (id: string) => {
+    setActionLoading(id);
+    const result = await updateFeedbackStatus(id, "reviewed");
+    if (result.success) {
+      setToast({ message: "Feedback marked as reviewed", type: "success" });
+      await fetchFeedback();
+    } else {
+      setToast({ message: result.error ?? "Failed to update feedback", type: "error" });
+    }
+    setActionLoading(null);
+  };
+
+  const filtered = feedback.filter((f) => filterType === "all" || f.type === filterType);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-[#8E8E93] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-[#FF3B30]/10 text-[#FF3B30] rounded-2xl p-5 text-[13px]">
+        Failed to load feedback: {error}
+      </div>
+    );
+  }
 
   return (
     <>
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-2xl text-[13px] font-semibold shadow-lg transition-all ${
+          toast.type === "success" ? "bg-[#34C759] text-white" : "bg-[#FF3B30] text-white"
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-[28px] font-bold text-[#1C1C1E] tracking-tight">Feedback</h1>
         <p className="text-[14px] text-[#8E8E93] mt-1">User feedback, bug reports, and feature requests</p>
@@ -52,35 +118,54 @@ export default function AdminFeedbackPage() {
         ))}
       </div>
 
-      <div className="space-y-4">
-        {filtered.map((fb) => (
-          <div key={fb.id} className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${TYPE_STYLES[fb.type]}`}>
-                  {fb.type}
-                </span>
-                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[fb.status]}`}>
-                  {fb.status.replace("_", " ")}
-                </span>
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center">
+          <p className="text-[14px] font-semibold text-[#8E8E93]">
+            {feedback.length === 0 ? "No feedback yet" : "No feedback matches this filter"}
+          </p>
+          <p className="text-[12px] text-[#C7C7CC] mt-1">User feedback will appear here once submitted.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filtered.map((fb) => (
+            <div key={fb.id} className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {fb.type && (
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${TYPE_STYLES[fb.type] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
+                      {fb.type}
+                    </span>
+                  )}
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[fb.status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
+                    {fb.status.replace("_", " ")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {fb.votes !== null && fb.votes > 0 && (
+                    <div className="text-[12px] font-semibold text-[#8E8E93]">
+                      {fb.votes} vote{fb.votes !== 1 ? "s" : ""}
+                    </div>
+                  )}
+                  {fb.status === "new" && (
+                    <button
+                      onClick={() => handleMarkReviewed(fb.id)}
+                      disabled={actionLoading === fb.id}
+                      className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition-colors disabled:opacity-50"
+                    >
+                      {actionLoading === fb.id ? "..." : "Mark Reviewed"}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <svg key={i} className={`w-3.5 h-3.5 ${i < fb.rating ? "text-[#FF9F0A]" : "text-[#E5E5EA]"}`} fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
+              <h3 className="text-[14px] font-bold text-[#1C1C1E] mb-1">{fb.title ?? "Untitled"}</h3>
+              <p className="text-[13px] text-[#8E8E93] leading-relaxed mb-3">{fb.description ?? ""}</p>
+              <div className="text-[11px] text-[#C7C7CC]">
+                {fb.user_name ?? fb.user_email ?? "Anonymous"} · {new Date(fb.created_at).toLocaleDateString()}
               </div>
             </div>
-            <h3 className="text-[14px] font-bold text-[#1C1C1E] mb-1">{fb.subject}</h3>
-            <p className="text-[13px] text-[#8E8E93] leading-relaxed mb-3">{fb.message}</p>
-            <div className="flex items-center justify-between">
-              <div className="text-[11px] text-[#C7C7CC]">{fb.user} · {fb.company} · {fb.date}</div>
-              <button className="text-[11px] font-semibold text-[#007AFF] hover:underline">Reply</button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }

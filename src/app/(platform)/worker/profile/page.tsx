@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { getWorkerInfo, getWorkerProfileStats, updateWorkerProfile } from '@/lib/actions/worker';
+import type { WorkerInfo, WorkerProfileStats } from '@/lib/actions/worker';
 
 interface NotificationSetting {
   readonly id: string;
@@ -17,25 +19,6 @@ const INITIAL_NOTIFICATIONS: readonly NotificationSetting[] = [
   { id: 'messages', label: 'Client Messages', description: 'Direct messages from clients', enabled: false },
   { id: 'weekly', label: 'Weekly Summary', description: 'Earnings and performance recap every Sunday', enabled: true },
 ] as const;
-
-const PROFILE_DATA = {
-  name: 'Jane Doe',
-  email: 'jane.doe@email.com',
-  phone: '(503) 555-0142',
-  role: 'Pro Cleaner',
-  joinedDate: 'January 2025',
-  totalJobs: 347,
-  avgRating: 4.9,
-  totalEarnings: 28450,
-} as const;
-
-const PAYOUT_DATA = {
-  method: 'Direct Deposit',
-  bank: 'Chase Bank ****4821',
-  nextPayout: 'Mar 22, 2026',
-  pendingAmount: 550,
-  schedule: 'Weekly (Sundays)',
-} as const;
 
 function Toggle({
   enabled,
@@ -79,10 +62,85 @@ function SectionCard({
   );
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function formatPayType(payType: string | null): string {
+  switch (payType) {
+    case 'per_job': return 'Per Job';
+    case 'hourly': return 'Hourly';
+    case 'percentage': return 'Percentage';
+    case 'manual': return 'Manual';
+    default: return 'Not set';
+  }
+}
+
+function formatPayRate(payType: string | null, payRate: number | null): string {
+  if (payRate === null) return 'Not set';
+  switch (payType) {
+    case 'hourly': return `$${payRate}/hr`;
+    case 'percentage': return `${payRate}%`;
+    case 'per_job': return `$${payRate}/job`;
+    default: return `$${payRate}`;
+  }
+}
+
 export default function WorkerProfilePage() {
+  const [worker, setWorker] = useState<WorkerInfo | null>(null);
+  const [stats, setStats] = useState<WorkerProfileStats | null>(null);
+  const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<readonly NotificationSetting[]>(
     INITIAL_NOTIFICATIONS
   );
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveToast, setSaveToast] = useState(false);
+
+  useEffect(() => {
+    Promise.all([getWorkerInfo(), getWorkerProfileStats()]).then(([workerRes, statsRes]) => {
+      if (workerRes.success && workerRes.data) {
+        setWorker(workerRes.data);
+        setEditName(workerRes.data.fullName);
+        setEditPhone(workerRes.data.phone ?? '');
+      }
+      if (statsRes.success && statsRes.data) {
+        setStats(statsRes.data);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  const handleStartEdit = useCallback(() => {
+    if (worker) {
+      setEditName(worker.fullName);
+      setEditPhone(worker.phone ?? '');
+      setIsEditing(true);
+    }
+  }, [worker]);
+
+  const handleSaveProfile = useCallback(async () => {
+    if (!worker) return;
+    setSaving(true);
+    const result = await updateWorkerProfile(worker.userId, {
+      full_name: editName,
+      phone: editPhone,
+    });
+    if (result.success) {
+      setWorker({ ...worker, fullName: editName, phone: editPhone || null });
+      setIsEditing(false);
+      setSaveToast(true);
+      setTimeout(() => setSaveToast(false), 2000);
+    }
+    setSaving(false);
+  }, [worker, editName, editPhone]);
 
   const toggleNotification = (id: string) => {
     setNotifications((prev) =>
@@ -90,18 +148,46 @@ export default function WorkerProfilePage() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="p-5 max-w-lg mx-auto animate-pulse">
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-24 h-24 rounded-full bg-gray-200 mb-3" />
+          <div className="h-5 bg-gray-200 rounded w-32 mb-2" />
+          <div className="h-3 bg-gray-200 rounded w-20" />
+        </div>
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white rounded-2xl p-3.5 text-center">
+              <div className="h-6 bg-gray-200 rounded w-12 mx-auto mb-1" />
+              <div className="h-3 bg-gray-200 rounded w-16 mx-auto" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const initials = worker ? getInitials(worker.fullName) : '?';
+  const roleName = worker?.role === 'owner' ? 'Owner' : worker?.role === 'lead' ? 'Lead Cleaner' : 'Cleaner';
+  const joinedDate = worker
+    ? new Date(worker.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : '';
+
   return (
     <div className="p-5 max-w-lg mx-auto">
       {/* Avatar & Name */}
       <div className="flex flex-col items-center mb-6">
         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] flex items-center justify-center text-white text-3xl font-black mb-3 shadow-[0_4px_16px_rgba(0,122,255,0.3)]">
-          JD
+          {initials}
         </div>
-        <h1 className="text-xl font-black text-gray-900">{PROFILE_DATA.name}</h1>
-        <p className="text-sm text-[#8E8E93]">{PROFILE_DATA.role}</p>
-        <p className="text-xs text-[#8E8E93] mt-0.5">
-          Member since {PROFILE_DATA.joinedDate}
-        </p>
+        <h1 className="text-xl font-black text-gray-900">{worker?.fullName ?? 'Unknown'}</h1>
+        <p className="text-sm text-[#8E8E93]">{roleName}</p>
+        {joinedDate && (
+          <p className="text-xs text-[#8E8E93] mt-0.5">
+            Member since {joinedDate}
+          </p>
+        )}
       </div>
 
       {/* Stats */}
@@ -112,7 +198,7 @@ export default function WorkerProfilePage() {
           transition={{ delay: 0.05 }}
           className="bg-white rounded-2xl p-3.5 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
         >
-          <p className="text-xl font-black text-gray-900">{PROFILE_DATA.totalJobs}</p>
+          <p className="text-xl font-black text-gray-900">{stats?.totalJobs ?? 0}</p>
           <p className="text-[11px] text-[#8E8E93] font-medium">Jobs Done</p>
         </motion.div>
         <motion.div
@@ -121,7 +207,9 @@ export default function WorkerProfilePage() {
           transition={{ delay: 0.1 }}
           className="bg-white rounded-2xl p-3.5 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
         >
-          <p className="text-xl font-black text-[#FFD60A]">{PROFILE_DATA.avgRating}</p>
+          <p className="text-xl font-black text-[#FFD60A]">
+            {stats?.avgRating !== null && stats?.avgRating !== undefined ? stats.avgRating.toFixed(1) : '—'}
+          </p>
           <p className="text-[11px] text-[#8E8E93] font-medium">Rating</p>
         </motion.div>
         <motion.div
@@ -131,67 +219,116 @@ export default function WorkerProfilePage() {
           className="bg-white rounded-2xl p-3.5 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
         >
           <p className="text-xl font-black text-[#34C759]">
-            ${(PROFILE_DATA.totalEarnings / 1000).toFixed(1)}k
+            {stats?.totalEarned
+              ? stats.totalEarned >= 1000
+                ? `$${(stats.totalEarned / 1000).toFixed(1)}k`
+                : `$${stats.totalEarned}`
+              : '$0'}
           </p>
           <p className="text-[11px] text-[#8E8E93] font-medium">Earned</p>
         </motion.div>
       </div>
 
+      {/* Save Toast */}
+      {saveToast && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#34C759] text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg"
+        >
+          Profile saved
+        </motion.div>
+      )}
+
       <div className="space-y-4">
         {/* Contact Info */}
         <SectionCard title="Contact Info">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-1">
-              <span className="text-sm text-[#8E8E93]">Email</span>
-              <span className="text-sm font-medium text-gray-900">
-                {PROFILE_DATA.email}
-              </span>
+          {isEditing ? (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#8E8E93] mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#007AFF] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#8E8E93] mb-1">Email</label>
+                <input
+                  type="email"
+                  value={worker?.email ?? ''}
+                  disabled
+                  className="w-full rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 text-sm text-[#8E8E93]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#8E8E93] mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  placeholder="(555) 123-4567"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#007AFF] focus:outline-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="flex-1 py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
             </div>
-            <div className="border-t border-gray-100" />
-            <div className="flex items-center justify-between py-1">
-              <span className="text-sm text-[#8E8E93]">Phone</span>
-              <span className="text-sm font-medium text-gray-900">
-                {PROFILE_DATA.phone}
-              </span>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-[#8E8E93]">Email</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {worker?.email ?? '—'}
+                </span>
+              </div>
+              <div className="border-t border-gray-100" />
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-[#8E8E93]">Phone</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {worker?.phone ?? '—'}
+                </span>
+              </div>
+              <button
+                onClick={handleStartEdit}
+                className="w-full py-2.5 rounded-xl bg-[#007AFF]/10 text-[#007AFF] text-sm font-semibold hover:bg-[#007AFF]/20 transition-colors mt-2"
+              >
+                Edit Profile
+              </button>
             </div>
-          </div>
+          )}
         </SectionCard>
 
-        {/* Payout Status */}
-        <SectionCard title="Payout">
+        {/* Pay Info */}
+        <SectionCard title="Pay Info">
           <div className="space-y-3">
             <div className="flex items-center justify-between py-1">
-              <span className="text-sm text-[#8E8E93]">Method</span>
+              <span className="text-sm text-[#8E8E93]">Pay Type</span>
               <span className="text-sm font-medium text-gray-900">
-                {PAYOUT_DATA.method}
+                {formatPayType(worker?.payType ?? null)}
               </span>
             </div>
             <div className="border-t border-gray-100" />
             <div className="flex items-center justify-between py-1">
-              <span className="text-sm text-[#8E8E93]">Account</span>
+              <span className="text-sm text-[#8E8E93]">Pay Rate</span>
               <span className="text-sm font-medium text-gray-900">
-                {PAYOUT_DATA.bank}
-              </span>
-            </div>
-            <div className="border-t border-gray-100" />
-            <div className="flex items-center justify-between py-1">
-              <span className="text-sm text-[#8E8E93]">Schedule</span>
-              <span className="text-sm font-medium text-gray-900">
-                {PAYOUT_DATA.schedule}
-              </span>
-            </div>
-            <div className="border-t border-gray-100" />
-            <div className="flex items-center justify-between py-1">
-              <span className="text-sm text-[#8E8E93]">Next Payout</span>
-              <span className="text-sm font-medium text-gray-900">
-                {PAYOUT_DATA.nextPayout}
-              </span>
-            </div>
-            <div className="border-t border-gray-100" />
-            <div className="flex items-center justify-between py-1">
-              <span className="text-sm text-[#8E8E93]">Pending</span>
-              <span className="text-sm font-bold text-[#34C759]">
-                ${PAYOUT_DATA.pendingAmount}
+                {formatPayRate(worker?.payType ?? null, worker?.payRate ?? null)}
               </span>
             </div>
           </div>

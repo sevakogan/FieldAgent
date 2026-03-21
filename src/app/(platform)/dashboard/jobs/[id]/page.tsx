@@ -1,82 +1,433 @@
 'use client'
-import { motion } from 'framer-motion'
 
-const JOB = {
-  id: '1', address: '123 Ocean Dr, Miami Beach, FL 33139', service: 'Pool Cleaning', worker: 'Carlos Martinez',
-  client: 'Maria Gonzalez', status: 'in_progress', date: '2026-03-20', time: '9:00 AM', price: 75, expenses: 12.50, tax: 6.56, tip: 10, total: 104.06,
-  checklist: [{ item: 'Skim surface', done: true }, { item: 'Test pH levels', done: true }, { item: 'Add chemicals', done: false }, { item: 'Clean filter', done: false }],
-  timeline: [
-    { time: '8:45 AM', event: 'Job assigned to Carlos M.' },
-    { time: '8:55 AM', event: 'Worker started driving' },
-    { time: '9:02 AM', event: 'Worker arrived at location' },
-    { time: '9:05 AM', event: 'Before photos uploaded (3)' },
-    { time: '9:08 AM', event: 'Job started' },
-  ],
+import { useState, useEffect, useCallback } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { getJob, updateJobStatus, updateJob, deleteJob, type JobDetail } from '@/lib/actions/jobs'
+import type { JobStatus } from '@/types/database'
+
+const STATUS_COLORS: Record<string, string> = {
+  requested: '#8E8E93',
+  approved: '#007AFF',
+  scheduled: '#007AFF',
+  driving: '#5AC8FA',
+  arrived: '#FF9F0A',
+  in_progress: '#FFD60A',
+  pending_review: '#AF52DE',
+  revision_needed: '#FF9F0A',
+  completed: '#34C759',
+  charged: '#34C759',
+  cancelled: '#FF6B6B',
 }
 
-const STATUS_COLORS: Record<string, string> = { scheduled: '#007AFF', driving: '#5AC8FA', arrived: '#FFD60A', in_progress: '#007AFF', pending_review: '#AF52DE', completed: '#34C759' }
+const STATUS_LABELS: Record<string, string> = {
+  requested: 'Requested',
+  approved: 'Approved',
+  scheduled: 'Scheduled',
+  driving: 'Driving',
+  arrived: 'Arrived',
+  in_progress: 'In Progress',
+  pending_review: 'Pending Review',
+  revision_needed: 'Revision Needed',
+  completed: 'Completed',
+  charged: 'Charged',
+  cancelled: 'Cancelled',
+}
+
+const STATUS_FLOW: Record<string, string[]> = {
+  requested: ['approved', 'cancelled'],
+  approved: ['scheduled', 'cancelled'],
+  scheduled: ['driving', 'in_progress', 'cancelled'],
+  driving: ['arrived', 'cancelled'],
+  arrived: ['in_progress', 'cancelled'],
+  in_progress: ['pending_review', 'completed', 'cancelled'],
+  pending_review: ['completed', 'revision_needed'],
+  revision_needed: ['in_progress', 'cancelled'],
+  completed: ['charged'],
+  charged: [],
+  cancelled: [],
+}
 
 export default function JobDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const jobId = params.id as string
+
+  const [job, setJob] = useState<JobDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [updating, setUpdating] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editPrice, setEditPrice] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
+
+  const fetchJob = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    const result = await getJob(jobId)
+    if (result.success && result.data) {
+      setJob(result.data)
+      setEditPrice(String(result.data.price))
+      setEditDate(result.data.scheduled_date)
+      setEditTime(result.data.scheduled_time ?? '')
+    } else {
+      setError(result.error ?? 'Failed to load job')
+    }
+    setLoading(false)
+  }, [jobId])
+
+  useEffect(() => {
+    fetchJob()
+  }, [fetchJob])
+
+  async function handleStatusChange(newStatus: string) {
+    if (!job) return
+    setUpdating(true)
+    const result = await updateJobStatus(jobId, newStatus)
+    if (result.success) {
+      setJob({ ...job, status: newStatus as JobStatus })
+    } else {
+      setError(result.error ?? 'Failed to update status')
+    }
+    setUpdating(false)
+  }
+
+  async function handleSaveEdit() {
+    if (!job) return
+    setUpdating(true)
+    const price = parseFloat(editPrice)
+    if (isNaN(price) || price < 0) {
+      setError('Invalid price')
+      setUpdating(false)
+      return
+    }
+
+    const result = await updateJob(jobId, {
+      price,
+      scheduled_date: editDate,
+      scheduled_time: editTime || null,
+    })
+
+    if (result.success) {
+      setJob({
+        ...job,
+        price,
+        scheduled_date: editDate,
+        scheduled_time: editTime || null,
+      })
+      setEditing(false)
+    } else {
+      setError(result.error ?? 'Failed to update job')
+    }
+    setUpdating(false)
+  }
+
+  async function handleDelete() {
+    setUpdating(true)
+    const result = await deleteJob(jobId)
+    if (result.success) {
+      router.push('/dashboard/jobs')
+    } else {
+      setError(result.error ?? 'Failed to delete job')
+      setUpdating(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 border-3 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (error && !job) {
+    return (
+      <div>
+        <Link href="/dashboard/jobs" className="text-[#007AFF] text-sm mb-4 inline-block">&larr; Back to Jobs</Link>
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">{error}</div>
+      </div>
+    )
+  }
+
+  if (!job) return null
+
+  const nextStatuses = STATUS_FLOW[job.status] ?? []
+  const statusColor = STATUS_COLORS[job.status] ?? '#8E8E93'
+  const fullAddress = [job.address_street, job.address_unit, job.address_city, job.address_state, job.address_zip]
+    .filter(Boolean)
+    .join(', ')
+
   return (
     <div>
-      <a href="/dashboard/jobs" className="text-[#007AFF] text-sm mb-2 inline-block">← Jobs</a>
+      <Link href="/dashboard/jobs" className="text-[#007AFF] text-sm mb-2 inline-block">&larr; Jobs</Link>
+
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">Job #{JOB.id}</h1>
-        <span className="px-3 py-1.5 rounded-full text-sm font-medium" style={{ backgroundColor: (STATUS_COLORS[JOB.status] || '#8E8E93') + '20', color: STATUS_COLORS[JOB.status] || '#8E8E93' }}>
-          {JOB.status.replace('_', ' ').toUpperCase()}
+        <h1 className="text-2xl font-bold text-[#1C1C1E]">Job Details</h1>
+        <span
+          className="px-3 py-1.5 rounded-full text-sm font-medium"
+          style={{
+            backgroundColor: statusColor + '20',
+            color: statusColor,
+          }}
+        >
+          {STATUS_LABELS[job.status] ?? job.status}
         </span>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">{error}</div>
+      )}
+
       <div className="grid md:grid-cols-3 gap-6">
+        {/* Main content */}
         <div className="md:col-span-2 space-y-6">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
-            <h2 className="font-semibold text-[#1C1C1E] mb-4">Details</h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><p className="text-[#8E8E93]">Address</p><p className="text-[#1C1C1E] font-medium">{JOB.address}</p></div>
-              <div><p className="text-[#8E8E93]">Service</p><p className="text-[#1C1C1E] font-medium">{JOB.service}</p></div>
-              <div><p className="text-[#8E8E93]">Worker</p><p className="text-[#1C1C1E] font-medium">{JOB.worker}</p></div>
-              <div><p className="text-[#8E8E93]">Client</p><p className="text-[#1C1C1E] font-medium">{JOB.client}</p></div>
-              <div><p className="text-[#8E8E93]">Date</p><p className="text-[#1C1C1E] font-medium">{JOB.date}</p></div>
-              <div><p className="text-[#8E8E93]">Time</p><p className="text-[#1C1C1E] font-medium">{JOB.time}</p></div>
+          {/* Details card */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl border border-[#E5E5EA] p-5"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-[#1C1C1E]">Details</h2>
+              {!editing && job.status !== 'completed' && job.status !== 'charged' && job.status !== 'cancelled' && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="text-[#007AFF] text-sm font-medium hover:underline"
+                >
+                  Edit
+                </button>
+              )}
             </div>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
-            <h2 className="font-semibold text-[#1C1C1E] mb-4">Checklist</h2>
-            <div className="space-y-2">
-              {JOB.checklist.map((c, i) => (
-                <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F2F2F7]">
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${c.done ? 'bg-[#34C759] border-[#34C759]' : 'border-[#E5E5EA]'}`}>
-                    {c.done && <span className="text-white text-xs">✓</span>}
+
+            {editing ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-[#8E8E93] mb-1">Scheduled Date</label>
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                    />
                   </div>
-                  <span className={`text-sm ${c.done ? 'text-[#8E8E93] line-through' : 'text-[#1C1C1E]'}`}>{c.item}</span>
+                  <div>
+                    <label className="block text-xs text-[#8E8E93] mb-1">Time</label>
+                    <input
+                      type="time"
+                      value={editTime}
+                      onChange={(e) => setEditTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
-            <h2 className="font-semibold text-[#1C1C1E] mb-4">Timeline</h2>
-            <div className="space-y-4">
-              {JOB.timeline.map((t, i) => (
-                <div key={i} className="flex gap-4">
-                  <div className="flex flex-col items-center"><div className="w-3 h-3 rounded-full bg-[#007AFF]" />{i < JOB.timeline.length - 1 && <div className="w-0.5 flex-1 bg-[#E5E5EA]" />}</div>
-                  <div className="pb-4"><p className="text-sm text-[#1C1C1E]">{t.event}</p><p className="text-xs text-[#AEAEB2]">{t.time}</p></div>
+                <div>
+                  <label className="block text-xs text-[#8E8E93] mb-1">Price</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#8E8E93]">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value)}
+                      className="w-full pl-7 pr-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={updating}
+                    className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] disabled:opacity-50"
+                  >
+                    {updating ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditing(false)
+                      setEditPrice(String(job.price))
+                      setEditDate(job.scheduled_date)
+                      setEditTime(job.scheduled_time ?? '')
+                    }}
+                    className="px-4 py-2 bg-white text-[#3C3C43] border border-[#E5E5EA] rounded-xl text-sm font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-[#8E8E93]">Address</p>
+                  <p className="text-[#1C1C1E] font-medium">{fullAddress}</p>
+                </div>
+                <div>
+                  <p className="text-[#8E8E93]">Service</p>
+                  <p className="text-[#1C1C1E] font-medium">{job.service_name}</p>
+                  {job.service_description && (
+                    <p className="text-xs text-[#8E8E93]">{job.service_description}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[#8E8E93]">Worker</p>
+                  <p className="text-[#1C1C1E] font-medium">{job.worker_name ?? 'Unassigned'}</p>
+                </div>
+                <div>
+                  <p className="text-[#8E8E93]">Source</p>
+                  <p className="text-[#1C1C1E] font-medium capitalize">{job.source.replace(/_/g, ' ')}</p>
+                </div>
+                <div>
+                  <p className="text-[#8E8E93]">Date</p>
+                  <p className="text-[#1C1C1E] font-medium">
+                    {new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#8E8E93]">Time</p>
+                  <p className="text-[#1C1C1E] font-medium">{job.scheduled_time ?? 'Not set'}</p>
+                </div>
+              </div>
+            )}
           </motion.div>
+
+          {/* Checklist */}
+          {job.checklist_results && Object.keys(job.checklist_results).length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-2xl border border-[#E5E5EA] p-5"
+            >
+              <h2 className="font-semibold text-[#1C1C1E] mb-4">Checklist</h2>
+              <div className="space-y-2">
+                {Object.entries(job.checklist_results).map(([key, value]) => {
+                  const done = Boolean(value)
+                  return (
+                  <div key={key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F2F2F7]">
+                    <div
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        done ? 'bg-[#34C759] border-[#34C759]' : 'border-[#E5E5EA]'
+                      }`}
+                    >
+                      {done && <span className="text-white text-xs">&#10003;</span>}
+                    </div>
+                    <span className={`text-sm ${done ? 'text-[#8E8E93] line-through' : 'text-[#1C1C1E]'}`}>
+                      {key}
+                    </span>
+                  </div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )}
         </div>
+
+        {/* Sidebar */}
         <div className="space-y-6">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
+          {/* Pricing */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-2xl border border-[#E5E5EA] p-5"
+          >
             <h2 className="font-semibold text-[#1C1C1E] mb-4">Pricing</h2>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-[#8E8E93]">Service</span><span>${JOB.price.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-[#8E8E93]">Expenses</span><span>${JOB.expenses.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-[#8E8E93]">Tax</span><span>${JOB.tax.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-[#8E8E93]">Tip</span><span className="text-[#34C759]">${JOB.tip.toFixed(2)}</span></div>
-              <div className="border-t border-[#E5E5EA] pt-2 flex justify-between font-semibold"><span>Total</span><span>${JOB.total.toFixed(2)}</span></div>
+              <div className="flex justify-between">
+                <span className="text-[#8E8E93]">Service</span>
+                <span className="text-[#1C1C1E]">${Number(job.price).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#8E8E93]">Expenses</span>
+                <span className="text-[#1C1C1E]">${Number(job.expenses_total).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#8E8E93]">Tax</span>
+                <span className="text-[#1C1C1E]">${Number(job.tax_amount).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#8E8E93]">Tip</span>
+                <span className="text-[#34C759]">${Number(job.tip_amount).toFixed(2)}</span>
+              </div>
+              {job.total_charged !== null && (
+                <div className="border-t border-[#E5E5EA] pt-2 flex justify-between font-semibold">
+                  <span className="text-[#1C1C1E]">Total Charged</span>
+                  <span className="text-[#1C1C1E]">${Number(job.total_charged).toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </motion.div>
-          <button className="w-full py-2.5 bg-[#34C759] text-white rounded-xl text-sm font-medium">Approve Job</button>
-          <button className="w-full py-2.5 bg-white text-[#FF6B6B] border border-[#FF6B6B] rounded-xl text-sm font-medium">Cancel Job</button>
+
+          {/* Status actions */}
+          {nextStatuses.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="space-y-2"
+            >
+              {nextStatuses.map((s) => {
+                const isCancel = s === 'cancelled'
+                return (
+                  <button
+                    key={s}
+                    onClick={() => handleStatusChange(s)}
+                    disabled={updating}
+                    className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 ${
+                      isCancel
+                        ? 'bg-white text-[#FF6B6B] border border-[#FF6B6B] hover:bg-red-50'
+                        : 'text-white hover:opacity-90'
+                    }`}
+                    style={
+                      isCancel
+                        ? undefined
+                        : { backgroundColor: STATUS_COLORS[s] ?? '#007AFF' }
+                    }
+                  >
+                    {isCancel ? 'Cancel Job' : `Mark as ${STATUS_LABELS[s] ?? s}`}
+                  </button>
+                )
+              })}
+            </motion.div>
+          )}
+
+          {/* Delete */}
+          {job.status !== 'charged' && (
+            <div>
+              {showDeleteConfirm ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+                  <p className="text-sm text-red-700">Are you sure you want to delete this job? This cannot be undone.</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDelete}
+                      disabled={updating}
+                      className="flex-1 py-2 bg-[#FF6B6B] text-white rounded-xl text-sm font-medium disabled:opacity-50"
+                    >
+                      {updating ? 'Deleting...' : 'Yes, Delete'}
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 py-2 bg-white text-[#3C3C43] border border-[#E5E5EA] rounded-xl text-sm font-medium"
+                    >
+                      No, Keep
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full py-2.5 bg-white text-[#8E8E93] border border-[#E5E5EA] rounded-xl text-sm font-medium hover:text-[#FF6B6B] hover:border-[#FF6B6B] transition-colors"
+                >
+                  Delete Job
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

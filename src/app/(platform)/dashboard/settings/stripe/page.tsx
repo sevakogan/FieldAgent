@@ -1,48 +1,144 @@
 'use client'
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import Link from 'next/link'
 
-const MOCK_DATA = [
-  { id: '1', name: 'Item 1', status: 'active', date: '2026-03-20', amount: '$150.00' },
-  { id: '2', name: 'Item 2', status: 'pending', date: '2026-03-19', amount: '$220.00' },
-  { id: '3', name: 'Item 3', status: 'completed', date: '2026-03-18', amount: '$85.00' },
-  { id: '4', name: 'Item 4', status: 'active', date: '2026-03-17', amount: '$340.00' },
-  { id: '5', name: 'Item 5', status: 'pending', date: '2026-03-16', amount: '$175.00' },
+import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { getCompany, updateCompany } from '@/lib/actions/company'
+import type { FeeSetting } from '@/types/database'
+
+const FEE_OPTIONS: { value: FeeSetting; label: string; description: string }[] = [
+  { value: 'company_pays', label: 'Company Pays', description: 'You absorb the processing fees' },
+  { value: 'client_pays', label: 'Client Pays', description: 'Processing fees added to client invoice' },
+  { value: 'split_50_50', label: 'Split 50/50', description: 'Fees split equally between you and the client' },
 ]
 
-const STATUS_COLORS: Record<string, string> = { active: '#34C759', pending: '#FF9F0A', completed: '#007AFF' }
+export default function StripeSettingsPage() {
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null)
+  const [feeSetting, setFeeSetting] = useState<FeeSetting>('company_pays')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
-export default function stripePage() {
-  const [search, setSearch] = useState('')
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    const result = await getCompany()
+    if (result.success && result.data) {
+      setStripeAccountId(result.data.stripe_account_id)
+      setFeeSetting(result.data.stripe_fee_setting)
+    } else {
+      setError(result.error ?? 'Failed to load settings')
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const handleSaveFees = async () => {
+    setSaving(true)
+    setError(null)
+    setSuccess(false)
+    const result = await updateCompany({ stripe_fee_setting: feeSetting })
+    if (result.success) {
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } else {
+      setError(result.error ?? 'Failed to save')
+    }
+    setSaving(false)
+  }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">stripe</h1>
-        <button className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors">+ Add New</button>
+      <div className="flex items-center gap-3 mb-6">
+        <Link href="/dashboard/settings" className="text-[#007AFF] hover:text-[#0066DD] text-sm font-medium">
+          &larr; Settings
+        </Link>
+        <h1 className="text-2xl font-bold text-[#1C1C1E]">Stripe Connect</h1>
       </div>
-      <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full md:w-80 px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
-      <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-        <table className="w-full">
-          <thead><tr className="border-b border-[#E5E5EA]">
-            <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Name</th>
-            <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
-            <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Date</th>
-            <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Amount</th>
-          </tr></thead>
-          <tbody className="divide-y divide-[#E5E5EA]">
-            {MOCK_DATA.filter(d => d.name.toLowerCase().includes(search.toLowerCase())).map((item, i) => (
-              <motion.tr key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="hover:bg-[#F2F2F7] cursor-pointer transition-colors">
-                <td className="p-4 text-sm font-medium text-[#1C1C1E]">{item.name}</td>
-                <td className="p-4"><span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: (STATUS_COLORS[item.status] || '#8E8E93') + '20', color: STATUS_COLORS[item.status] || '#8E8E93' }}>{item.status}</span></td>
-                <td className="p-4 text-sm text-[#8E8E93]">{item.date}</td>
-                <td className="p-4 text-sm text-right font-medium text-[#1C1C1E]">{item.amount}</td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <div className="h-8 w-8 border-3 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">{error}</div>
+      )}
+
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 mb-4 text-sm">Fee settings saved</div>
+      )}
+
+      {!loading && (
+        <div className="max-w-2xl space-y-6">
+          {/* Connection status */}
+          <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6">
+            <h2 className="font-semibold text-[#1C1C1E] mb-4">Connection Status</h2>
+            {stripeAccountId ? (
+              <div className="flex items-center justify-between p-4 bg-[#34C759]/5 rounded-xl">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#34C759]" />
+                    <span className="font-medium text-[#1C1C1E]">Connected</span>
+                  </div>
+                  <p className="text-sm text-[#8E8E93] mt-1">Account: {stripeAccountId}</p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-[#8E8E93] mb-4">
+                  Connect your Stripe account to accept payments from clients.
+                </p>
+                <a
+                  href="/api/payments/connect"
+                  className="inline-block px-5 py-2.5 bg-[#635BFF] text-white rounded-xl text-sm font-medium hover:bg-[#5851DB] transition-colors"
+                >
+                  Connect Stripe
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Fee settings */}
+          <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6">
+            <h2 className="font-semibold text-[#1C1C1E] mb-4">Processing Fee Settings</h2>
+            <div className="space-y-3">
+              {FEE_OPTIONS.map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer border transition-colors ${
+                    feeSetting === opt.value
+                      ? 'border-[#007AFF] bg-[#007AFF]/5'
+                      : 'border-[#E5E5EA] hover:bg-[#F2F2F7]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="fee_setting"
+                    value={opt.value}
+                    checked={feeSetting === opt.value}
+                    onChange={() => setFeeSetting(opt.value)}
+                    className="accent-[#007AFF]"
+                  />
+                  <div>
+                    <p className="font-medium text-sm text-[#1C1C1E]">{opt.label}</p>
+                    <p className="text-xs text-[#8E8E93]">{opt.description}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <button
+              onClick={handleSaveFees}
+              disabled={saving}
+              className="mt-4 px-6 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save Fee Settings'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

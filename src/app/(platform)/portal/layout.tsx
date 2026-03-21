@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { getPortalClient } from '@/lib/actions/portal';
+import type { PortalClient } from '@/lib/actions/portal';
 
 const TABS = [
   { href: '/portal', label: 'Home', icon: HomeIcon },
@@ -29,14 +31,31 @@ const SIDEBAR_LINKS = [
   { href: '/portal/settings', label: 'Settings', icon: SettingsIcon },
 ] as const;
 
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0] ?? '').join('').toUpperCase().slice(0, 2);
+}
+
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [client, setClient] = useState<PortalClient | null>(null);
+
+  useEffect(() => {
+    getPortalClient().then(result => {
+      if (result.success && result.data) {
+        setClient(result.data);
+      }
+    });
+  }, []);
 
   const isActive = (href: string) => {
     if (href === '/portal') return pathname === '/portal';
     return pathname.startsWith(href);
   };
+
+  const initials = client ? getInitials(client.fullName) : '?';
+  const displayName = client?.fullName ?? 'Loading...';
+  const displayEmail = client?.email ?? '';
 
   return (
     <div className="min-h-screen bg-[#F2F2F7]">
@@ -49,7 +68,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </button>
         <h1 className="text-lg font-semibold text-gray-900">KleanHQ</h1>
         <div className="h-8 w-8 rounded-full bg-[#AF52DE] flex items-center justify-center text-white text-sm font-medium">
-          S
+          {initials}
         </div>
       </header>
 
@@ -115,11 +134,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           <div className="mt-6 rounded-xl bg-[#F2F2F7] p-3">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-[#AF52DE] flex items-center justify-center text-white text-sm font-semibold">
-                S
+                {initials}
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-900">Sarah Miller</p>
-                <p className="text-xs text-gray-500">sarah@example.com</p>
+                <p className="text-sm font-medium text-gray-900">{displayName}</p>
+                <p className="text-xs text-gray-500">{displayEmail}</p>
               </div>
             </div>
           </div>

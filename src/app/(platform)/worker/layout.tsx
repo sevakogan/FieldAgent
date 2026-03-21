@@ -1,8 +1,11 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { getWorkerInfo } from '@/lib/actions/worker';
+import type { WorkerInfo } from '@/lib/actions/worker';
 
 const NAV_ITEMS = [
   { href: '/worker', icon: 'calendar-today', label: 'Today' },
@@ -54,6 +57,15 @@ function TabIcon({ name, active }: { readonly name: string; readonly active: boo
   return <>{icons[name]}</>;
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 function BottomTabs() {
   const pathname = usePathname();
 
@@ -94,8 +106,11 @@ function BottomTabs() {
   );
 }
 
-function DesktopSidebar() {
+function DesktopSidebar({ worker }: { readonly worker: WorkerInfo | null }) {
   const pathname = usePathname();
+  const initials = worker ? getInitials(worker.fullName) : '..';
+  const displayName = worker?.fullName ?? 'Loading...';
+  const roleName = worker?.role === 'owner' ? 'Owner' : worker?.role === 'lead' ? 'Lead' : 'Cleaner';
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200/50 h-dvh sticky top-0">
@@ -130,11 +145,11 @@ function DesktopSidebar() {
       <div className="p-4 border-t border-gray-100">
         <div className="flex items-center gap-3 px-2">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] flex items-center justify-center text-white text-sm font-bold">
-            JD
+            {initials}
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">Jane Doe</p>
-            <p className="text-[11px] text-[#8E8E93]">Pro Cleaner</p>
+            <p className="text-sm font-semibold text-gray-900">{displayName}</p>
+            <p className="text-[11px] text-[#8E8E93]">{roleName}</p>
           </div>
         </div>
       </div>
@@ -147,9 +162,19 @@ export default function WorkerLayout({
 }: {
   readonly children: React.ReactNode;
 }) {
+  const [worker, setWorker] = useState<WorkerInfo | null>(null);
+
+  useEffect(() => {
+    getWorkerInfo().then((res) => {
+      if (res.success && res.data) {
+        setWorker(res.data);
+      }
+    });
+  }, []);
+
   return (
     <div className="flex min-h-dvh bg-[#F2F2F7]">
-      <DesktopSidebar />
+      <DesktopSidebar worker={worker} />
       <main className="flex-1 pb-24 md:pb-6 md:p-6">
         {children}
       </main>

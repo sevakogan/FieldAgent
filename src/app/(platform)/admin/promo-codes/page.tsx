@@ -1,23 +1,99 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { getAdminPromoCodes, createPromoCode, updatePromoCodeStatus } from "@/lib/actions/admin";
 
-const PROMO_CODES = [
-  { id: "1", code: "SUMMER25", discount: "25%", type: "percentage", duration: "3 months", uses: 142, maxUses: 500, status: "active", created: "2024-08-01", expires: "2024-12-31" },
-  { id: "2", code: "WELCOME50", discount: "$50", type: "fixed", duration: "First month", uses: 89, maxUses: 200, status: "active", created: "2024-07-15", expires: "2025-01-31" },
-  { id: "3", code: "PARTNER15", discount: "15%", type: "percentage", duration: "6 months", uses: 34, maxUses: 100, status: "active", created: "2024-09-01", expires: "2025-03-01" },
-  { id: "4", code: "LAUNCH100", discount: "$100", type: "fixed", duration: "First month", uses: 500, maxUses: 500, status: "exhausted", created: "2024-06-01", expires: "2024-09-30" },
-  { id: "5", code: "BETA20", discount: "20%", type: "percentage", duration: "12 months", uses: 250, maxUses: 250, status: "expired", created: "2024-01-01", expires: "2024-06-30" },
-] as const;
+type PromoCode = {
+  id: string;
+  code: string;
+  level: string | null;
+  discount_type: string | null;
+  discount_value: number | null;
+  max_uses: number | null;
+  current_uses: number | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  status: string;
+  created_at: string;
+};
 
 const STATUS_STYLES: Record<string, string> = {
   active: "bg-[#34C759]/10 text-[#34C759]",
   exhausted: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
   expired: "bg-[#8E8E93]/10 text-[#8E8E93]",
+  disabled: "bg-[#FF3B30]/10 text-[#FF3B30]",
 };
 
 export default function AdminPromoCodesPage() {
+  const [codes, setCodes] = useState<PromoCode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  // Form state
+  const [formCode, setFormCode] = useState("");
+  const [formType, setFormType] = useState("percentage");
+  const [formValue, setFormValue] = useState("");
+  const [formMaxUses, setFormMaxUses] = useState("");
+  const [formExpires, setFormExpires] = useState("");
+
+  const loadCodes = useCallback(() => {
+    getAdminPromoCodes().then((result) => {
+      if (result.success && result.data) {
+        setCodes(result.data);
+      } else {
+        setError(result.error ?? "Unknown error");
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    loadCodes();
+  }, [loadCodes]);
+
+  const handleCreate = async () => {
+    if (!formCode || !formValue) return;
+    setCreating(true);
+    const result = await createPromoCode({
+      code: formCode,
+      discount_type: formType,
+      discount_value: Number(formValue),
+      max_uses: Number(formMaxUses) || 0,
+      valid_until: formExpires,
+    });
+    setCreating(false);
+    if (result.success) {
+      setShowCreate(false);
+      setFormCode("");
+      setFormValue("");
+      setFormMaxUses("");
+      setFormExpires("");
+      loadCodes();
+    }
+  };
+
+  const handleDisable = async (id: string) => {
+    await updatePromoCodeStatus(id, "disabled");
+    loadCodes();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-[#8E8E93] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-[#FF3B30]/10 text-[#FF3B30] rounded-2xl p-5 text-[13px]">
+        Failed to load promo codes: {error}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -38,79 +114,137 @@ export default function AdminPromoCodesPage() {
       {showCreate && (
         <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5 mb-6">
           <h3 className="text-[14px] font-bold text-[#1C1C1E] mb-4">New Promo Code</h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Code</label>
-              <input type="text" placeholder="e.g. SAVE20" className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] font-mono uppercase placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30" />
+              <input
+                type="text"
+                placeholder="e.g. SAVE20"
+                value={formCode}
+                onChange={(e) => setFormCode(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] font-mono uppercase placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
+              />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Discount</label>
-              <input type="text" placeholder="25% or $50" className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30" />
+              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Type</label>
+              <select
+                value={formType}
+                onChange={(e) => setFormType(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
+              >
+                <option value="percentage">Percentage</option>
+                <option value="fixed">Fixed ($)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Value</label>
+              <input
+                type="number"
+                placeholder={formType === "percentage" ? "25" : "50"}
+                value={formValue}
+                onChange={(e) => setFormValue(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
+              />
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Max Uses</label>
-              <input type="number" placeholder="500" className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30" />
+              <input
+                type="number"
+                placeholder="500"
+                value={formMaxUses}
+                onChange={(e) => setFormMaxUses(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
+              />
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Expires</label>
-              <input type="date" className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30" />
+              <input
+                type="date"
+                value={formExpires}
+                onChange={(e) => setFormExpires(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <button onClick={() => setShowCreate(false)} className="h-9 px-4 rounded-xl border border-[#E5E5EA] text-[13px] font-semibold text-[#8E8E93] hover:bg-[#F2F2F7] transition-colors">
               Cancel
             </button>
-            <button className="h-9 px-4 rounded-xl bg-[#34C759] text-white text-[13px] font-semibold hover:bg-[#2DA44E] transition-colors">
-              Create
+            <button
+              onClick={handleCreate}
+              disabled={creating || !formCode || !formValue}
+              className="h-9 px-4 rounded-xl bg-[#34C759] text-white text-[13px] font-semibold hover:bg-[#2DA44E] transition-colors disabled:opacity-50"
+            >
+              {creating ? "Creating..." : "Create"}
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[#F2F2F7]">
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Code</th>
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Discount</th>
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Duration</th>
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Usage</th>
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Status</th>
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Expires</th>
-                <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PROMO_CODES.map((promo) => (
-                <tr key={promo.id} className="border-b border-[#F2F2F7] last:border-0 hover:bg-[#F9F9FB] transition-colors">
-                  <td className="px-5 py-3.5 text-[13px] font-mono font-bold text-[#1C1C1E]">{promo.code}</td>
-                  <td className="px-5 py-3.5 text-[13px] font-semibold text-[#1C1C1E]">{promo.discount}</td>
-                  <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{promo.duration}</td>
-                  <td className="px-5 py-3.5">
-                    <div className="text-[12px] text-[#8E8E93]">{promo.uses}/{promo.maxUses}</div>
-                    <div className="w-16 h-1.5 bg-[#F2F2F7] rounded-full mt-1 overflow-hidden">
-                      <div className="h-full bg-[#8E8E93] rounded-full" style={{ width: `${(promo.uses / promo.maxUses) * 100}%` }} />
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[promo.status]}`}>
-                      {promo.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{promo.expires}</td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex gap-2">
-                      <button className="text-[11px] font-semibold text-[#007AFF] hover:underline">Edit</button>
-                      <button className="text-[11px] font-semibold text-[#FF3B30] hover:underline">Disable</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {codes.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center">
+          <p className="text-[14px] font-semibold text-[#8E8E93]">No promo codes yet</p>
+          <p className="text-[12px] text-[#C7C7CC] mt-1">Create your first promotional code above.</p>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#F2F2F7]">
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Code</th>
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Discount</th>
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Usage</th>
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Status</th>
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Expires</th>
+                  <th className="text-left text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider px-5 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {codes.map((promo) => {
+                  const usagePct = promo.max_uses && promo.max_uses > 0
+                    ? ((promo.current_uses ?? 0) / promo.max_uses) * 100
+                    : 0;
+                  return (
+                    <tr key={promo.id} className="border-b border-[#F2F2F7] last:border-0 hover:bg-[#F9F9FB] transition-colors">
+                      <td className="px-5 py-3.5 text-[13px] font-mono font-bold text-[#1C1C1E]">{promo.code}</td>
+                      <td className="px-5 py-3.5 text-[13px] font-semibold text-[#1C1C1E]">
+                        {promo.discount_type === "percentage" ? `${promo.discount_value}%` : `$${promo.discount_value}`}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="text-[12px] text-[#8E8E93]">{promo.current_uses ?? 0}/{promo.max_uses ?? "∞"}</div>
+                        {promo.max_uses && promo.max_uses > 0 && (
+                          <div className="w-16 h-1.5 bg-[#F2F2F7] rounded-full mt-1 overflow-hidden">
+                            <div className="h-full bg-[#8E8E93] rounded-full" style={{ width: `${Math.min(usagePct, 100)}%` }} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[promo.status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
+                          {promo.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">
+                        {promo.valid_until ? new Date(promo.valid_until).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {promo.status === "active" && (
+                          <button
+                            onClick={() => handleDisable(promo.id)}
+                            className="text-[11px] font-semibold text-[#FF3B30] hover:underline"
+                          >
+                            Disable
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </>
   );
 }

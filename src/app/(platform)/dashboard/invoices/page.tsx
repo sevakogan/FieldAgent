@@ -1,47 +1,189 @@
 'use client'
-import { useState } from 'react'
+
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import {
+  getInvoices,
+  getInvoiceSummary,
+  type InvoiceRow,
+  type InvoiceSummary,
+} from '@/lib/actions/invoices'
 
-const MOCK_DATA = [
-  { id: '1', name: 'Item 1', status: 'active', date: '2026-03-20', amount: '$150.00' },
-  { id: '2', name: 'Item 2', status: 'pending', date: '2026-03-19', amount: '$220.00' },
-  { id: '3', name: 'Item 3', status: 'completed', date: '2026-03-18', amount: '$85.00' },
-  { id: '4', name: 'Item 4', status: 'active', date: '2026-03-17', amount: '$340.00' },
-  { id: '5', name: 'Item 5', status: 'pending', date: '2026-03-16', amount: '$175.00' },
+const STATUS_COLORS: Record<string, string> = {
+  pending: '#FF9F0A',
+  paid: '#34C759',
+  failed: '#FF6B6B',
+  refunded: '#8E8E93',
+  overdue: '#FF3B30',
+}
+
+const STATUS_TABS: { label: string; value: string }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Paid', value: 'paid' },
+  { label: 'Overdue', value: 'overdue' },
+  { label: 'Failed', value: 'failed' },
 ]
 
-const STATUS_COLORS: Record<string, string> = { active: '#34C759', pending: '#FF9F0A', completed: '#007AFF' }
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+}
 
-export default function invoicesPage() {
-  const [search, setSearch] = useState('')
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+export default function InvoicesPage() {
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([])
+  const [summary, setSummary] = useState<InvoiceSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('all')
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const [invoicesResult, summaryResult] = await Promise.all([
+        getInvoices({ status: activeTab }),
+        getInvoiceSummary(),
+      ])
+      if (invoicesResult.success && invoicesResult.data) {
+        setInvoices(invoicesResult.data)
+      }
+      if (summaryResult.success && summaryResult.data) {
+        setSummary(summaryResult.data)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [activeTab])
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">invoices</h1>
-        <button className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors">+ Add New</button>
+        <h1 className="text-2xl font-bold text-[#1C1C1E]">Invoices</h1>
+        <Link
+          href="/dashboard/jobs"
+          className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
+        >
+          + Create from Job
+        </Link>
       </div>
-      <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full md:w-80 px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+
+      {/* Summary banner */}
+      {summary && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-3 gap-4 mb-6"
+        >
+          <div className="bg-white rounded-2xl border border-[#E5E5EA] p-4">
+            <p className="text-sm text-[#8E8E93] mb-1">Outstanding</p>
+            <p className="text-xl font-bold text-[#FF9F0A]">
+              {formatCurrency(summary.totalOutstanding)}
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl border border-[#E5E5EA] p-4">
+            <p className="text-sm text-[#8E8E93] mb-1">Paid</p>
+            <p className="text-xl font-bold text-[#34C759]">
+              {formatCurrency(summary.totalPaid)}
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl border border-[#E5E5EA] p-4">
+            <p className="text-sm text-[#8E8E93] mb-1">Overdue</p>
+            <p className="text-xl font-bold text-[#FF3B30]">
+              {formatCurrency(summary.totalOverdue)}
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Status filter tabs */}
+      <div className="flex gap-2 mb-4 overflow-x-auto">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === tab.value
+                ? 'bg-[#007AFF] text-white'
+                : 'bg-white text-[#8E8E93] border border-[#E5E5EA] hover:bg-[#F2F2F7]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
       <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-        <table className="w-full">
-          <thead><tr className="border-b border-[#E5E5EA]">
-            <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Name</th>
-            <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
-            <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Date</th>
-            <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Amount</th>
-          </tr></thead>
-          <tbody className="divide-y divide-[#E5E5EA]">
-            {MOCK_DATA.filter(d => d.name.toLowerCase().includes(search.toLowerCase())).map((item, i) => (
-              <motion.tr key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="hover:bg-[#F2F2F7] cursor-pointer transition-colors">
-                <td className="p-4 text-sm font-medium text-[#1C1C1E]">{item.name}</td>
-                <td className="p-4"><span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: (STATUS_COLORS[item.status] || '#8E8E93') + '20', color: STATUS_COLORS[item.status] || '#8E8E93' }}>{item.status}</span></td>
-                <td className="p-4 text-sm text-[#8E8E93]">{item.date}</td>
-                <td className="p-4 text-sm text-right font-medium text-[#1C1C1E]">{item.amount}</td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="h-4 w-32 bg-[#F2F2F7] rounded animate-pulse mx-auto" />
+          </div>
+        ) : invoices.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-[#8E8E93] text-sm">No invoices yet</p>
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[#E5E5EA]">
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Invoice #</th>
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Client</th>
+                <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Total</th>
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Due Date</th>
+                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Created</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E5E5EA]">
+              {invoices.map((invoice, i) => (
+                <motion.tr
+                  key={invoice.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.03 }}
+                >
+                  <td className="p-4">
+                    <Link
+                      href={`/dashboard/invoices/${invoice.id}`}
+                      className="text-sm font-medium text-[#1C1C1E] hover:text-[#007AFF] transition-colors"
+                    >
+                      {invoice.invoice_number}
+                    </Link>
+                  </td>
+                  <td className="p-4 text-sm text-[#3C3C43]">{invoice.client_name}</td>
+                  <td className="p-4 text-sm text-right font-medium text-[#1C1C1E]">
+                    {formatCurrency(invoice.total)}
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className="text-xs px-2.5 py-1 rounded-full font-medium capitalize"
+                      style={{
+                        backgroundColor: (STATUS_COLORS[invoice.status] ?? '#8E8E93') + '20',
+                        color: STATUS_COLORS[invoice.status] ?? '#8E8E93',
+                      }}
+                    >
+                      {invoice.status}
+                    </span>
+                  </td>
+                  <td className="p-4 text-sm text-[#8E8E93] hidden md:table-cell">
+                    {formatDate(invoice.due_date)}
+                  </td>
+                  <td className="p-4 text-sm text-[#8E8E93] hidden md:table-cell">
+                    {formatDate(invoice.created_at)}
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
