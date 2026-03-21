@@ -112,3 +112,20 @@ export async function getViewAsCompany(): Promise<CompanyOption | null> {
     owner_email: owner?.email ?? '',
   }
 }
+
+/** Returns true if viewing another company (read-only mode). False if viewing own or no override. */
+export async function isReadOnlyMode(): Promise<boolean> {
+  const viewAsId = await getViewAsCompanyId()
+  if (!viewAsId) return false
+
+  const supabase = createAdminClient()
+  // Get the default/own company
+  const { data: ownCompany } = await supabase
+    .from('companies')
+    .select('id')
+    .limit(1)
+    .single()
+
+  if (!ownCompany) return false
+  return viewAsId !== ownCompany.id
+}
