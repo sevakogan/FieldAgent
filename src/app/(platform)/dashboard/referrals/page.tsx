@@ -65,7 +65,7 @@ export default function ReferralsPage() {
     if (!referredEmail.trim()) return
     setCreating(true)
     setError(null)
-    const result = await createReferral({ referred_email: referredEmail.trim() })
+    const result = await createReferral({ referred_email: referredEmail.trim(), referred_type: referredType })
     if (result.success) {
       setToast('Referral created! Link sent.')
       setReferredEmail('')

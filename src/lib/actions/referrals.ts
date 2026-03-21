@@ -25,13 +25,13 @@ export async function getReferrals(): Promise<ActionResult<ReferralRow[]>> {
 
     const { data: referrals, error } = await supabase
       .from('referrals')
-      .select('id, referral_code, referral_link, referred_type, referred_user_id, status, reward_type, reward_value, total_earned, created_at')
+      .select('id, referral_code, referral_link, referred_type, referred_user_id, source, status, reward_type, reward_value, total_earned, created_at')
       .eq('referrer_user_id', ownerId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
-    // Get referred user emails
+    // Get referred user emails for those who signed up
     const referredUserIds = (referrals ?? []).map(r => r.referred_user_id).filter(Boolean) as string[]
     const { data: users } = referredUserIds.length > 0
       ? await supabase.from('users').select('id, email').in('id', referredUserIds)
@@ -44,11 +44,12 @@ export async function getReferrals(): Promise<ActionResult<ReferralRow[]>> {
       referral_code: r.referral_code,
       referral_link: r.referral_link,
       referred_type: r.referred_type,
-      referred_user_email: r.referred_user_id ? (emailMap.get(r.referred_user_id) ?? null) : null,
+      // Show the signed-up user's email, or fall back to the source (email they were invited with)
+      referred_user_email: r.referred_user_id ? (emailMap.get(r.referred_user_id) ?? null) : (r.source ?? null),
       status: r.status,
       reward_type: r.reward_type,
       reward_value: r.reward_value,
-      total_earned: r.total_earned,
+      total_earned: r.total_earned ?? 0,
       created_at: r.created_at,
     }))
 
@@ -60,6 +61,7 @@ export async function getReferrals(): Promise<ActionResult<ReferralRow[]>> {
 
 export async function createReferral(fields: {
   referred_email: string
+  referred_type?: string
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const ownerId = await getOwnerId()
@@ -89,14 +91,13 @@ export async function createReferral(fields: {
     const { data, error } = await supabase
       .from('referrals')
       .insert({
-        company_id: company.id,
         referrer_type: 'company',
         referrer_user_id: ownerId,
         referrer_entity_id: company.id,
         referral_code: code,
         referral_link: `https://kleanhq.com/r/${code}`,
-        referred_type: 'company',
-        referred_email: fields.referred_email.trim(),
+        referred_type: fields.referred_type ?? 'company',
+        source: fields.referred_email.trim(),
         status: 'pending',
         reward_value: 0,
         total_earned: 0,
