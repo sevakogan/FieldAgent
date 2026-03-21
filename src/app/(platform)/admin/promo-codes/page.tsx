@@ -11,8 +11,7 @@ type PromoCode = {
   discount_value: number | null;
   max_uses: number | null;
   current_uses: number | null;
-  valid_from: string | null;
-  valid_until: string | null;
+  expires_at: string | null;
   status: string;
   created_at: string;
 };
@@ -61,7 +60,7 @@ export default function AdminPromoCodesPage() {
       discount_type: formType,
       discount_value: Number(formValue),
       max_uses: Number(formMaxUses) || 0,
-      valid_until: formExpires,
+      expires_at: formExpires,
     });
     setCreating(false);
     if (result.success) {
@@ -225,7 +224,7 @@ export default function AdminPromoCodesPage() {
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">
-                        {promo.valid_until ? new Date(promo.valid_until).toLocaleDateString() : "—"}
+                        {promo.expires_at ? new Date(promo.expires_at).toLocaleDateString() : "—"}
                       </td>
                       <td className="px-5 py-3.5">
                         {promo.status === "active" && (

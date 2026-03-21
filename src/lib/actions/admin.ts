@@ -277,8 +277,7 @@ export async function getAdminPromoCodes(): Promise<ActionResult<Array<{
   discount_value: number | null
   max_uses: number | null
   current_uses: number | null
-  valid_from: string | null
-  valid_until: string | null
+  expires_at: string | null
   status: string
   created_at: string
 }>>> {
@@ -286,7 +285,7 @@ export async function getAdminPromoCodes(): Promise<ActionResult<Array<{
     const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('promo_codes')
-      .select('id, code, level, discount_type, discount_value, max_uses, current_uses, valid_from, valid_until, status, created_at')
+      .select('id, code, level, discount_type, discount_value, max_uses, current_uses, expires_at, status, created_at')
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -301,7 +300,7 @@ export async function createPromoCode(fields: {
   discount_type: string
   discount_value: number
   max_uses: number
-  valid_until: string
+  expires_at: string
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const supabase = createAdminClient()
@@ -309,10 +308,11 @@ export async function createPromoCode(fields: {
       .from('promo_codes')
       .insert({
         code: fields.code.toUpperCase(),
+        level: 'platform',
         discount_type: fields.discount_type,
         discount_value: fields.discount_value,
         max_uses: fields.max_uses,
-        valid_until: fields.valid_until,
+        expires_at: fields.expires_at,
         status: 'active',
         current_uses: 0,
       })
