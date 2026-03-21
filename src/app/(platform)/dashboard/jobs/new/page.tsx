@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { createJob } from '@/lib/actions/jobs'
 import { getTeamMembers, type TeamMember } from '@/lib/actions/jobs'
 import { getAddresses, type AddressRow } from '@/lib/actions/addresses'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
+import { getClients, createClient, type ClientRow } from '@/lib/actions/clients'
 
 type FormData = {
+  client_id: string
   address_id: string
   service_type_id: string
   assigned_worker_id: string
@@ -19,6 +21,7 @@ type FormData = {
 }
 
 const INITIAL_FORM: FormData = {
+  client_id: '',
   address_id: '',
   service_type_id: '',
   assigned_worker_id: '',
@@ -33,20 +36,30 @@ export default function NewJobPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [clients, setClients] = useState<ClientRow[]>([])
   const [addresses, setAddresses] = useState<AddressRow[]>([])
   const [services, setServices] = useState<ServiceRow[]>([])
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loadingDropdowns, setLoadingDropdowns] = useState(true)
 
+  // New client inline form
+  const [showNewClient, setShowNewClient] = useState(false)
+  const [newClientName, setNewClientName] = useState('')
+  const [newClientEmail, setNewClientEmail] = useState('')
+  const [newClientPhone, setNewClientPhone] = useState('')
+  const [creatingClient, setCreatingClient] = useState(false)
+
   useEffect(() => {
     async function loadDropdowns() {
       setLoadingDropdowns(true)
-      const [addrResult, svcResult, memberResult] = await Promise.all([
+      const [clientResult, addrResult, svcResult, memberResult] = await Promise.all([
+        getClients(),
         getAddresses(),
         getServices(),
         getTeamMembers(),
       ])
 
+      if (clientResult.success && clientResult.data) setClients(clientResult.data)
       if (addrResult.success && addrResult.data) setAddresses(addrResult.data)
       if (svcResult.success && svcResult.data) setServices(svcResult.data)
       if (memberResult.success && memberResult.data) setMembers(memberResult.data)
@@ -55,16 +68,64 @@ export default function NewJobPage() {
     loadDropdowns()
   }, [])
 
+  // Filter addresses by selected client
+  const filteredAddresses = useMemo(() => {
+    if (!form.client_id) return addresses
+    return addresses.filter(a => a.client_id === form.client_id)
+  }, [addresses, form.client_id])
+
   function handleChange(field: keyof FormData, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }))
+    const updated = { ...form, [field]: value }
+
+    // When client changes, reset address if it doesn't belong to the new client
+    if (field === 'client_id') {
+      const clientAddresses = addresses.filter(a => a.client_id === value)
+      if (!clientAddresses.some(a => a.id === form.address_id)) {
+        updated.address_id = ''
+      }
+    }
 
     // Auto-fill price when service is selected
     if (field === 'service_type_id' && value) {
       const selected = services.find(s => s.id === value)
       if (selected) {
-        setForm(prev => ({ ...prev, [field]: value, price: String(selected.default_price) }))
+        updated.price = String(selected.default_price)
       }
     }
+
+    setForm(updated)
+  }
+
+  async function handleCreateClient(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newClientName.trim() || !newClientEmail.trim()) return
+
+    setCreatingClient(true)
+    const result = await createClient({
+      full_name: newClientName,
+      email: newClientEmail,
+      phone: newClientPhone || undefined,
+    })
+
+    if (result.success && result.data) {
+      // Refresh clients list and select the new one
+      const refreshed = await getClients()
+      if (refreshed.success && refreshed.data) {
+        setClients(refreshed.data)
+        // Find the newly created client
+        const newClient = refreshed.data.find(c => c.email === newClientEmail)
+        if (newClient) {
+          setForm(prev => ({ ...prev, client_id: newClient.id }))
+        }
+      }
+      setShowNewClient(false)
+      setNewClientName('')
+      setNewClientEmail('')
+      setNewClientPhone('')
+    } else {
+      setError(result.error ?? 'Failed to create client')
+    }
+    setCreatingClient(false)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -117,7 +178,7 @@ export default function NewJobPage() {
 
   return (
     <div className="max-w-2xl">
-      <Link href="/dashboard/jobs" className="text-[#007AFF] text-sm mb-2 inline-block">
+      <Link href="/dashboard/jobs" className="text-[#007AFF] text-sm mb-2 inline-block hover:underline">
         &larr; Back to Jobs
       </Link>
       <h1 className="text-2xl font-bold text-[#1C1C1E] mb-6">New Job</h1>
@@ -134,18 +195,97 @@ export default function NewJobPage() {
         onSubmit={handleSubmit}
         className="bg-white rounded-2xl border border-[#E5E5EA] p-6 space-y-5"
       >
-        {/* Address */}
+        {/* Client Picker */}
+        <div>
+          <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
+            Client <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-2">
+            <select
+              value={form.client_id}
+              onChange={(e) => handleChange('client_id', e.target.value)}
+              className="flex-1 px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+            >
+              <option value="">Select client...</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.full_name} — {c.email}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setShowNewClient(!showNewClient)}
+              className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                showNewClient
+                  ? 'bg-[#FF3B30] text-white hover:bg-[#FF2D20]'
+                  : 'bg-[#34C759] text-white hover:bg-[#2DB84D]'
+              }`}
+            >
+              {showNewClient ? 'Cancel' : '+ New'}
+            </button>
+          </div>
+
+          {/* Inline New Client Form */}
+          <AnimatePresence>
+            {showNewClient && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-3 p-4 bg-[#F2F2F7] rounded-xl border border-[#E5E5EA] space-y-3">
+                  <p className="text-xs font-semibold text-[#8E8E93] uppercase tracking-wider">New Client</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      placeholder="Full Name *"
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                      className="px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email *"
+                      value={newClientEmail}
+                      onChange={(e) => setNewClientEmail(e.target.value)}
+                      className="px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                    />
+                  </div>
+                  <input
+                    type="tel"
+                    placeholder="Phone (optional)"
+                    value={newClientPhone}
+                    onChange={(e) => setNewClientPhone(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateClient}
+                    disabled={creatingClient || !newClientName.trim() || !newClientEmail.trim()}
+                    className="w-full py-2 bg-[#007AFF] text-white rounded-lg text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+                  >
+                    {creatingClient ? 'Creating...' : 'Create & Select Client'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Address — filtered by client */}
         <div>
           <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
             Address <span className="text-red-500">*</span>
           </label>
-          {addresses.length === 0 ? (
-            <p className="text-sm text-[#8E8E93]">
-              No addresses found.{' '}
-              <Link href="/dashboard/addresses/new" className="text-[#007AFF] hover:underline">
-                Add an address first
-              </Link>
-            </p>
+          {filteredAddresses.length === 0 ? (
+            <div className="text-sm text-[#8E8E93] bg-[#F2F2F7] rounded-xl p-3">
+              {form.client_id
+                ? <>This client has no addresses. <Link href={`/dashboard/addresses?client=${form.client_id}`} className="text-[#007AFF] hover:underline">Add an address</Link></>
+                : <>No addresses found. <Link href="/dashboard/addresses" className="text-[#007AFF] hover:underline">Add an address first</Link></>
+              }
+            </div>
           ) : (
             <select
               value={form.address_id}
@@ -153,9 +293,10 @@ export default function NewJobPage() {
               className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
             >
               <option value="">Select address...</option>
-              {addresses.map((a) => (
+              {filteredAddresses.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.street}{a.unit ? `, ${a.unit}` : ''}, {a.city}, {a.state} {a.zip}
+                  {!form.client_id && ` (${a.client_name})`}
                 </option>
               ))}
             </select>
@@ -168,12 +309,10 @@ export default function NewJobPage() {
             Service Type <span className="text-red-500">*</span>
           </label>
           {services.length === 0 ? (
-            <p className="text-sm text-[#8E8E93]">
+            <div className="text-sm text-[#8E8E93] bg-[#F2F2F7] rounded-xl p-3">
               No services found.{' '}
-              <Link href="/dashboard/services" className="text-[#007AFF] hover:underline">
-                Create a service first
-              </Link>
-            </p>
+              <Link href="/dashboard/services" className="text-[#007AFF] hover:underline">Create a service first</Link>
+            </div>
           ) : (
             <select
               value={form.service_type_id}

@@ -56,6 +56,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )
           })}
         </nav>
+        <div className="p-3 border-t border-[#E5E5EA]">
+          <Link
+            href="/admin"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-[#AF52DE] bg-[#AF52DE]/8 hover:bg-[#AF52DE]/15 transition-colors w-full"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            God Mode
+          </Link>
+        </div>
       </aside>
       <main className="flex-1 overflow-y-auto">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 max-w-7xl mx-auto">
