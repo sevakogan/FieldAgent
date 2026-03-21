@@ -54,6 +54,7 @@ export type InvoiceSummary = {
   totalOutstanding: number
   totalPaid: number
   totalOverdue: number
+  potentialRevenue: number
 }
 
 export async function getInvoices(filters?: {
@@ -154,9 +155,15 @@ export async function getInvoice(id: string): Promise<ActionResult<InvoiceDetail
       clientEmail = user?.email ?? null
     }
 
-    const items: InvoiceLineItem[] = Array.isArray(invoice.items)
-      ? (invoice.items as InvoiceLineItem[])
-      : []
+    // Handle both old array format and new object format with line_items
+    let items: InvoiceLineItem[] = []
+    if (invoice.items) {
+      if (Array.isArray(invoice.items)) {
+        items = invoice.items as InvoiceLineItem[]
+      } else if (typeof invoice.items === 'object' && 'line_items' in (invoice.items as Record<string, unknown>)) {
+        items = ((invoice.items as Record<string, unknown>).line_items as InvoiceLineItem[]) ?? []
+      }
+    }
 
     const detail: InvoiceDetail = {
       id: invoice.id,
@@ -205,17 +212,26 @@ export async function getInvoiceSummary(): Promise<ActionResult<InvoiceSummary>>
       (acc, inv) => {
         const total = Number(inv.total) || 0
         if (inv.status === 'pending') {
-          return { ...acc, totalOutstanding: acc.totalOutstanding + total }
+          return {
+            ...acc,
+            totalOutstanding: acc.totalOutstanding + total,
+            potentialRevenue: acc.potentialRevenue + total,
+          }
         }
         if (inv.status === 'paid') {
           return { ...acc, totalPaid: acc.totalPaid + total }
         }
         if (inv.status === 'overdue') {
-          return { ...acc, totalOverdue: acc.totalOverdue + total, totalOutstanding: acc.totalOutstanding + total }
+          return {
+            ...acc,
+            totalOverdue: acc.totalOverdue + total,
+            totalOutstanding: acc.totalOutstanding + total,
+            potentialRevenue: acc.potentialRevenue + total,
+          }
         }
         return acc
       },
-      { totalOutstanding: 0, totalPaid: 0, totalOverdue: 0 } as InvoiceSummary
+      { totalOutstanding: 0, totalPaid: 0, totalOverdue: 0, potentialRevenue: 0 } as InvoiceSummary
     )
 
     return { success: true, data: summary }

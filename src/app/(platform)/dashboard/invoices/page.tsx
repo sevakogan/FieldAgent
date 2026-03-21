@@ -80,8 +80,15 @@ export default function InvoicesPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-3 gap-4 mb-6"
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
         >
+          <div className="bg-white rounded-2xl border border-[#E5E5EA] p-4">
+            <p className="text-sm text-[#8E8E93] mb-1">Potential Revenue</p>
+            <p className="text-xl font-bold text-[#007AFF]">
+              {formatCurrency(summary.potentialRevenue)}
+            </p>
+            <p className="text-[10px] text-[#C7C7CC] mt-0.5">From pending invoices</p>
+          </div>
           <div className="bg-white rounded-2xl border border-[#E5E5EA] p-4">
             <p className="text-sm text-[#8E8E93] mb-1">Outstanding</p>
             <p className="text-xl font-bold text-[#FF9F0A]">
@@ -89,7 +96,7 @@ export default function InvoicesPage() {
             </p>
           </div>
           <div className="bg-white rounded-2xl border border-[#E5E5EA] p-4">
-            <p className="text-sm text-[#8E8E93] mb-1">Paid</p>
+            <p className="text-sm text-[#8E8E93] mb-1">Collected</p>
             <p className="text-xl font-bold text-[#34C759]">
               {formatCurrency(summary.totalPaid)}
             </p>
