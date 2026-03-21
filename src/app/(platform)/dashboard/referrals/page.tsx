@@ -22,10 +22,10 @@ const REFERRAL_TYPES = [
 ]
 
 const SHARE_CHANNELS = [
-  { key: 'copy', icon: '📋', label: 'Copy Link' },
-  { key: 'sms', icon: '💬', label: 'SMS' },
-  { key: 'email', icon: '📧', label: 'Email' },
-  { key: 'whatsapp', icon: '📱', label: 'WhatsApp' },
+  { key: 'copy', icon: '📋', label: 'Copy Link', color: '#8E8E93' },
+  { key: 'sms', icon: '💬', label: 'Text', color: '#34C759' },
+  { key: 'email', icon: '📧', label: 'Email', color: '#007AFF' },
+  { key: 'whatsapp', icon: '📱', label: 'WhatsApp', color: '#25D366' },
 ]
 
 export default function ReferralsPage() {
@@ -34,10 +34,11 @@ export default function ReferralsPage() {
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
 
-  // Create form
-  const [showCreate, setShowCreate] = useState(false)
+  // Share panel state
+  const [showShare, setShowShare] = useState(false)
+  const [shareChannel, setShareChannel] = useState<string | null>(null)
   const [referredEmail, setReferredEmail] = useState('')
-  const [referredType, setReferredType] = useState('company')
+  const [referredPhone, setReferredPhone] = useState('')
   const [creating, setCreating] = useState(false)
 
   const fetchData = useCallback(async () => {
@@ -61,40 +62,71 @@ export default function ReferralsPage() {
     }
   }, [toast])
 
-  const handleCreate = async () => {
-    if (!referredEmail.trim()) return
-    setCreating(true)
-    setError(null)
-    const result = await createReferral({ referred_email: referredEmail.trim(), referred_type: referredType })
-    if (result.success) {
-      setToast('Referral created! Link sent.')
-      setReferredEmail('')
-      setShowCreate(false)
-      await fetchData()
-    } else {
-      setError(result.error ?? 'Failed to create referral')
-    }
-    setCreating(false)
-  }
-
-  function handleShare(channel: string, code: string, link: string) {
-    const message = `Join KleanHQ with my referral code ${code}! Sign up here: ${link}`
+  function handleShareAction(channel: string, code: string, link: string) {
+    // Link points to signup, not landing page
+    const signupLink = `${link}?signup=true`
+    const message = `Join KleanHQ with my referral code ${code}! Create your account here: ${signupLink}`
 
     switch (channel) {
       case 'copy':
-        navigator.clipboard.writeText(link)
+        navigator.clipboard.writeText(signupLink)
         setToast('Link copied!')
+        setShareChannel(null)
         break
       case 'sms':
-        window.open(`sms:?body=${encodeURIComponent(message)}`)
+        if (referredPhone.trim()) {
+          window.open(`sms:${referredPhone.trim()}?body=${encodeURIComponent(message)}`)
+          // Also create referral record
+          createReferral({ referred_email: referredPhone.trim(), referred_type: 'company' })
+            .then(() => fetchData())
+          setReferredPhone('')
+          setShareChannel(null)
+        } else {
+          setShareChannel('sms')
+        }
         break
       case 'email':
-        window.open(`mailto:?subject=${encodeURIComponent('Join KleanHQ!')}&body=${encodeURIComponent(message)}`)
+        if (referredEmail.trim()) {
+          window.open(`mailto:${referredEmail.trim()}?subject=${encodeURIComponent('Join KleanHQ!')}&body=${encodeURIComponent(message)}`)
+          createReferral({ referred_email: referredEmail.trim(), referred_type: 'company' })
+            .then(() => fetchData())
+          setReferredEmail('')
+          setShareChannel(null)
+        } else {
+          setShareChannel('email')
+        }
         break
       case 'whatsapp':
         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`)
+        setShareChannel(null)
         break
     }
+  }
+
+  const handleSendEmail = async () => {
+    if (!referredEmail.trim() || !myCode || !myLink) return
+    setCreating(true)
+    const signupLink = `${myLink}?signup=true`
+    const message = `Join KleanHQ with my referral code ${myCode}! Create your account here: ${signupLink}`
+    window.open(`mailto:${referredEmail.trim()}?subject=${encodeURIComponent('Join KleanHQ!')}&body=${encodeURIComponent(message)}`)
+    await createReferral({ referred_email: referredEmail.trim(), referred_type: 'company' })
+    await fetchData()
+    setReferredEmail('')
+    setShareChannel(null)
+    setCreating(false)
+    setToast('Email invite sent!')
+  }
+
+  const handleSendSms = () => {
+    if (!referredPhone.trim() || !myCode || !myLink) return
+    const signupLink = `${myLink}?signup=true`
+    const message = `Join KleanHQ with my referral code ${myCode}! Create your account here: ${signupLink}`
+    window.open(`sms:${referredPhone.trim()}?body=${encodeURIComponent(message)}`)
+    createReferral({ referred_email: referredPhone.trim(), referred_type: 'company' })
+      .then(() => fetchData())
+    setReferredPhone('')
+    setShareChannel(null)
+    setToast('Text invite opened!')
   }
 
   // Stats
@@ -131,12 +163,12 @@ export default function ReferralsPage() {
           <p className="text-sm text-[#8E8E93] mt-0.5">Grow your network. Earn rewards.</p>
         </div>
         <button
-          onClick={() => setShowCreate(!showCreate)}
+          onClick={() => { setShowShare(!showShare); setShareChannel(null) }}
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-            showCreate ? 'bg-[#FF3B30] text-white' : 'bg-[#007AFF] text-white hover:bg-[#0066DD]'
+            showShare ? 'bg-[#FF3B30] text-white' : 'bg-[#007AFF] text-white hover:bg-[#0066DD]'
           }`}
         >
-          {showCreate ? 'Cancel' : '+ Invite Someone'}
+          {showShare ? 'Close' : '+ Invite Someone'}
         </button>
       </div>
 
@@ -161,7 +193,14 @@ export default function ReferralsPage() {
               {SHARE_CHANNELS.map(ch => (
                 <button
                   key={ch.key}
-                  onClick={() => handleShare(ch.key, myCode, myLink)}
+                  onClick={() => {
+                    if (ch.key === 'copy' || ch.key === 'whatsapp') {
+                      handleShareAction(ch.key, myCode, myLink)
+                    } else {
+                      setShowShare(true)
+                      setShareChannel(ch.key)
+                    }
+                  }}
                   className="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-sm transition-colors"
                   title={ch.label}
                 >
@@ -170,8 +209,204 @@ export default function ReferralsPage() {
               ))}
             </div>
           </div>
+
+          {/* Inline share input — slides down from banner */}
+          <AnimatePresence>
+            {shareChannel && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3 mt-3 border-t border-white/15">
+                  {shareChannel === 'email' && (
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        placeholder="Enter their email address"
+                        value={referredEmail}
+                        onChange={e => setReferredEmail(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+                        autoFocus
+                        className="flex-1 px-4 py-2 rounded-xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
+                      />
+                      <button
+                        onClick={handleSendEmail}
+                        disabled={creating || !referredEmail.trim()}
+                        className="px-4 py-2 bg-white text-[#007AFF] rounded-xl text-sm font-semibold hover:bg-white/90 transition-colors disabled:opacity-50"
+                      >
+                        {creating ? '...' : 'Send'}
+                      </button>
+                      <button onClick={() => setShareChannel(null)} className="px-3 py-2 text-white/50 hover:text-white text-sm">✕</button>
+                    </div>
+                  )}
+                  {shareChannel === 'sms' && (
+                    <div className="flex gap-2">
+                      <input
+                        type="tel"
+                        placeholder="Enter their phone number"
+                        value={referredPhone}
+                        onChange={e => setReferredPhone(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSendSms()}
+                        autoFocus
+                        className="flex-1 px-4 py-2 rounded-xl bg-white/15 border border-white/20 text-white placeholder:text-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
+                      />
+                      <button
+                        onClick={handleSendSms}
+                        disabled={!referredPhone.trim()}
+                        className="px-4 py-2 bg-white text-[#34C759] rounded-xl text-sm font-semibold hover:bg-white/90 transition-colors disabled:opacity-50"
+                      >
+                        Text
+                      </button>
+                      <button onClick={() => setShareChannel(null)} className="px-3 py-2 text-white/50 hover:text-white text-sm">✕</button>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
+
+      {/* Invite panel — shows when + Invite Someone is clicked */}
+      <AnimatePresence>
+        {showShare && !myCode && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden mb-6"
+          >
+            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5 text-center">
+              <p className="text-sm text-[#8E8E93]">Create your first referral to get your unique code</p>
+              <div className="flex gap-2 mt-3 max-w-md mx-auto">
+                <input
+                  type="email"
+                  placeholder="Their email address"
+                  value={referredEmail}
+                  onChange={e => setReferredEmail(e.target.value)}
+                  className="flex-1 px-4 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                />
+                <button
+                  onClick={async () => {
+                    if (!referredEmail.trim()) return
+                    setCreating(true)
+                    await createReferral({ referred_email: referredEmail.trim() })
+                    await fetchData()
+                    setReferredEmail('')
+                    setShowShare(false)
+                    setCreating(false)
+                    setToast('Referral created!')
+                  }}
+                  disabled={creating || !referredEmail.trim()}
+                  className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium disabled:opacity-50"
+                >
+                  {creating ? '...' : 'Create'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Invite panel — when code exists, show share options */}
+      <AnimatePresence>
+        {showShare && myCode && myLink && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-6"
+          >
+            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
+              <h2 className="font-semibold text-[#1C1C1E] mb-3">How do you want to invite?</h2>
+              <div className="grid grid-cols-4 gap-3">
+                {SHARE_CHANNELS.map(ch => (
+                  <button
+                    key={ch.key}
+                    onClick={() => {
+                      if (ch.key === 'copy') {
+                        handleShareAction('copy', myCode, myLink)
+                      } else if (ch.key === 'whatsapp') {
+                        handleShareAction('whatsapp', myCode, myLink)
+                      } else {
+                        setShareChannel(shareChannel === ch.key ? null : ch.key)
+                      }
+                    }}
+                    className={`flex flex-col items-center gap-1.5 p-4 rounded-xl border transition-all ${
+                      shareChannel === ch.key
+                        ? 'border-[#007AFF] bg-[#007AFF]/5 ring-1 ring-[#007AFF]/20'
+                        : 'border-[#E5E5EA] hover:bg-[#F2F2F7]'
+                    }`}
+                  >
+                    <span className="text-2xl">{ch.icon}</span>
+                    <span className="text-xs font-medium text-[#1C1C1E]">{ch.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Expanded input for selected channel */}
+              <AnimatePresence>
+                {shareChannel === 'email' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex gap-2 mt-3 pt-3 border-t border-[#E5E5EA]">
+                      <input
+                        type="email"
+                        placeholder="Enter their email address"
+                        value={referredEmail}
+                        onChange={e => setReferredEmail(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+                        autoFocus
+                        className="flex-1 px-4 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                      />
+                      <button
+                        onClick={handleSendEmail}
+                        disabled={creating || !referredEmail.trim()}
+                        className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium disabled:opacity-50"
+                      >
+                        {creating ? '...' : 'Send Email'}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+                {shareChannel === 'sms' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex gap-2 mt-3 pt-3 border-t border-[#E5E5EA]">
+                      <input
+                        type="tel"
+                        placeholder="Enter their phone number"
+                        value={referredPhone}
+                        onChange={e => setReferredPhone(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSendSms()}
+                        autoFocus
+                        className="flex-1 px-4 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                      />
+                      <button
+                        onClick={handleSendSms}
+                        disabled={!referredPhone.trim()}
+                        className="px-5 py-2.5 bg-[#34C759] text-white rounded-xl text-sm font-medium disabled:opacity-50"
+                      >
+                        Send Text
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3 mb-6">
@@ -187,57 +422,6 @@ export default function ReferralsPage() {
           </div>
         ))}
       </div>
-
-      {/* Create Referral Form */}
-      <AnimatePresence>
-        {showCreate && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden mb-6"
-          >
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5 space-y-4">
-              <h2 className="font-semibold text-[#1C1C1E]">Invite Someone</h2>
-
-              <div className="flex gap-2">
-                {(['company', 'client'] as const).map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setReferredType(t)}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                      referredType === t
-                        ? 'bg-[#007AFF] text-white border-[#007AFF]'
-                        : 'bg-white text-[#3C3C43] border-[#E5E5EA] hover:bg-[#F2F2F7]'
-                    }`}
-                  >
-                    {t === 'company' ? '🏢 Company' : '👤 Client'}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-3">
-                <input
-                  type="email"
-                  placeholder="Their email address"
-                  value={referredEmail}
-                  onChange={e => setReferredEmail(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                  className="flex-1 px-4 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 focus:bg-white"
-                />
-                <button
-                  onClick={handleCreate}
-                  disabled={creating || !referredEmail.trim()}
-                  className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
-                >
-                  {creating ? 'Sending...' : 'Send Invite'}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* 6 Referral Types */}
       <div className="mb-6">
@@ -279,7 +463,7 @@ export default function ReferralsPage() {
           <h3 className="text-lg font-semibold text-[#1C1C1E] mb-1">No referrals yet</h3>
           <p className="text-sm text-[#8E8E93] mb-4">Share your code to start earning rewards</p>
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={() => setShowShare(true)}
             className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
           >
             Invite Someone
