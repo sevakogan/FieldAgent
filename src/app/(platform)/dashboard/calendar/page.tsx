@@ -19,15 +19,34 @@ type CalendarJob = {
   client_name?: string
 }
 
-const WORKER_COLORS = [
-  '#34C759', '#FF5A5B', '#007AFF', '#FF9F0A', '#AF52DE',
+// Client colors — consistent per client name via hash
+const CLIENT_COLORS = [
+  '#007AFF', '#34C759', '#FF9F0A', '#AF52DE', '#FF5A5B',
   '#5AC8FA', '#30D158', '#FF6482', '#64D2FF', '#FFD60A',
+  '#FF2D55', '#00C7BE', '#BF5AF2', '#FF6B6B', '#32ADE6',
 ]
 
-function getWorkerColor(name: string | null, workerList: string[]): string {
-  if (!name) return '#8E8E93'
-  const idx = workerList.indexOf(name)
-  return WORKER_COLORS[idx >= 0 ? idx % WORKER_COLORS.length : 0]
+// Service type border accents — different from client fills
+const SERVICE_ACCENTS = [
+  '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF',
+  '#5856D6', '#AF52DE', '#FF2D55', '#A2845E', '#00C7BE',
+]
+
+function hashString(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0
+  }
+  return Math.abs(hash)
+}
+
+function getClientColor(clientName: string | null): string {
+  if (!clientName) return '#8E8E93'
+  return CLIENT_COLORS[hashString(clientName) % CLIENT_COLORS.length]
+}
+
+function getServiceAccent(serviceName: string): string {
+  return SERVICE_ACCENTS[hashString(serviceName) % SERVICE_ACCENTS.length]
 }
 
 function formatTime(time: string | null): string {
@@ -86,6 +105,8 @@ export default function CalendarPage() {
   const monthName = new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long' })
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
   const workerNames = [...new Set(jobs.map(j => j.worker_name).filter(Boolean))] as string[]
+  const clientNames = [...new Set(jobs.map(j => j.client_name).filter(Boolean))] as string[]
+  const serviceNames = [...new Set(jobs.map(j => j.service_name))]
 
   const prevMonth = () => {
     if (currentMonth === 0) { setCurrentYear(currentYear - 1); setCurrentMonth(11) }
@@ -245,16 +266,31 @@ export default function CalendarPage() {
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">{error}</div>
       )}
 
-      {/* Worker Legend */}
-      {workerNames.length > 0 && (
-        <div className="flex items-center gap-4 mb-4 flex-wrap">
-          <span className="text-xs text-[#8E8E93] font-medium">Workers:</span>
-          {workerNames.map((name) => (
-            <div key={name} className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: getWorkerColor(name, workerNames) }} />
-              <span className="text-xs text-[#1C1C1E] font-medium">{name}</span>
+      {/* Legend — Clients (fill) + Services (accent) */}
+      {(clientNames.length > 0 || serviceNames.length > 0) && (
+        <div className="flex items-center gap-6 mb-4 flex-wrap">
+          {clientNames.length > 0 && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-[10px] text-[#8E8E93] font-semibold uppercase tracking-wider">Clients</span>
+              {clientNames.map((name) => (
+                <div key={name} className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: getClientColor(name) }} />
+                  <span className="text-xs text-[#1C1C1E] font-medium">{name}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+          {serviceNames.length > 0 && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-[10px] text-[#8E8E93] font-semibold uppercase tracking-wider">Services</span>
+              {serviceNames.map((name) => (
+                <div key={name} className="flex items-center gap-1.5">
+                  <span className="w-3 h-1 rounded-full" style={{ backgroundColor: getServiceAccent(name) }} />
+                  <span className="text-xs text-[#1C1C1E]">{name}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -306,7 +342,8 @@ export default function CalendarPage() {
                       </div>
                       <div className="space-y-1">
                         {dayJobs.slice(0, 4).map((job) => {
-                          const color = getWorkerColor(job.worker_name, workerNames)
+                          const clientColor = getClientColor(job.client_name ?? null)
+                          const serviceAccent = getServiceAccent(job.service_name)
                           return (
                             <div
                               key={job.id}
@@ -323,14 +360,9 @@ export default function CalendarPage() {
                               <Link
                                 href={`/dashboard/jobs/${job.id}`}
                                 onClick={(e) => { if (dragJobId) e.preventDefault() }}
-                                className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-lg text-white font-medium truncate hover:brightness-110 transition-all shadow-sm"
-                                style={{ backgroundColor: color }}
+                                className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-lg text-white font-medium truncate hover:brightness-110 transition-all shadow-sm border-l-[3px]"
+                                style={{ backgroundColor: clientColor, borderLeftColor: serviceAccent }}
                               >
-                                {job.worker_name && (
-                                  <span className="w-3.5 h-3.5 rounded-full bg-white/25 flex items-center justify-center text-[7px] font-bold shrink-0">
-                                    {job.worker_name.charAt(0)}
-                                  </span>
-                                )}
                                 <span className="truncate">{job.service_name}</span>
                                 {job.scheduled_time && (
                                   <span className="ml-auto opacity-75 text-[8px] shrink-0">{formatTime(job.scheduled_time)}</span>
@@ -400,14 +432,15 @@ export default function CalendarPage() {
                             <td key={day} className={`p-1 border-r border-[#F2F2F7] align-top ${isToday(day) ? 'bg-[#34C759]/3' : ''}`}>
                               <div className="space-y-1 min-h-[48px]">
                                 {cellJobs.map((job) => {
-                                  const color = getWorkerColor(job.worker_name, workerNames)
+                                  const clientColor = getClientColor(job.client_name ?? null)
+                                  const serviceAccent = getServiceAccent(job.service_name)
                                   return (
                                     <Link
                                       key={job.id}
                                       href={`/dashboard/jobs/${job.id}`}
                                       draggable
-                                      className="block rounded-lg px-2 py-1.5 text-white text-[11px] font-medium truncate hover:brightness-110 transition-all shadow-sm cursor-grab active:cursor-grabbing"
-                                      style={{ backgroundColor: color }}
+                                      className="block rounded-lg px-2 py-1.5 text-white text-[11px] font-medium truncate hover:brightness-110 transition-all shadow-sm cursor-grab active:cursor-grabbing border-l-[3px]"
+                                      style={{ backgroundColor: clientColor, borderLeftColor: serviceAccent }}
                                     >
                                       <div className="truncate">{job.service_name}</div>
                                       {job.price != null && (
