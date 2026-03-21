@@ -221,8 +221,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-[#F2F2F7]">
+    <div className="flex flex-col min-h-screen bg-[#F2F2F7]">
       <ViewingAsBanner />
+      <div className="flex flex-1">
 
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex flex-col ${collapsed ? 'w-16' : 'w-60'} bg-white border-r border-[#E5E5EA] transition-all duration-300`}>
@@ -289,6 +290,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </svg>
         God Mode
       </Link>
+      </div>{/* close flex wrapper */}
     </div>
   )
 }

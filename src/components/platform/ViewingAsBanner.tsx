@@ -65,7 +65,7 @@ export default function ViewingAsBanner() {
   // Acting as company — green banner, full rights
   if (isActing) {
     return (
-      <div className="fixed top-0 left-0 right-0 z-50 bg-[#34C759] text-white px-4 py-2 flex items-center justify-between shadow-lg">
+      <div className="w-full bg-[#34C759] text-white px-4 py-2 flex items-center justify-between shadow-lg z-50">
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 rounded-md bg-white/20 flex items-center justify-center">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -94,7 +94,7 @@ export default function ViewingAsBanner() {
   // Read-only — orange banner with "Act as Company" option
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 z-50 bg-[#FF9F0A] text-white px-4 py-2 flex items-center justify-between shadow-lg">
+      <div className="w-full bg-[#FF9F0A] text-white px-4 py-2 flex items-center justify-between shadow-lg z-50">
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 rounded-md bg-white/20 flex items-center justify-center">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
