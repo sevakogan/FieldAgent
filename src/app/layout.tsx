@@ -22,11 +22,12 @@ function BuildStamp() {
   const version = process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'
   const buildDate = process.env.NEXT_PUBLIC_BUILD_DATE ?? ''
   const buildId = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'
+  const buildTime = process.env.NEXT_PUBLIC_BUILD_TIME ?? ''
 
   return (
     <div className="fixed bottom-2 left-3 z-40 pointer-events-none select-none">
       <span className="text-[10px] font-mono text-black/20 tracking-wide">
-        v{version} · {buildDate} · {buildId}
+        v{version} · {buildDate} {buildTime} · {buildId}
       </span>
     </div>
   )
