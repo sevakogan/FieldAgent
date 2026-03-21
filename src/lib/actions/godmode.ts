@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const VIEW_AS_COOKIE = 'kleanhq_view_as'
+const ACT_AS_COOKIE = 'kleanhq_act_as'
+const ADMIN_PASSWORD = 'seva'
 
 export interface CompanyOption {
   readonly id: string
@@ -62,9 +64,11 @@ export async function setViewAsCompany(companyId: string): Promise<{ success: bo
     const cookieStore = await cookies()
     cookieStore.set(VIEW_AS_COOKIE, companyId, {
       path: '/',
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24,
       sameSite: 'lax',
     })
+    // Clear act-as when switching to view-as
+    cookieStore.delete(ACT_AS_COOKIE)
 
     return { success: true }
   } catch (err) {
@@ -72,15 +76,54 @@ export async function setViewAsCompany(companyId: string): Promise<{ success: bo
   }
 }
 
+/** Elevate from read-only view to full "Act as Company" mode after password confirmation */
+export async function setActAsCompany(companyId: string, password: string): Promise<{ success: boolean; error?: string }> {
+  if (password !== ADMIN_PASSWORD) {
+    return { success: false, error: 'Incorrect password' }
+  }
+
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase.from('companies').select('id').eq('id', companyId).single()
+    if (!data) return { success: false, error: 'Company not found' }
+
+    const cookieStore = await cookies()
+    cookieStore.set(ACT_AS_COOKIE, companyId, {
+      path: '/',
+      maxAge: 60 * 60 * 24,
+      sameSite: 'lax',
+    })
+    // Also set view-as so getCompanyId picks it up
+    cookieStore.set(VIEW_AS_COOKIE, companyId, {
+      path: '/',
+      maxAge: 60 * 60 * 24,
+      sameSite: 'lax',
+    })
+
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to activate' }
+  }
+}
+
 export async function clearViewAsCompany(): Promise<{ success: boolean }> {
   const cookieStore = await cookies()
   cookieStore.delete(VIEW_AS_COOKIE)
+  cookieStore.delete(ACT_AS_COOKIE)
   return { success: true }
 }
 
 export async function getViewAsCompanyId(): Promise<string | null> {
   const cookieStore = await cookies()
   return cookieStore.get(VIEW_AS_COOKIE)?.value ?? null
+}
+
+/** Check if currently in "Act as" mode (full rights) vs view-only */
+export async function isActingAsCompany(): Promise<boolean> {
+  const cookieStore = await cookies()
+  const actAs = cookieStore.get(ACT_AS_COOKIE)?.value
+  const viewAs = cookieStore.get(VIEW_AS_COOKIE)?.value
+  return !!actAs && actAs === viewAs
 }
 
 export async function getViewAsCompany(): Promise<CompanyOption | null> {
@@ -113,13 +156,16 @@ export async function getViewAsCompany(): Promise<CompanyOption | null> {
   }
 }
 
-/** Returns true if viewing another company (read-only mode). False if viewing own or no override. */
+/** Returns true if viewing another company in READ-ONLY mode (not acting as). */
 export async function isReadOnlyMode(): Promise<boolean> {
   const viewAsId = await getViewAsCompanyId()
   if (!viewAsId) return false
 
+  // If acting as this company, NOT read-only
+  const acting = await isActingAsCompany()
+  if (acting) return false
+
   const supabase = createAdminClient()
-  // Get the default/own company
   const { data: ownCompany } = await supabase
     .from('companies')
     .select('id')
