@@ -10,13 +10,19 @@ import { getAddresses, type AddressRow } from '@/lib/actions/addresses'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
 import { getClients, createClient, type ClientRow } from '@/lib/actions/clients'
 
-type Recurrence = 'one_time' | 'weekly' | 'biweekly' | 'monthly'
+type JobFrequency = 'one_time' | 'weekly' | 'biweekly' | 'monthly'
+type PayFrequency = 'per_job' | 'monthly'
 
-const RECURRENCE_OPTIONS: { value: Recurrence; label: string; desc: string }[] = [
-  { value: 'one_time', label: '1×', desc: 'One Time' },
-  { value: 'weekly', label: 'W', desc: 'Weekly' },
-  { value: 'biweekly', label: '2W', desc: 'Bi-Weekly' },
-  { value: 'monthly', label: 'M', desc: 'Monthly' },
+const JOB_FREQ_OPTIONS: { value: JobFrequency; label: string; icon: string }[] = [
+  { value: 'one_time', label: 'One Time', icon: '1×' },
+  { value: 'weekly', label: 'Weekly', icon: '📅' },
+  { value: 'biweekly', label: 'Bi-Weekly', icon: '📆' },
+  { value: 'monthly', label: 'Monthly', icon: '🗓️' },
+]
+
+const PAY_FREQ_OPTIONS: { value: PayFrequency; label: string; desc: string }[] = [
+  { value: 'per_job', label: 'Per Job', desc: 'Charge after each visit' },
+  { value: 'monthly', label: 'Monthly', desc: 'Roll up into monthly invoice' },
 ]
 
 type FormData = {
@@ -27,7 +33,8 @@ type FormData = {
   scheduled_date: string
   scheduled_time: string
   price: string
-  recurrence: Recurrence
+  job_frequency: JobFrequency
+  pay_frequency: PayFrequency
 }
 
 const INITIAL_FORM: FormData = {
@@ -38,7 +45,8 @@ const INITIAL_FORM: FormData = {
   scheduled_date: '',
   scheduled_time: '',
   price: '',
-  recurrence: 'one_time',
+  job_frequency: 'one_time',
+  pay_frequency: 'per_job',
 }
 
 export default function NewJobPage() {
@@ -385,35 +393,69 @@ export default function NewJobPage() {
           </div>
         </div>
 
-        {/* Recurrence */}
-        <div>
-          <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
-            Frequency
-          </label>
-          <div className="flex gap-2">
-            {RECURRENCE_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => handleChange('recurrence', opt.value)}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border ${
-                  form.recurrence === opt.value
-                    ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-sm'
-                    : 'bg-white text-[#3C3C43] border-[#E5E5EA] hover:bg-[#F2F2F7]'
-                }`}
-              >
-                <div className="text-xs font-bold">{opt.label}</div>
-                <div className={`text-[10px] mt-0.5 ${form.recurrence === opt.value ? 'text-white/80' : 'text-[#8E8E93]'}`}>
-                  {opt.desc}
-                </div>
-              </button>
-            ))}
+        {/* Job Frequency + Payment Frequency side by side */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
+              Job Frequency
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {JOB_FREQ_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleChange('job_frequency', opt.value)}
+                  className={`py-2 px-2 rounded-xl text-center transition-all border ${
+                    form.job_frequency === opt.value
+                      ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-sm'
+                      : 'bg-white text-[#3C3C43] border-[#E5E5EA] hover:bg-[#F2F2F7]'
+                  }`}
+                >
+                  <div className="text-sm">{opt.icon}</div>
+                  <div className={`text-[10px] font-semibold ${form.job_frequency === opt.value ? 'text-white/90' : 'text-[#8E8E93]'}`}>
+                    {opt.label}
+                  </div>
+                </button>
+              ))}
+            </div>
+            {form.job_frequency !== 'one_time' && (
+              <p className="text-[10px] text-[#8E8E93] mt-1.5">
+                Recurring from the start date
+              </p>
+            )}
           </div>
-          {form.recurrence !== 'one_time' && (
-            <p className="text-xs text-[#8E8E93] mt-1.5">
-              This will create a recurring schedule starting from the selected date.
-            </p>
-          )}
+
+          <div>
+            <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
+              Payment
+            </label>
+            <div className="space-y-1.5">
+              {PAY_FREQ_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleChange('pay_frequency', opt.value)}
+                  className={`w-full py-2.5 px-3 rounded-xl text-left transition-all border flex items-center gap-3 ${
+                    form.pay_frequency === opt.value
+                      ? 'bg-[#34C759]/10 border-[#34C759] text-[#1C1C1E]'
+                      : 'bg-white border-[#E5E5EA] text-[#3C3C43] hover:bg-[#F2F2F7]'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    form.pay_frequency === opt.value ? 'border-[#34C759]' : 'border-[#C7C7CC]'
+                  }`}>
+                    {form.pay_frequency === opt.value && (
+                      <div className="w-2 h-2 rounded-full bg-[#34C759]" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">{opt.label}</div>
+                    <div className="text-[10px] text-[#8E8E93]">{opt.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Price */}
