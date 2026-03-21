@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { getAdminCompanies, updateCompanyStatus, createAdminCompany } from "@/lib/actions/admin";
+import { getAdminCompanies, updateCompanyStatus, createAdminCompany, updateCompany, canDeleteCompany, deleteCompany } from "@/lib/actions/admin";
 import { setViewAsCompany } from "@/lib/actions/godmode";
 
 type Company = {
@@ -43,6 +43,19 @@ export default function AdminCompaniesPage() {
   const [skipPayment, setSkipPayment] = useState(false);
   const [enteringId, setEnteringId] = useState<string | null>(null);
   const router = useRouter();
+
+  // Edit state
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editType, setEditType] = useState("");
+  const [editOwnerName, setEditOwnerName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
+  const [deleteStep, setDeleteStep] = useState<"check" | "confirm1" | "confirm2">("check");
+  const [deleteReason, setDeleteReason] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleCreateCompany = async () => {
     if (!newName.trim() || !newOwnerEmail.trim() || !newOwnerName.trim()) return;
@@ -107,6 +120,64 @@ export default function AdminCompaniesPage() {
       setToast({ message: result.error ?? "Failed to update status", type: "error" });
     }
     setActionLoading(null);
+  };
+
+  const handleStartEdit = (c: Company) => {
+    setEditingCompany(c);
+    setEditName(c.name);
+    setEditType(c.business_type ?? "cleaning");
+    setEditOwnerName(c.owner_name ?? "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCompany) return;
+    setSaving(true);
+    const result = await updateCompany(editingCompany.id, {
+      name: editName,
+      business_type: editType,
+      ownerName: editOwnerName,
+    });
+    if (result.success) {
+      setToast({ message: "Company updated", type: "success" });
+      setEditingCompany(null);
+      await fetchCompanies();
+    } else {
+      setToast({ message: result.error ?? "Failed to update", type: "error" });
+    }
+    setSaving(false);
+  };
+
+  const handleStartDelete = async (c: Company) => {
+    setDeleteTarget(c);
+    setDeleteStep("check");
+    setDeleteReason(null);
+
+    // Check if they can be deleted
+    const result = await canDeleteCompany(c.id);
+    if (result.success && result.data) {
+      if (result.data.canDelete) {
+        setDeleteStep("confirm1");
+      } else {
+        setDeleteReason(result.data.reason ?? "Cannot delete");
+        setDeleteStep("check"); // stays on check with reason shown
+      }
+    } else {
+      setDeleteReason(result.error ?? "Failed to check");
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteCompany(deleteTarget.id);
+    if (result.success) {
+      setToast({ message: `"${deleteTarget.name}" deleted permanently`, type: "success" });
+      setDeleteTarget(null);
+      await fetchCompanies();
+    } else {
+      setToast({ message: result.error ?? "Failed to delete", type: "error" });
+    }
+    setDeleting(false);
   };
 
   const filtered = companies.filter((c) => {
@@ -246,25 +317,39 @@ export default function AdminCompaniesPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{new Date(c.created_at).toLocaleDateString()}</td>
-                  <td className="px-5 py-3.5 text-right space-x-2">
-                    <button
-                      onClick={() => handleEnterCompany(c.id)}
-                      disabled={enteringId === c.id}
-                      className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition-colors disabled:opacity-50"
-                    >
-                      {enteringId === c.id ? "..." : "Enter →"}
-                    </button>
-                    <button
-                      onClick={() => handleToggleStatus(c.id, c.status)}
-                      disabled={actionLoading === c.id}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-50 ${
-                        c.status === "suspended"
-                          ? "bg-[#34C759]/10 text-[#34C759] hover:bg-[#34C759]/20"
-                          : "bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20"
-                      }`}
-                    >
-                      {actionLoading === c.id ? "..." : c.status === "suspended" ? "Activate" : "Suspend"}
-                    </button>
+                  <td className="px-5 py-3.5 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => handleEnterCompany(c.id)}
+                        disabled={enteringId === c.id}
+                        className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition-colors disabled:opacity-50"
+                      >
+                        {enteringId === c.id ? "..." : "Enter →"}
+                      </button>
+                      <button
+                        onClick={() => handleStartEdit(c)}
+                        className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#FF9F0A]/10 text-[#FF9F0A] hover:bg-[#FF9F0A]/20 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleToggleStatus(c.id, c.status)}
+                        disabled={actionLoading === c.id}
+                        className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-50 ${
+                          c.status === "suspended"
+                            ? "bg-[#34C759]/10 text-[#34C759] hover:bg-[#34C759]/20"
+                            : "bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20"
+                        }`}
+                      >
+                        {actionLoading === c.id ? "..." : c.status === "suspended" ? "Activate" : "Suspend"}
+                      </button>
+                      <button
+                        onClick={() => handleStartDelete(c)}
+                        className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -277,6 +362,108 @@ export default function AdminCompaniesPage() {
           </div>
         )}
       </div>
+
+      {/* ── Edit Modal ── */}
+      {editingCompany && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setEditingCompany(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-[#1C1C1E] mb-4">Edit Company</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-[#8E8E93] mb-1">Company Name</label>
+                <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full px-3 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#8E8E93] mb-1">Business Type</label>
+                <select value={editType} onChange={e => setEditType(e.target.value)} className="w-full px-3 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30">
+                  <option value="cleaning">Cleaning</option>
+                  <option value="lawn_care">Lawn Care</option>
+                  <option value="pool_service">Pool Service</option>
+                  <option value="pressure_washing">Pressure Washing</option>
+                  <option value="pest_control">Pest Control</option>
+                  <option value="handyman">Handyman</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#8E8E93] mb-1">Owner Name</label>
+                <input type="text" value={editOwnerName} onChange={e => setEditOwnerName(e.target.value)} className="w-full px-3 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={handleSaveEdit} disabled={saving || !editName.trim()} className="flex-1 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50">
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+              <button onClick={() => setEditingCompany(null)} className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-sm font-medium hover:bg-[#E5E5EA] transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Modal (double confirm) ── */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
+            {deleteStep === "check" && deleteReason ? (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-[#FF9F0A]/10 flex items-center justify-center text-lg">⚠️</div>
+                  <h3 className="text-lg font-bold text-[#1C1C1E]">Cannot Delete</h3>
+                </div>
+                <p className="text-sm text-[#3C3C43] mb-5">{deleteReason}</p>
+                <button onClick={() => setDeleteTarget(null)} className="w-full py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-sm font-medium hover:bg-[#E5E5EA] transition-colors">
+                  OK
+                </button>
+              </>
+            ) : deleteStep === "confirm1" ? (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-[#FF3B30]/10 flex items-center justify-center text-lg">🗑️</div>
+                  <h3 className="text-lg font-bold text-[#1C1C1E]">Delete &quot;{deleteTarget.name}&quot;?</h3>
+                </div>
+                <p className="text-sm text-[#3C3C43] mb-5">
+                  This will permanently remove the company, all its jobs, invoices, addresses, team members, and client links. This action cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button onClick={() => setDeleteStep("confirm2")} className="flex-1 py-2.5 bg-[#FF3B30] text-white rounded-xl text-sm font-medium hover:bg-[#D32F2F] transition-colors">
+                    Yes, Delete
+                  </button>
+                  <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-sm font-medium hover:bg-[#E5E5EA] transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : deleteStep === "confirm2" ? (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-[#FF3B30] flex items-center justify-center text-white text-lg">⚠️</div>
+                  <h3 className="text-lg font-bold text-[#FF3B30]">Final Confirmation</h3>
+                </div>
+                <p className="text-sm text-[#3C3C43] mb-2">
+                  You are about to <strong>permanently delete</strong> &quot;{deleteTarget.name}&quot; and all associated data.
+                </p>
+                <p className="text-xs text-[#FF3B30] font-semibold mb-5">
+                  This is irreversible. Are you absolutely sure?
+                </p>
+                <div className="flex gap-3">
+                  <button onClick={handleConfirmDelete} disabled={deleting} className="flex-1 py-2.5 bg-[#FF3B30] text-white rounded-xl text-sm font-bold hover:bg-[#D32F2F] transition-colors disabled:opacity-50">
+                    {deleting ? "Deleting..." : "DELETE PERMANENTLY"}
+                  </button>
+                  <button onClick={() => setDeleteTarget(null)} disabled={deleting} className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-sm font-medium hover:bg-[#E5E5EA] transition-colors disabled:opacity-50">
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-[#8E8E93] border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

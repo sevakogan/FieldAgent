@@ -583,6 +583,150 @@ export async function updateCompanyStatus(companyId: string, status: string): Pr
   }
 }
 
+export async function updateCompany(companyId: string, fields: {
+  name?: string
+  business_type?: string
+  phone?: string
+  email?: string
+  ownerName?: string
+}): Promise<ActionResult> {
+  try {
+    const supabase = createAdminClient()
+
+    // Update company fields
+    const companyUpdate: Record<string, string> = {}
+    if (fields.name !== undefined) companyUpdate.name = fields.name
+    if (fields.business_type !== undefined) companyUpdate.business_type = fields.business_type
+    if (fields.phone !== undefined) companyUpdate.phone = fields.phone
+    if (fields.email !== undefined) companyUpdate.email = fields.email
+
+    if (Object.keys(companyUpdate).length > 0) {
+      const { error } = await supabase.from('companies').update(companyUpdate).eq('id', companyId)
+      if (error) throw error
+    }
+
+    // Update owner name if provided
+    if (fields.ownerName !== undefined) {
+      const { data: company } = await supabase.from('companies').select('owner_id').eq('id', companyId).single()
+      if (company?.owner_id) {
+        await supabase.from('users').update({ full_name: fields.ownerName }).eq('id', company.owner_id)
+      }
+    }
+
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to update company' }
+  }
+}
+
+export async function canDeleteCompany(companyId: string): Promise<ActionResult<{ canDelete: boolean; reason?: string }>> {
+  try {
+    const supabase = createAdminClient()
+
+    // Check for unpaid invoices
+    const { data: unpaidInvoices, error: invErr } = await supabase
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .in('status', ['pending', 'overdue'])
+
+    if (invErr) throw invErr
+    if ((unpaidInvoices as unknown as number) > 0 || (invErr === null && unpaidInvoices !== null)) {
+      // Use count from header
+    }
+
+    // Re-query with count
+    const { count: unpaidCount } = await supabase
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .in('status', ['pending', 'overdue'])
+
+    if (unpaidCount && unpaidCount > 0) {
+      return { success: true, data: { canDelete: false, reason: `Company has ${unpaidCount} unpaid invoice(s). Resolve payments before deleting.` } }
+    }
+
+    // Check for active Stripe subscriptions (stripe_account_id present = might have active billing)
+    const { data: company } = await supabase
+      .from('companies')
+      .select('stripe_account_id')
+      .eq('id', companyId)
+      .single()
+
+    if (company?.stripe_account_id) {
+      // Has Stripe connected — check for recent paid invoices in last 30 days
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const { count: recentPaid } = await supabase
+        .from('invoices')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('status', 'paid')
+        .gte('paid_at', thirtyDaysAgo)
+
+      if (recentPaid && recentPaid > 0) {
+        return { success: true, data: { canDelete: false, reason: `Company has ${recentPaid} paid invoice(s) in the last 30 days. Wait until billing cycle completes.` } }
+      }
+    }
+
+    return { success: true, data: { canDelete: true } }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to check delete eligibility' }
+  }
+}
+
+export async function deleteCompany(companyId: string): Promise<ActionResult> {
+  try {
+    const supabase = createAdminClient()
+
+    // Final safety check
+    const check = await canDeleteCompany(companyId)
+    if (!check.success || !check.data?.canDelete) {
+      return { success: false, error: check.data?.reason ?? 'Cannot delete this company' }
+    }
+
+    // Delete in dependency order
+    // 1. Job-related
+    await supabase.from('job_media').delete().in('job_id',
+      (await supabase.from('jobs').select('id').eq('company_id', companyId)).data?.map(j => j.id) ?? []
+    )
+    await supabase.from('job_expenses').delete().in('job_id',
+      (await supabase.from('jobs').select('id').eq('company_id', companyId)).data?.map(j => j.id) ?? []
+    )
+    await supabase.from('worker_payouts').delete().eq('company_id', companyId)
+    await supabase.from('jobs').delete().eq('company_id', companyId)
+
+    // 2. Address-related
+    await supabase.from('address_services').delete().in('address_id',
+      (await supabase.from('addresses').select('id').eq('company_id', companyId)).data?.map(a => a.id) ?? []
+    )
+    await supabase.from('addresses').delete().eq('company_id', companyId)
+
+    // 3. Client links
+    await supabase.from('client_companies').delete().eq('company_id', companyId)
+
+    // 4. Services, invoices, quotes, messages, etc.
+    await supabase.from('invoices').delete().eq('company_id', companyId)
+    await supabase.from('quotes').delete().eq('company_id', companyId)
+    await supabase.from('contracts').delete().eq('company_id', companyId)
+    await supabase.from('messages').delete().eq('company_id', companyId)
+    await supabase.from('notifications').delete().eq('company_id', companyId)
+    await supabase.from('service_types').delete().eq('company_id', companyId)
+    await supabase.from('referrals').delete().eq('company_id', companyId)
+    await supabase.from('activity_log').delete().eq('company_id', companyId)
+
+    // 5. Company members
+    await supabase.from('company_members').delete().eq('company_id', companyId)
+
+    // 6. Company itself
+    const { error } = await supabase.from('companies').delete().eq('id', companyId)
+    if (error) throw error
+
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to delete company' }
+  }
+}
+
 // ─── Waitlist Mutations ─────────────────────────────────────────────
 export async function approveWaitlistEntry(id: string): Promise<ActionResult> {
   try {
