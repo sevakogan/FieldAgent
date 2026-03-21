@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { getAdminCompanies, updateCompanyStatus, createAdminCompany } from "@/lib/actions/admin";
+import { setViewAsCompany } from "@/lib/actions/godmode";
 
 type Company = {
   id: string;
@@ -38,6 +40,9 @@ export default function AdminCompaniesPage() {
   const [newOwnerName, setNewOwnerName] = useState("");
   const [newBusinessType, setNewBusinessType] = useState("cleaning");
   const [creating, setCreating] = useState(false);
+  const [skipPayment, setSkipPayment] = useState(false);
+  const [enteringId, setEnteringId] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleCreateCompany = async () => {
     if (!newName.trim() || !newOwnerEmail.trim() || !newOwnerName.trim()) return;
@@ -79,6 +84,17 @@ export default function AdminCompaniesPage() {
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  const handleEnterCompany = async (companyId: string) => {
+    setEnteringId(companyId);
+    const result = await setViewAsCompany(companyId);
+    if (result.success) {
+      router.push('/dashboard');
+    } else {
+      setToast({ message: result.error ?? 'Failed to enter company', type: 'error' });
+      setEnteringId(null);
+    }
+  };
 
   const handleToggleStatus = async (companyId: string, currentStatus: string) => {
     const newStatus = currentStatus === "suspended" ? "active" : "suspended";
@@ -160,6 +176,16 @@ export default function AdminCompaniesPage() {
             <input type="text" placeholder="Owner Full Name *" value={newOwnerName} onChange={e => setNewOwnerName(e.target.value)} className="px-3 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
             <input type="email" placeholder="Owner Email *" value={newOwnerEmail} onChange={e => setNewOwnerEmail(e.target.value)} className="px-3 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
           </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={skipPayment}
+              onChange={e => setSkipPayment(e.target.checked)}
+              className="w-4 h-4 rounded border-[#E5E5EA] text-[#007AFF] focus:ring-[#007AFF]/30"
+            />
+            <span className="text-sm text-[#1C1C1E]">Skip payment setup</span>
+            <span className="text-xs text-[#8E8E93]">(company can start immediately)</span>
+          </label>
           <button
             onClick={handleCreateCompany}
             disabled={creating || !newName.trim() || !newOwnerEmail.trim() || !newOwnerName.trim()}
@@ -220,7 +246,14 @@ export default function AdminCompaniesPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{new Date(c.created_at).toLocaleDateString()}</td>
-                  <td className="px-5 py-3.5 text-right">
+                  <td className="px-5 py-3.5 text-right space-x-2">
+                    <button
+                      onClick={() => handleEnterCompany(c.id)}
+                      disabled={enteringId === c.id}
+                      className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition-colors disabled:opacity-50"
+                    >
+                      {enteringId === c.id ? "..." : "Enter →"}
+                    </button>
                     <button
                       onClick={() => handleToggleStatus(c.id, c.status)}
                       disabled={actionLoading === c.id}
