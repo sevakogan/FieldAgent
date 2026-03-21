@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { inviteTeamMember } from '@/lib/actions/team'
+import { Button } from '@/components/platform/Button'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
 
 const PAY_TYPES = [
@@ -316,13 +317,14 @@ export default function InviteTeamMemberPage() {
 
         {/* Submit */}
         <div className="flex items-center gap-3">
-          <button
+          <Button
             type="submit"
+            variant="primary"
             disabled={loading}
-            className="px-6 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+            loading={loading}
           >
-            {loading ? 'Inviting...' : 'Invite Team Member'}
-          </button>
+            Invite Team Member
+          </Button>
           <Link
             href="/dashboard/team"
             className="px-6 py-2.5 bg-white text-[#8E8E93] border border-[#E5E5EA] rounded-xl text-sm font-medium hover:text-[#1C1C1E] transition-colors"

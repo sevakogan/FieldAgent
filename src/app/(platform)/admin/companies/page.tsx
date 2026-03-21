@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAdminCompanies, updateCompanyStatus, createAdminCompany, updateCompany, canDeleteCompany, deleteCompany } from "@/lib/actions/admin";
 import { setViewAsCompany } from "@/lib/actions/godmode";
+import { StatusBadge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 type Company = {
   id: string;
@@ -16,13 +18,6 @@ type Company = {
   owner_email: string | null;
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  active: "bg-[#34C759]/10 text-[#34C759]",
-  trial: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  suspended: "bg-[#FF3B30]/10 text-[#FF3B30]",
-  churned: "bg-[#8E8E93]/10 text-[#8E8E93]",
-  pending: "bg-[#007AFF]/10 text-[#007AFF]",
-};
 
 export default function AdminCompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -219,14 +214,13 @@ export default function AdminCompaniesPage() {
           <h1 className="text-[28px] font-bold text-[#1C1C1E] tracking-tight">Companies</h1>
           <p className="text-[14px] text-[#8E8E93] mt-1">Manage all companies on the platform</p>
         </div>
-        <button
+        <Button
+          variant={showCreate ? 'danger' : 'primary'}
+          size="sm"
           onClick={() => setShowCreate(!showCreate)}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-            showCreate ? 'bg-[#FF3B30] text-white' : 'bg-[#007AFF] text-white hover:bg-[#0066DD]'
-          }`}
         >
           {showCreate ? 'Cancel' : '+ Create Company'}
-        </button>
+        </Button>
       </div>
 
       {/* Create Company Form */}
@@ -257,13 +251,15 @@ export default function AdminCompaniesPage() {
             <span className="text-sm text-[#1C1C1E]">Skip payment setup</span>
             <span className="text-xs text-[#8E8E93]">(company can start immediately)</span>
           </label>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleCreateCompany}
             disabled={creating || !newName.trim() || !newOwnerEmail.trim() || !newOwnerName.trim()}
-            className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+            loading={creating}
           >
             {creating ? 'Creating...' : 'Create Company'}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -312,43 +308,43 @@ export default function AdminCompaniesPage() {
                   </td>
                   <td className="px-5 py-3.5 text-[13px] text-[#1C1C1E] capitalize">{c.business_type ?? "—"}</td>
                   <td className="px-5 py-3.5">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[c.status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                      {c.status}
-                    </span>
+                    <StatusBadge status={c.status} />
                   </td>
                   <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{new Date(c.created_at).toLocaleDateString()}</td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <button
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => handleEnterCompany(c.id)}
                         disabled={enteringId === c.id}
-                        className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition-colors disabled:opacity-50"
+                        loading={enteringId === c.id}
                       >
                         {enteringId === c.id ? "..." : "Enter →"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="warning"
+                        size="sm"
                         onClick={() => handleStartEdit(c)}
-                        className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#FF9F0A]/10 text-[#FF9F0A] hover:bg-[#FF9F0A]/20 transition-colors"
                       >
                         Edit
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant={c.status === "suspended" ? "success" : "danger"}
+                        size="sm"
                         onClick={() => handleToggleStatus(c.id, c.status)}
                         disabled={actionLoading === c.id}
-                        className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-50 ${
-                          c.status === "suspended"
-                            ? "bg-[#34C759]/10 text-[#34C759] hover:bg-[#34C759]/20"
-                            : "bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20"
-                        }`}
+                        loading={actionLoading === c.id}
                       >
                         {actionLoading === c.id ? "..." : c.status === "suspended" ? "Activate" : "Suspend"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
                         onClick={() => handleStartDelete(c)}
-                        className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-colors"
                       >
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -391,12 +387,12 @@ export default function AdminCompaniesPage() {
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={handleSaveEdit} disabled={saving || !editName.trim()} className="flex-1 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50">
+              <Button variant="primary" size="sm" onClick={handleSaveEdit} disabled={saving || !editName.trim()} loading={saving} className="flex-1">
                 {saving ? "Saving..." : "Save Changes"}
-              </button>
-              <button onClick={() => setEditingCompany(null)} className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-sm font-medium hover:bg-[#E5E5EA] transition-colors">
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setEditingCompany(null)} className="flex-1">
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -413,9 +409,9 @@ export default function AdminCompaniesPage() {
                   <h3 className="text-lg font-bold text-[#1C1C1E]">Cannot Delete</h3>
                 </div>
                 <p className="text-sm text-[#3C3C43] mb-5">{deleteReason}</p>
-                <button onClick={() => setDeleteTarget(null)} className="w-full py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-sm font-medium hover:bg-[#E5E5EA] transition-colors">
+                <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)} className="w-full">
                   OK
-                </button>
+                </Button>
               </>
             ) : deleteStep === "confirm1" ? (
               <>
@@ -427,12 +423,12 @@ export default function AdminCompaniesPage() {
                   This will permanently remove the company, all its jobs, invoices, addresses, team members, and client links. This action cannot be undone.
                 </p>
                 <div className="flex gap-3">
-                  <button onClick={() => setDeleteStep("confirm2")} className="flex-1 py-2.5 bg-[#FF3B30] text-white rounded-xl text-sm font-medium hover:bg-[#D32F2F] transition-colors">
+                  <Button variant="danger" size="sm" onClick={() => setDeleteStep("confirm2")} className="flex-1">
                     Yes, Delete
-                  </button>
-                  <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-sm font-medium hover:bg-[#E5E5EA] transition-colors">
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)} className="flex-1">
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : deleteStep === "confirm2" ? (
@@ -448,12 +444,12 @@ export default function AdminCompaniesPage() {
                   This is irreversible. Are you absolutely sure?
                 </p>
                 <div className="flex gap-3">
-                  <button onClick={handleConfirmDelete} disabled={deleting} className="flex-1 py-2.5 bg-[#FF3B30] text-white rounded-xl text-sm font-bold hover:bg-[#D32F2F] transition-colors disabled:opacity-50">
+                  <Button variant="danger" size="sm" onClick={handleConfirmDelete} disabled={deleting} loading={deleting} className="flex-1">
                     {deleting ? "Deleting..." : "DELETE PERMANENTLY"}
-                  </button>
-                  <button onClick={() => setDeleteTarget(null)} disabled={deleting} className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-sm font-medium hover:bg-[#E5E5EA] transition-colors disabled:opacity-50">
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)} disabled={deleting} className="flex-1">
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (

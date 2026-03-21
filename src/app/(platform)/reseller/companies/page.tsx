@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { fetchResellerCompanies, inviteCompanyAsReseller } from "@/lib/actions/reseller";
+import { StatusBadge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 interface Company {
   id: string;
@@ -16,12 +18,6 @@ interface ResellerCompaniesData {
   marginPercentage: number;
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  active: "bg-[#34C759]/10 text-[#34C759]",
-  trial: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  inactive: "bg-[#8E8E93]/10 text-[#8E8E93]",
-  churned: "bg-[#FF3B30]/10 text-[#FF3B30]",
-};
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -112,12 +108,9 @@ export default function ResellerCompaniesPage() {
             {companies.length} {companies.length === 1 ? "company" : "companies"}
           </p>
         </div>
-        <button
-          onClick={() => setShowInvite(!showInvite)}
-          className="px-4 py-2 bg-[#AF52DE] text-white rounded-xl text-[13px] font-semibold hover:bg-[#9B3DC8] transition-colors"
-        >
+        <Button variant={showInvite ? "danger" : "purple"} size="sm" onClick={() => setShowInvite(!showInvite)}>
           {showInvite ? "Cancel" : "+ Invite Company"}
-        </button>
+        </Button>
       </div>
 
       {showInvite && (
@@ -148,13 +141,9 @@ export default function ResellerCompaniesPage() {
               />
             </div>
           </div>
-          <button
-            onClick={handleInvite}
-            disabled={inviting || !inviteForm.companyName.trim() || !inviteForm.ownerEmail.trim()}
-            className="px-5 py-2.5 bg-[#AF52DE] text-white rounded-xl text-[13px] font-semibold hover:bg-[#9B3DC8] transition-colors disabled:opacity-50"
-          >
+          <Button variant="purple" size="sm" onClick={handleInvite} disabled={inviting || !inviteForm.companyName.trim() || !inviteForm.ownerEmail.trim()} loading={inviting}>
             {inviting ? "Inviting..." : "Send Invite"}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -195,9 +184,7 @@ export default function ResellerCompaniesPage() {
                       {c.slug && <div className="text-[11px] text-[#8E8E93]">{c.slug}</div>}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[c.status] ?? "bg-[#8E8E93]/10 text-[#8E8E93]"}`}>
-                        {c.status}
-                      </span>
+                      <StatusBadge status={c.status} />
                     </td>
                     <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{formatDate(c.created_at)}</td>
                   </tr>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getChangelogEntries, createChangelogEntry, deleteChangelogEntry } from "@/lib/actions/admin";
+import { Badge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 type ChangelogEntry = {
   id: string;
@@ -12,10 +14,10 @@ type ChangelogEntry = {
   created_at: string;
 };
 
-const TYPE_STYLES: Record<string, string> = {
-  feature: "bg-[#34C759]/10 text-[#34C759]",
-  improvement: "bg-[#007AFF]/10 text-[#007AFF]",
-  fix: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
+const TYPE_VARIANT: Record<string, "green" | "blue" | "orange"> = {
+  feature: "green",
+  improvement: "blue",
+  fix: "orange",
 };
 
 const EMPTY_FORM = { version: "", title: "", description: "", type: "feature" };
@@ -93,12 +95,9 @@ export default function AdminChangelogPage() {
           <h1 className="text-[28px] font-bold text-[#1C1C1E] tracking-tight">Changelog</h1>
           <p className="text-[14px] text-[#8E8E93] mt-1">Product updates visible to all users</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-[13px] font-semibold hover:bg-[#0066DD] transition-colors"
-        >
+        <Button variant={showForm ? "danger" : "primary"} size="sm" onClick={() => setShowForm(!showForm)}>
           {showForm ? "Cancel" : "+ New Entry"}
-        </button>
+        </Button>
       </div>
 
       {error && (
@@ -152,13 +151,9 @@ export default function AdminChangelogPage() {
               className="w-full px-4 py-3 rounded-xl border border-[#E5E5EA] bg-white text-[13px] text-[#1C1C1E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 resize-none"
             />
           </div>
-          <button
-            onClick={handleCreate}
-            disabled={saving || !form.version.trim() || !form.title.trim()}
-            className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-[13px] font-semibold hover:bg-[#0066DD] transition-colors disabled:opacity-50"
-          >
+          <Button variant="primary" size="sm" onClick={handleCreate} disabled={saving || !form.version.trim() || !form.title.trim()} loading={saving}>
             {saving ? "Saving..." : "Create Entry"}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -186,21 +181,17 @@ export default function AdminChangelogPage() {
                     </span>
                   )}
                   {entry.entry_type && (
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${TYPE_STYLES[entry.entry_type] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                      {entry.entry_type}
-                    </span>
+                    <Badge variant={TYPE_VARIANT[entry.entry_type] ?? "slate"}>
+                      {entry.entry_type.charAt(0).toUpperCase() + entry.entry_type.slice(1)}
+                    </Badge>
                   )}
                   <span className="text-[11px] text-[#8E8E93]">
                     {new Date(entry.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <button
-                  onClick={() => handleDelete(entry.id)}
-                  disabled={deletingId === entry.id}
-                  className="text-[#FF3B30] text-[12px] font-semibold hover:underline disabled:opacity-50"
-                >
+                <Button variant="danger" size="sm" onClick={() => handleDelete(entry.id)} disabled={deletingId === entry.id} loading={deletingId === entry.id}>
                   {deletingId === entry.id ? "Deleting..." : "Delete"}
-                </button>
+                </Button>
               </div>
               <h3 className="text-[14px] font-bold text-[#1C1C1E] mb-1">{entry.title}</h3>
               {entry.content && (

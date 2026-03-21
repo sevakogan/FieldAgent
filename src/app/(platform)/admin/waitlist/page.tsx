@@ -2,15 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getAdminWaitlist, approveWaitlistEntry, rejectWaitlistEntry } from "@/lib/actions/admin";
+import { StatusBadge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 type WaitlistEntry = Record<string, unknown>;
 
-const STATUS_STYLES: Record<string, string> = {
-  waiting: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  invited: "bg-[#007AFF]/10 text-[#007AFF]",
-  approved: "bg-[#34C759]/10 text-[#34C759]",
-  rejected: "bg-[#FF3B30]/10 text-[#FF3B30]",
-};
 
 export default function AdminWaitlistPage() {
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
@@ -133,28 +129,30 @@ export default function AdminWaitlistPage() {
                       <td className="px-5 py-3.5 text-[13px] font-semibold text-[#1C1C1E]">{name}</td>
                       <td className="px-5 py-3.5 text-[13px] text-[#8E8E93]">{email}</td>
                       <td className="px-5 py-3.5">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                          {status}
-                        </span>
+                        <StatusBadge status={status} />
                       </td>
                       <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{date ? new Date(date).toLocaleDateString() : "—"}</td>
                       <td className="px-5 py-3.5 text-right">
                         {isPending && id && (
                           <div className="flex items-center justify-end gap-2">
-                            <button
+                            <Button
+                              variant="success"
+                              size="sm"
                               onClick={() => handleApprove(id)}
                               disabled={actionLoading === `approve-${id}`}
-                              className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#34C759]/10 text-[#34C759] hover:bg-[#34C759]/20 transition-colors disabled:opacity-50"
+                              loading={actionLoading === `approve-${id}`}
                             >
                               {actionLoading === `approve-${id}` ? "..." : "Approve"}
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
                               onClick={() => handleReject(id)}
                               disabled={actionLoading === `reject-${id}`}
-                              className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-colors disabled:opacity-50"
+                              loading={actionLoading === `reject-${id}`}
                             >
                               {actionLoading === `reject-${id}` ? "..." : "Reject"}
-                            </button>
+                            </Button>
                           </div>
                         )}
                       </td>

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/actions/clients'
+import { Button } from '@/components/platform/Button'
 
 export default function NewClientPage() {
   const router = useRouter()
@@ -122,13 +123,15 @@ export default function NewClientPage() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={submitting}
-              className="flex-1 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              loading={submitting}
+              className="flex-1"
             >
-              {submitting ? 'Creating...' : 'Create Client'}
-            </button>
+              Create Client
+            </Button>
             <Link
               href="/dashboard/clients"
               className="flex-1 py-2.5 bg-white text-[#1C1C1E] border border-[#E5E5EA] rounded-xl text-sm font-medium text-center hover:bg-[#F2F2F7] transition-colors"

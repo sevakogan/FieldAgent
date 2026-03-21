@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getAdminWebhooks, retryWebhook } from "@/lib/actions/admin";
+import { StatusBadge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 type WebhookLog = {
   id: string;
@@ -12,12 +14,6 @@ type WebhookLog = {
   created_at: string;
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  success: "bg-[#34C759]/10 text-[#34C759]",
-  failed: "bg-[#FF3B30]/10 text-[#FF3B30]",
-  pending: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  received: "bg-[#007AFF]/10 text-[#007AFF]",
-};
 
 export default function AdminWebhooksPage() {
   const [logs, setLogs] = useState<WebhookLog[]>([]);
@@ -151,22 +147,22 @@ export default function AdminWebhooksPage() {
                     </td>
                     <td className="px-5 py-3.5 text-[13px] text-[#8E8E93]">{log.source ?? "—"}</td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[log.status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                        {log.status}
-                      </span>
+                      <StatusBadge status={log.status} />
                     </td>
                     <td className="px-5 py-3.5 text-[12px] text-[#8E8E93] font-mono">
                       {new Date(log.created_at).toLocaleString()}
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       {log.status === "failed" && (
-                        <button
+                        <Button
+                          variant="warning"
+                          size="sm"
                           onClick={() => handleRetry(log.id)}
                           disabled={actionLoading === log.id}
-                          className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#FF9F0A]/10 text-[#FF9F0A] hover:bg-[#FF9F0A]/20 transition-colors disabled:opacity-50"
+                          loading={actionLoading === log.id}
                         >
                           {actionLoading === log.id ? "..." : "Retry"}
-                        </button>
+                        </Button>
                       )}
                     </td>
                   </tr>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getAdminPromoCodes, createPromoCode, updatePromoCodeStatus } from "@/lib/actions/admin";
+import { StatusBadge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 type PromoCode = {
   id: string;
@@ -16,12 +18,6 @@ type PromoCode = {
   created_at: string;
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  active: "bg-[#34C759]/10 text-[#34C759]",
-  exhausted: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  expired: "bg-[#8E8E93]/10 text-[#8E8E93]",
-  disabled: "bg-[#FF3B30]/10 text-[#FF3B30]",
-};
 
 export default function AdminPromoCodesPage() {
   const [codes, setCodes] = useState<PromoCode[]>([]);
@@ -101,12 +97,9 @@ export default function AdminPromoCodesPage() {
           <h1 className="text-[28px] font-bold text-[#1C1C1E] tracking-tight">Promo Codes</h1>
           <p className="text-[14px] text-[#8E8E93] mt-1">Create and manage promotional discount codes</p>
         </div>
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          className="h-9 px-4 rounded-xl bg-[#8E8E93] text-white text-[13px] font-semibold hover:bg-[#636366] transition-colors"
-        >
+        <Button variant="secondary" size="sm" onClick={() => setShowCreate(!showCreate)}>
           + Create Code
-        </button>
+        </Button>
       </div>
 
       {/* Create form */}
@@ -166,16 +159,18 @@ export default function AdminPromoCodesPage() {
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <button onClick={() => setShowCreate(false)} className="h-9 px-4 rounded-xl border border-[#E5E5EA] text-[13px] font-semibold text-[#8E8E93] hover:bg-[#F2F2F7] transition-colors">
+            <Button variant="secondary" size="sm" onClick={() => setShowCreate(false)}>
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="success"
+              size="sm"
               onClick={handleCreate}
               disabled={creating || !formCode || !formValue}
-              className="h-9 px-4 rounded-xl bg-[#34C759] text-white text-[13px] font-semibold hover:bg-[#2DA44E] transition-colors disabled:opacity-50"
+              loading={creating}
             >
               {creating ? "Creating..." : "Create"}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -219,21 +214,16 @@ export default function AdminPromoCodesPage() {
                         )}
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[promo.status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                          {promo.status}
-                        </span>
+                        <StatusBadge status={promo.status} />
                       </td>
                       <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">
                         {promo.expires_at ? new Date(promo.expires_at).toLocaleDateString() : "—"}
                       </td>
                       <td className="px-5 py-3.5">
                         {promo.status === "active" && (
-                          <button
-                            onClick={() => handleDisable(promo.id)}
-                            className="text-[11px] font-semibold text-[#FF3B30] hover:underline"
-                          >
+                          <Button variant="danger" size="sm" onClick={() => handleDisable(promo.id)}>
                             Disable
-                          </button>
+                          </Button>
                         )}
                       </td>
                     </tr>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getAdminReferrals, updateReferralStatus } from "@/lib/actions/admin";
+import { StatusBadge } from "@/components/platform/Badge";
 
 type Referral = {
   id: string;

@@ -6,6 +6,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getClient, updateClient, deleteClient, type ClientDetail } from '@/lib/actions/clients'
 import { createAddress } from '@/lib/actions/addresses'
+import { StatusBadge } from '@/components/platform/Badge'
+import { Button } from '@/components/platform/Button'
 
 const PAYMENT_LABELS: Record<string, string> = {
   per_job: 'Per Job',
@@ -229,19 +231,22 @@ export default function ClientDetailPage() {
                   </select>
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-4 py-2 bg-[#007AFF] text-white rounded-lg text-sm font-medium hover:bg-[#0066DD] disabled:opacity-50"
+                    loading={saving}
                   >
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
+                    Save
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setEditing(false)}
-                    className="px-4 py-2 bg-white text-[#1C1C1E] border border-[#E5E5EA] rounded-lg text-sm font-medium hover:bg-[#F2F2F7]"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -314,13 +319,17 @@ export default function ClientDetailPage() {
                   <input type="checkbox" checked={propIsStr} onChange={e => setPropIsStr(e.target.checked)} className="w-4 h-4 rounded border-[#E5E5EA] text-[#FF9F0A] focus:ring-[#FF9F0A]/30" />
                   <span className="text-sm text-[#1C1C1E]">Short-Term Rental (STR)</span>
                 </label>
-                <button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={handleAddProperty}
                   disabled={addingProp}
-                  className="w-full py-2 bg-[#007AFF] text-white rounded-lg text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+                  loading={addingProp}
+                  className="w-full"
+                  pill={false}
                 >
-                  {addingProp ? 'Adding...' : 'Add Property'}
-                </button>
+                  Add Property
+                </Button>
               </div>
             )}
 
@@ -356,15 +365,7 @@ export default function ClientDetailPage() {
                           STR
                         </span>
                       )}
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{
-                          backgroundColor: addr.status === 'active' ? '#34C75920' : '#8E8E9320',
-                          color: addr.status === 'active' ? '#34C759' : '#8E8E93',
-                        }}
-                      >
-                        {addr.status}
-                      </span>
+                      <StatusBadge status={addr.status} />
                     </div>
                   </Link>
                 ))}
@@ -383,49 +384,55 @@ export default function ClientDetailPage() {
           >
             <h2 className="font-semibold text-[#1C1C1E] mb-4">Quick Actions</h2>
             <div className="space-y-2">
-              <button
+              <Button
+                variant="success"
                 onClick={() => setShowAddProperty(true)}
-                className="w-full py-2.5 bg-[#34C759] text-white rounded-xl text-sm font-medium hover:bg-[#2DB84D] transition-colors"
+                className="w-full"
               >
                 + Add Property
-              </button>
+              </Button>
               <Link
                 href={`/dashboard/jobs/new?client=${clientId}`}
                 className="w-full py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors block text-center"
               >
                 + Schedule Job
               </Link>
-              <button
+              <Button
+                variant="ghost"
                 onClick={startEditing}
-                className="w-full py-2.5 bg-white text-[#007AFF] border border-[#007AFF] rounded-xl text-sm font-medium hover:bg-[#007AFF]/5 transition-colors"
+                className="w-full"
               >
                 Edit Client
-              </button>
+              </Button>
               {!confirmDelete ? (
-                <button
+                <Button
+                  variant="danger"
                   onClick={() => setConfirmDelete(true)}
-                  className="w-full py-2.5 bg-white text-[#FF3B30] border border-[#FF3B30] rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
+                  className="w-full"
                 >
                   Delete Client
-                </button>
+                </Button>
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-[#FF3B30] text-center">
                     This will permanently delete this client and all their addresses.
                   </p>
-                  <button
+                  <Button
+                    variant="danger"
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="w-full py-2.5 bg-[#FF3B30] text-white rounded-xl text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                    loading={deleting}
+                    className="w-full"
                   >
-                    {deleting ? 'Deleting...' : 'Confirm Delete'}
-                  </button>
-                  <button
+                    Confirm Delete
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={() => setConfirmDelete(false)}
-                    className="w-full py-2.5 bg-white text-[#1C1C1E] border border-[#E5E5EA] rounded-xl text-sm font-medium hover:bg-[#F2F2F7] transition-colors"
+                    className="w-full"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

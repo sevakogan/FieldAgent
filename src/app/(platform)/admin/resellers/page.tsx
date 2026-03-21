@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getAdminResellers, createAdminReseller, updateResellerStatus } from "@/lib/actions/admin";
+import { StatusBadge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 type Reseller = {
   id: string;
@@ -15,12 +17,6 @@ type Reseller = {
   user_email: string | null;
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  active: "bg-[#34C759]/10 text-[#34C759]",
-  pending: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  inactive: "bg-[#8E8E93]/10 text-[#8E8E93]",
-  suspended: "bg-[#FF3B30]/10 text-[#FF3B30]",
-};
 
 export default function AdminResellersPage() {
   const [resellers, setResellers] = useState<Reseller[]>([]);
@@ -102,12 +98,9 @@ export default function AdminResellersPage() {
           <h1 className="text-[28px] font-bold text-[#1C1C1E] tracking-tight">Resellers</h1>
           <p className="text-[14px] text-[#8E8E93] mt-1">Manage reseller partnerships and commissions</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="h-10 px-5 rounded-xl bg-[#007AFF] text-white text-[13px] font-semibold hover:bg-[#0066DD] transition-colors"
-        >
+        <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
           Add Reseller
-        </button>
+        </Button>
       </div>
 
       <input
@@ -139,25 +132,21 @@ export default function AdminResellersPage() {
                     <div className="text-[11px] text-[#8E8E93]">{r.user_name ?? "—"} · {r.user_email ?? "—"}</div>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[r.status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                      {r.status}
-                    </span>
+                    <StatusBadge status={r.status} />
                   </td>
                   <td className="px-5 py-3.5 text-right text-[13px] text-[#1C1C1E]">{r.properties_count ?? 0}</td>
                   <td className="px-5 py-3.5 text-right text-[13px] text-[#8E8E93]">{r.margin_percentage ?? 0}%</td>
                   <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{new Date(r.created_at).toLocaleDateString()}</td>
                   <td className="px-5 py-3.5 text-right">
-                    <button
+                    <Button
+                      variant={r.status === "active" ? "danger" : "success"}
+                      size="sm"
                       onClick={() => handleToggleStatus(r.id, r.status)}
                       disabled={actionLoading === r.id}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-50 ${
-                        r.status === "active"
-                          ? "bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20"
-                          : "bg-[#34C759]/10 text-[#34C759] hover:bg-[#34C759]/20"
-                      }`}
+                      loading={actionLoading === r.id}
                     >
                       {actionLoading === r.id ? "..." : r.status === "active" ? "Suspend" : "Activate"}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -278,20 +267,12 @@ function AddResellerModal({ onClose, onCreated }: { onClose: () => void; onCreat
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 h-10 rounded-xl border border-[#E5E5EA] text-[13px] font-semibold text-[#8E8E93] hover:bg-[#F2F2F7] transition-colors"
-            >
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} className="flex-1">
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 h-10 rounded-xl bg-[#007AFF] text-white text-[13px] font-semibold hover:bg-[#0066DD] transition-colors disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" variant="primary" size="sm" disabled={submitting} loading={submitting} className="flex-1">
               {submitting ? "Creating..." : "Create Reseller"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

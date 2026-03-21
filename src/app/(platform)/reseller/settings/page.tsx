@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchResellerSettings, updateResellerSettings } from "@/lib/actions/reseller";
+import { StatusBadge } from "@/components/platform/Badge";
 
 interface ResellerSettings {
   id: string;
@@ -181,11 +182,7 @@ export default function ResellerSettingsPage() {
             <div>
               <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Status</label>
               <div className="h-10 px-3 rounded-xl bg-[#F2F2F7] border border-[#E5E5EA] flex items-center">
-                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${
-                  reseller.status === "active" ? "bg-[#34C759]/10 text-[#34C759]" : "bg-[#8E8E93]/10 text-[#8E8E93]"
-                }`}>
-                  {reseller.status}
-                </span>
+                <StatusBadge status={reseller.status} />
               </div>
             </div>
             <div>

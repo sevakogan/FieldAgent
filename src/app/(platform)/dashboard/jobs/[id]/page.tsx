@@ -6,20 +6,8 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { getJob, updateJobStatus, updateJob, deleteJob, type JobDetail } from '@/lib/actions/jobs'
 import type { JobStatus } from '@/types/database'
-
-const STATUS_COLORS: Record<string, string> = {
-  requested: '#8E8E93',
-  approved: '#007AFF',
-  scheduled: '#007AFF',
-  driving: '#5AC8FA',
-  arrived: '#FF9F0A',
-  in_progress: '#FFD60A',
-  pending_review: '#AF52DE',
-  revision_needed: '#FF9F0A',
-  completed: '#34C759',
-  charged: '#34C759',
-  cancelled: '#FF6B6B',
-}
+import { StatusBadge } from '@/components/platform/Badge'
+import { Button } from '@/components/platform/Button'
 
 const STATUS_LABELS: Record<string, string> = {
   requested: 'Requested',
@@ -156,7 +144,6 @@ export default function JobDetailPage() {
   if (!job) return null
 
   const nextStatuses = STATUS_FLOW[job.status] ?? []
-  const statusColor = STATUS_COLORS[job.status] ?? '#8E8E93'
   const fullAddress = [job.address_street, job.address_unit, job.address_city, job.address_state, job.address_zip]
     .filter(Boolean)
     .join(', ')
@@ -167,15 +154,7 @@ export default function JobDetailPage() {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1C1C1E]">Job Details</h1>
-        <span
-          className="px-3 py-1.5 rounded-full text-sm font-medium"
-          style={{
-            backgroundColor: statusColor + '20',
-            color: statusColor,
-          }}
-        >
-          {STATUS_LABELS[job.status] ?? job.status}
-        </span>
+        <StatusBadge status={job.status} />
       </div>
 
       {error && (
@@ -240,24 +219,27 @@ export default function JobDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleSaveEdit}
                     disabled={updating}
-                    className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] disabled:opacity-50"
+                    loading={updating}
                   >
-                    {updating ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
+                    Save
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => {
                       setEditing(false)
                       setEditPrice(String(job.price))
                       setEditDate(job.scheduled_date)
                       setEditTime(job.scheduled_time ?? '')
                     }}
-                    className="px-4 py-2 bg-white text-[#3C3C43] border border-[#E5E5EA] rounded-xl text-sm font-medium"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -373,24 +355,17 @@ export default function JobDetailPage() {
             >
               {nextStatuses.map((s) => {
                 const isCancel = s === 'cancelled'
+                const variant = isCancel ? 'danger' : s === 'completed' || s === 'charged' ? 'success' : 'primary'
                 return (
-                  <button
+                  <Button
                     key={s}
+                    variant={variant}
                     onClick={() => handleStatusChange(s)}
                     disabled={updating}
-                    className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 ${
-                      isCancel
-                        ? 'bg-white text-[#FF6B6B] border border-[#FF6B6B] hover:bg-red-50'
-                        : 'text-white hover:opacity-90'
-                    }`}
-                    style={
-                      isCancel
-                        ? undefined
-                        : { backgroundColor: STATUS_COLORS[s] ?? '#007AFF' }
-                    }
+                    className="w-full"
                   >
                     {isCancel ? 'Cancel Job' : `Mark as ${STATUS_LABELS[s] ?? s}`}
-                  </button>
+                  </Button>
                 )
               })}
             </motion.div>
@@ -403,28 +378,34 @@ export default function JobDetailPage() {
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
                   <p className="text-sm text-red-700">Are you sure you want to delete this job? This cannot be undone.</p>
                   <div className="flex gap-2">
-                    <button
+                    <Button
+                      variant="danger"
+                      size="sm"
                       onClick={handleDelete}
                       disabled={updating}
-                      className="flex-1 py-2 bg-[#FF6B6B] text-white rounded-xl text-sm font-medium disabled:opacity-50"
+                      loading={updating}
+                      className="flex-1"
                     >
-                      {updating ? 'Deleting...' : 'Yes, Delete'}
-                    </button>
-                    <button
+                      Yes, Delete
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setShowDeleteConfirm(false)}
-                      className="flex-1 py-2 bg-white text-[#3C3C43] border border-[#E5E5EA] rounded-xl text-sm font-medium"
+                      className="flex-1"
                     >
                       No, Keep
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : (
-                <button
+                <Button
+                  variant="danger"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full py-2.5 bg-white text-[#8E8E93] border border-[#E5E5EA] rounded-xl text-sm font-medium hover:text-[#FF6B6B] hover:border-[#FF6B6B] transition-colors"
+                  className="w-full"
                 >
                   Delete Job
-                </button>
+                </Button>
               )}
             </div>
           )}

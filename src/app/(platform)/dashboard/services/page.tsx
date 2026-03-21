@@ -9,6 +9,7 @@ import {
   deleteService,
   type ServiceRow,
 } from '@/lib/actions/services'
+import { Button } from '@/components/platform/Button'
 
 type FormData = {
   name: string
@@ -172,12 +173,9 @@ export default function ServicesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1C1C1E]">Services</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
-        >
+        <Button variant="primary" onClick={openCreate}>
           + Add Service
-        </button>
+        </Button>
       </div>
 
       {loading && (
@@ -201,12 +199,9 @@ export default function ServicesPage() {
           <div className="text-4xl mb-3">&#128736;</div>
           <h2 className="text-lg font-semibold text-[#1C1C1E] mb-1">No services yet</h2>
           <p className="text-sm text-[#8E8E93] mb-5">Create your first service type to get started.</p>
-          <button
-            onClick={openCreate}
-            className="inline-block px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
-          >
+          <Button variant="primary" onClick={openCreate}>
             Create Your First Service
-          </button>
+          </Button>
         </motion.div>
       )}
 
@@ -259,35 +254,43 @@ export default function ServicesPage() {
                 )}
 
                 <div className="flex gap-2 pt-2 border-t border-[#E5E5EA]">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => openEdit(service)}
-                    className="flex-1 py-2 text-[#007AFF] bg-[#007AFF10] rounded-xl text-sm font-medium hover:bg-[#007AFF20] transition-colors"
+                    className="flex-1"
                   >
                     Edit
-                  </button>
+                  </Button>
                   {deleteConfirmId === service.id ? (
                     <div className="flex-1 flex gap-1">
-                      <button
+                      <Button
+                        variant="danger"
+                        size="sm"
                         onClick={() => handleDelete(service.id)}
                         disabled={submitting}
-                        className="flex-1 py-2 text-white bg-[#FF6B6B] rounded-xl text-xs font-medium disabled:opacity-50"
+                        className="flex-1"
                       >
                         Confirm
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => setDeleteConfirmId(null)}
-                        className="flex-1 py-2 text-[#3C3C43] bg-[#F2F2F7] rounded-xl text-xs font-medium"
+                        className="flex-1"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   ) : (
-                    <button
+                    <Button
+                      variant="danger"
+                      size="sm"
                       onClick={() => setDeleteConfirmId(service.id)}
-                      className="flex-1 py-2 text-[#FF6B6B] bg-[#FF6B6B10] rounded-xl text-sm font-medium hover:bg-[#FF6B6B20] transition-colors"
+                      className="flex-1"
                     >
                       Archive
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -415,22 +418,20 @@ export default function ServicesPage() {
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <button
+                  <Button
                     type="submit"
+                    variant="primary"
                     disabled={submitting}
-                    className="px-6 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+                    loading={submitting}
                   >
-                    {submitting
-                      ? editingId ? 'Saving...' : 'Creating...'
-                      : editingId ? 'Save Changes' : 'Create Service'}
-                  </button>
-                  <button
-                    type="button"
+                    {editingId ? 'Save Changes' : 'Create Service'}
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={closeModal}
-                    className="px-6 py-2.5 bg-white text-[#3C3C43] border border-[#E5E5EA] rounded-xl text-sm font-medium hover:bg-[#F2F2F7] transition-colors"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </form>
             </motion.div>

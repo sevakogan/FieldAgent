@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchResellerReferrals } from "@/lib/actions/reseller";
+import { StatusBadge } from "@/components/platform/Badge";
 
 interface Referral {
   id: string;
@@ -17,11 +18,6 @@ interface ReferralsData {
   resellerSlug: string;
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  converted: "bg-[#34C759]/10 text-[#34C759]",
-  pending: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  expired: "bg-[#8E8E93]/10 text-[#8E8E93]",
-};
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -151,9 +147,7 @@ export default function ResellerReferralsPage() {
                     <td className="px-5 py-3.5 text-[13px] font-semibold text-[#1C1C1E]">{r.referred_email}</td>
                     <td className="px-5 py-3.5 text-[12px] font-mono text-[#8E8E93]">{r.referral_code}</td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[r.status] ?? "bg-[#8E8E93]/10 text-[#8E8E93]"}`}>
-                        {r.status}
-                      </span>
+                      <StatusBadge status={r.status} />
                     </td>
                     <td className="px-5 py-3.5 text-right text-[13px] font-semibold text-[#1C1C1E]">
                       {r.reward_value > 0 ? `$${r.reward_value}` : "\u2014"}

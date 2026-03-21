@@ -11,34 +11,7 @@ import {
   type RecentJob,
   type ActivityEntry,
 } from '@/lib/actions/dashboard'
-
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: '#007AFF',
-  driving: '#FF9F0A',
-  arrived: '#FF9F0A',
-  in_progress: '#FFD60A',
-  completed: '#34C759',
-  charged: '#34C759',
-  pending_review: '#AF52DE',
-  cancelled: '#FF6B6B',
-  requested: '#8E8E93',
-  approved: '#5AC8FA',
-  revision_needed: '#FF6B6B',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  scheduled: 'Scheduled',
-  driving: 'Driving',
-  arrived: 'Arrived',
-  in_progress: 'In Progress',
-  completed: 'Completed',
-  charged: 'Charged',
-  pending_review: 'Pending Review',
-  cancelled: 'Cancelled',
-  requested: 'Requested',
-  approved: 'Approved',
-  revision_needed: 'Revision Needed',
-}
+import { StatusBadge } from '@/components/platform/Badge'
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
@@ -187,15 +160,7 @@ export default function DashboardOverview() {
                       {job.scheduled_time ? ` \u00B7 ${formatTime(job.scheduled_time)}` : ''}
                     </p>
                   </div>
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{
-                      backgroundColor: (STATUS_COLORS[job.status] ?? '#8E8E93') + '20',
-                      color: STATUS_COLORS[job.status] ?? '#8E8E93',
-                    }}
-                  >
-                    {STATUS_LABELS[job.status] ?? job.status}
-                  </span>
+                  <StatusBadge status={job.status} />
                 </Link>
               ))
             )}

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { getAdminBilling } from "@/lib/actions/admin";
 import { updateInvoiceStatus } from "@/lib/actions/invoices";
+import { StatusBadge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 type BillingData = {
   mrr: number;
@@ -22,11 +24,6 @@ function formatCurrency(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(cents / 100);
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  paid: "bg-[#34C759]/10 text-[#34C759]",
-  pending: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  overdue: "bg-[#FF3B30]/10 text-[#FF3B30]",
-};
 
 export default function AdminBillingPage() {
   const [data, setData] = useState<BillingData | null>(null);
@@ -142,21 +139,21 @@ export default function AdminBillingPage() {
                     <td className="px-5 py-3.5 text-[13px] font-mono text-[#8E8E93]">{inv.id.slice(0, 8)}</td>
                     <td className="px-5 py-3.5 text-[13px] font-semibold text-[#1C1C1E]">{inv.company_name ?? "—"}</td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[inv.status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                        {inv.status}
-                      </span>
+                      <StatusBadge status={inv.status} />
                     </td>
                     <td className="px-5 py-3.5 text-right text-[13px] font-bold text-[#1C1C1E]">{formatCurrency(inv.total)}</td>
                     <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{new Date(inv.created_at).toLocaleDateString()}</td>
                     <td className="px-5 py-3.5 text-right">
                       {inv.status !== "paid" && (
-                        <button
+                        <Button
+                          variant="success"
+                          size="sm"
                           onClick={() => handleMarkPaid(inv.id)}
                           disabled={actionLoading === inv.id}
-                          className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#34C759]/10 text-[#34C759] hover:bg-[#34C759]/20 transition-colors disabled:opacity-50"
+                          loading={actionLoading === inv.id}
                         >
                           {actionLoading === inv.id ? "..." : "Mark Paid"}
-                        </button>
+                        </Button>
                       )}
                     </td>
                   </tr>

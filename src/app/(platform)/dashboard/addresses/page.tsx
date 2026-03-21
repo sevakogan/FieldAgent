@@ -6,11 +6,9 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { getAddresses, createAddress, type AddressRow } from '@/lib/actions/addresses'
 import { getClients, type ClientRow } from '@/lib/actions/clients'
-
-const STATUS_COLORS: Record<string, string> = {
-  active: '#34C759',
-  inactive: '#8E8E93',
-}
+import { StatusBadge } from '@/components/platform/Badge'
+import { Badge } from '@/components/platform/Badge'
+import { Button } from '@/components/platform/Button'
 
 function AddressesContent() {
   const searchParams = useSearchParams()
@@ -111,12 +109,9 @@ function AddressesContent() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1C1C1E]">Addresses</h1>
-        <button
-          onClick={() => { resetForm(); setShowModal(true) }}
-          className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
-        >
+        <Button variant="primary" onClick={() => { resetForm(); setShowModal(true) }}>
           + Add Address
-        </button>
+        </Button>
       </div>
 
       <input
@@ -146,12 +141,9 @@ function AddressesContent() {
           <div className="text-4xl mb-3">🏠</div>
           <h2 className="text-lg font-semibold text-[#1C1C1E] mb-1">No addresses yet</h2>
           <p className="text-sm text-[#8E8E93] mb-5">Add a property to start scheduling services.</p>
-          <button
-            onClick={() => { resetForm(); setShowModal(true) }}
-            className="inline-block px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
-          >
+          <Button variant="primary" onClick={() => { resetForm(); setShowModal(true) }}>
             Add Your First Address
-          </button>
+          </Button>
         </motion.div>
       )}
 
@@ -190,26 +182,12 @@ function AddressesContent() {
                     </Link>
                   </td>
                   <td className="p-4">
-                    <span
-                      className="text-xs px-2.5 py-1 rounded-full font-medium"
-                      style={{
-                        backgroundColor: addr.is_str ? '#FF9F0A20' : '#007AFF20',
-                        color: addr.is_str ? '#FF9F0A' : '#007AFF',
-                      }}
-                    >
+                    <Badge variant={addr.is_str ? 'orange' : 'blue'}>
                       {addr.is_str ? 'STR' : 'Residential'}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="p-4">
-                    <span
-                      className="text-xs px-2.5 py-1 rounded-full font-medium"
-                      style={{
-                        backgroundColor: (STATUS_COLORS[addr.status] ?? '#8E8E93') + '20',
-                        color: STATUS_COLORS[addr.status] ?? '#8E8E93',
-                      }}
-                    >
-                      {addr.status}
-                    </span>
+                    <StatusBadge status={addr.status} />
                   </td>
                   <td className="p-4 text-sm text-[#8E8E93] hidden lg:table-cell">
                     {new Date(addr.created_at).toLocaleDateString()}
@@ -348,20 +326,22 @@ function AddressesContent() {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
                   disabled={submitting}
-                  className="flex-1 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+                  loading={submitting}
+                  className="flex-1"
                 >
-                  {submitting ? 'Creating...' : 'Add Address'}
-                </button>
-                <button
-                  type="button"
+                  Add Address
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 bg-white text-[#1C1C1E] border border-[#E5E5EA] rounded-xl text-sm font-medium text-center hover:bg-[#F2F2F7] transition-colors"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
           </motion.div>

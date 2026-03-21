@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getAdminFeedback, updateFeedbackStatus } from "@/lib/actions/admin";
+import { Badge, StatusBadge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 type FeedbackItem = {
   id: string;
@@ -15,17 +17,10 @@ type FeedbackItem = {
   user_email: string | null;
 };
 
-const TYPE_STYLES: Record<string, string> = {
-  feature: "bg-[#007AFF]/10 text-[#007AFF]",
-  bug: "bg-[#FF3B30]/10 text-[#FF3B30]",
-  praise: "bg-[#34C759]/10 text-[#34C759]",
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  new: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  reviewed: "bg-[#007AFF]/10 text-[#007AFF]",
-  in_progress: "bg-[#AF52DE]/10 text-[#AF52DE]",
-  backlog: "bg-[#8E8E93]/10 text-[#8E8E93]",
+const TYPE_VARIANT: Record<string, "blue" | "red" | "green"> = {
+  feature: "blue",
+  bug: "red",
+  praise: "green",
 };
 
 export default function AdminFeedbackPage() {
@@ -132,13 +127,11 @@ export default function AdminFeedbackPage() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   {fb.type && (
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${TYPE_STYLES[fb.type] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                      {fb.type}
-                    </span>
+                    <Badge variant={TYPE_VARIANT[fb.type] ?? "slate"}>
+                      {fb.type.charAt(0).toUpperCase() + fb.type.slice(1)}
+                    </Badge>
                   )}
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[fb.status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                    {fb.status.replace("_", " ")}
-                  </span>
+                  <StatusBadge status={fb.status} />
                 </div>
                 <div className="flex items-center gap-3">
                   {fb.votes !== null && fb.votes > 0 && (
@@ -147,13 +140,15 @@ export default function AdminFeedbackPage() {
                     </div>
                   )}
                   {fb.status === "new" && (
-                    <button
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={() => handleMarkReviewed(fb.id)}
                       disabled={actionLoading === fb.id}
-                      className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 transition-colors disabled:opacity-50"
+                      loading={actionLoading === fb.id}
                     >
                       {actionLoading === fb.id ? "..." : "Mark Reviewed"}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

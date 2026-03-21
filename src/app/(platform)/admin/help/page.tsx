@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getAdminHelpArticles, createHelpArticle, deleteHelpArticle } from "@/lib/actions/admin";
+import { StatusBadge, Badge } from "@/components/platform/Badge";
+import { Button } from "@/components/platform/Button";
 
 type HelpArticle = {
   id: string;
@@ -14,10 +16,6 @@ type HelpArticle = {
   created_at: string;
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  published: "bg-[#34C759]/10 text-[#34C759]",
-  draft: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-};
 
 export default function AdminHelpPage() {
   const [articles, setArticles] = useState<HelpArticle[]>([]);
@@ -101,12 +99,9 @@ export default function AdminHelpPage() {
           <h1 className="text-[28px] font-bold text-[#1C1C1E] tracking-tight">Help Articles</h1>
           <p className="text-[14px] text-[#8E8E93] mt-1">Manage knowledge base articles for users</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="h-10 px-5 rounded-xl bg-[#007AFF] text-white text-[13px] font-semibold hover:bg-[#0066DD] transition-colors"
-        >
+        <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
           New Article
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -155,27 +150,19 @@ export default function AdminHelpPage() {
                     <td className="px-5 py-3.5 text-[13px] font-semibold text-[#1C1C1E]">{article.title}</td>
                     <td className="px-5 py-3.5">
                       {article.category ? (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#F2F2F7] text-[#8E8E93]">
-                          {article.category}
-                        </span>
+                        <Badge variant="slate">{article.category}</Badge>
                       ) : "—"}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${STATUS_STYLES[article.status] ?? "bg-[#F2F2F7] text-[#8E8E93]"}`}>
-                        {article.status}
-                      </span>
+                      <StatusBadge status={article.status} />
                     </td>
                     <td className="px-5 py-3.5 text-right text-[13px] text-[#8E8E93]">{(article.views ?? 0).toLocaleString()}</td>
                     <td className="px-5 py-3.5 text-right text-[13px] text-[#8E8E93]">{(article.helpful_count ?? 0).toLocaleString()}</td>
                     <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{new Date(article.created_at).toLocaleDateString()}</td>
                     <td className="px-5 py-3.5 text-right">
-                      <button
-                        onClick={() => handleDelete(article.id)}
-                        disabled={actionLoading === article.id}
-                        className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-colors disabled:opacity-50"
-                      >
+                      <Button variant="danger" size="sm" onClick={() => handleDelete(article.id)} disabled={actionLoading === article.id} loading={actionLoading === article.id}>
                         {actionLoading === article.id ? "..." : "Delete"}
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -271,20 +258,12 @@ function NewArticleModal({ onClose, onCreated }: { onClose: () => void; onCreate
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 h-10 rounded-xl border border-[#E5E5EA] text-[13px] font-semibold text-[#8E8E93] hover:bg-[#F2F2F7] transition-colors"
-            >
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} className="flex-1">
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 h-10 rounded-xl bg-[#007AFF] text-white text-[13px] font-semibold hover:bg-[#0066DD] transition-colors disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" variant="primary" size="sm" disabled={submitting} loading={submitting} className="flex-1">
               {submitting ? "Creating..." : "Create Article"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

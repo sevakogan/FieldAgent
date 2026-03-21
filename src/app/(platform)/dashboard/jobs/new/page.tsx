@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createJob } from '@/lib/actions/jobs'
+import { Button } from '@/components/platform/Button'
 import { getTeamMembers, type TeamMember } from '@/lib/actions/jobs'
 import { getAddresses, type AddressRow } from '@/lib/actions/addresses'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
@@ -287,14 +288,17 @@ export default function NewJobPage() {
                     onChange={(e) => setNewClientPhone(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
                   />
-                  <button
-                    type="button"
-                    onClick={handleCreateClient}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleCreateClient({ preventDefault: () => {} } as React.FormEvent)}
                     disabled={creatingClient || !newClientName.trim() || !newClientEmail.trim()}
-                    className="w-full py-2 bg-[#007AFF] text-white rounded-lg text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+                    loading={creatingClient}
+                    className="w-full"
+                    pill={false}
                   >
-                    {creatingClient ? 'Creating...' : 'Create & Select Client'}
-                  </button>
+                    Create & Select Client
+                  </Button>
                 </div>
               </motion.div>
             )}
@@ -487,13 +491,14 @@ export default function NewJobPage() {
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
-          <button
+          <Button
             type="submit"
+            variant="primary"
             disabled={submitting}
-            className="px-6 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+            loading={submitting}
           >
-            {submitting ? 'Creating...' : 'Create Job'}
-          </button>
+            Create Job
+          </Button>
           <Link
             href="/dashboard/jobs"
             className="px-6 py-2.5 bg-white text-[#3C3C43] border border-[#E5E5EA] rounded-xl text-sm font-medium hover:bg-[#F2F2F7] transition-colors"

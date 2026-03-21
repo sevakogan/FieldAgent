@@ -4,22 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getJobs, type JobRow } from '@/lib/actions/jobs'
+import { StatusBadge } from '@/components/platform/Badge'
 
 const STATUSES = ['all', 'scheduled', 'in_progress', 'pending_review', 'completed', 'cancelled'] as const
-
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: '#007AFF',
-  in_progress: '#FFD60A',
-  pending_review: '#AF52DE',
-  completed: '#34C759',
-  cancelled: '#FF6B6B',
-  driving: '#5AC8FA',
-  arrived: '#FF9F0A',
-  charged: '#34C759',
-  requested: '#8E8E93',
-  approved: '#007AFF',
-  revision_needed: '#FF9F0A',
-}
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: 'Scheduled',
@@ -27,12 +14,6 @@ const STATUS_LABELS: Record<string, string> = {
   pending_review: 'Review',
   completed: 'Completed',
   cancelled: 'Cancelled',
-  driving: 'Driving',
-  arrived: 'Arrived',
-  charged: 'Charged',
-  requested: 'Requested',
-  approved: 'Approved',
-  revision_needed: 'Revision',
 }
 
 export default function JobsPage() {
@@ -175,15 +156,7 @@ export default function JobsPage() {
                     ${Number(job.price).toFixed(2)}
                   </td>
                   <td className="p-4 text-center">
-                    <span
-                      className="text-xs px-2.5 py-1 rounded-full font-medium inline-block"
-                      style={{
-                        backgroundColor: (STATUS_COLORS[job.status] ?? '#8E8E93') + '20',
-                        color: STATUS_COLORS[job.status] ?? '#8E8E93',
-                      }}
-                    >
-                      {STATUS_LABELS[job.status] ?? job.status}
-                    </span>
+                    <StatusBadge status={job.status} />
                   </td>
                 </motion.tr>
               ))}
@@ -218,15 +191,7 @@ export default function JobsPage() {
                   </div>
                   <div className="flex items-center gap-3 ml-3">
                     <span className="text-sm font-medium text-[#1C1C1E]">${Number(job.price).toFixed(2)}</span>
-                    <span
-                      className="text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap"
-                      style={{
-                        backgroundColor: (STATUS_COLORS[job.status] ?? '#8E8E93') + '20',
-                        color: STATUS_COLORS[job.status] ?? '#8E8E93',
-                      }}
-                    >
-                      {STATUS_LABELS[job.status] ?? job.status}
-                    </span>
+                    <StatusBadge status={job.status} />
                   </div>
                 </Link>
               </motion.div>

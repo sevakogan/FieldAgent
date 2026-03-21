@@ -5,18 +5,14 @@ import { motion } from 'framer-motion'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getAddress, updateAddress, deleteAddress, type AddressDetail } from '@/lib/actions/addresses'
+import { StatusBadge } from '@/components/platform/Badge'
+import { Button } from '@/components/platform/Button'
 
 const RECURRENCE_LABELS: Record<string, string> = {
   one_time: 'One Time',
   weekly: 'Weekly',
   biweekly: 'Biweekly',
   monthly: 'Monthly',
-}
-
-const SERVICE_STATUS_COLORS: Record<string, string> = {
-  active: '#34C759',
-  paused: '#FF9F0A',
-  cancelled: '#FF3B30',
 }
 
 export default function AddressDetailPage() {
@@ -242,19 +238,22 @@ export default function AddressDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-4 py-2 bg-[#007AFF] text-white rounded-lg text-sm font-medium hover:bg-[#0066DD] disabled:opacity-50"
+                    loading={saving}
                   >
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
+                    Save
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setEditing(false)}
-                    className="px-4 py-2 bg-white text-[#1C1C1E] border border-[#E5E5EA] rounded-lg text-sm font-medium hover:bg-[#F2F2F7]"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -280,15 +279,7 @@ export default function AddressDetailPage() {
                 </div>
                 <div>
                   <p className="text-[#8E8E93]">Status</p>
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{
-                      backgroundColor: address.status === 'active' ? '#34C75920' : '#8E8E9320',
-                      color: address.status === 'active' ? '#34C759' : '#8E8E93',
-                    }}
-                  >
-                    {address.status}
-                  </span>
+                  <StatusBadge status={address.status} />
                 </div>
                 {address.integration_source && (
                   <div>
@@ -350,15 +341,7 @@ export default function AddressDetailPage() {
                       <span className="text-sm font-medium text-[#1C1C1E]">
                         ${svc.price.toFixed(2)}
                       </span>
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{
-                          backgroundColor: (SERVICE_STATUS_COLORS[svc.status] ?? '#8E8E93') + '20',
-                          color: SERVICE_STATUS_COLORS[svc.status] ?? '#8E8E93',
-                        }}
-                      >
-                        {svc.status}
-                      </span>
+                      <StatusBadge status={svc.status} />
                     </div>
                   </div>
                 ))}
@@ -377,12 +360,13 @@ export default function AddressDetailPage() {
           >
             <h2 className="font-semibold text-[#1C1C1E] mb-4">Quick Actions</h2>
             <div className="space-y-2">
-              <button
+              <Button
+                variant="primary"
                 onClick={startEditing}
-                className="w-full py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
+                className="w-full"
               >
                 Edit Address
-              </button>
+              </Button>
               <Link
                 href={`/dashboard/clients/${address.client_id}`}
                 className="block w-full py-2.5 bg-white text-[#007AFF] border border-[#007AFF] rounded-xl text-sm font-medium text-center hover:bg-[#007AFF]/5 transition-colors"
@@ -390,30 +374,34 @@ export default function AddressDetailPage() {
                 View Client
               </Link>
               {!confirmDelete ? (
-                <button
+                <Button
+                  variant="danger"
                   onClick={() => setConfirmDelete(true)}
-                  className="w-full py-2.5 bg-white text-[#FF3B30] border border-[#FF3B30] rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
+                  className="w-full"
                 >
                   Delete Address
-                </button>
+                </Button>
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-[#FF3B30] text-center">
                     This will permanently delete this address.
                   </p>
-                  <button
+                  <Button
+                    variant="danger"
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="w-full py-2.5 bg-[#FF3B30] text-white rounded-xl text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                    loading={deleting}
+                    className="w-full"
                   >
-                    {deleting ? 'Deleting...' : 'Confirm Delete'}
-                  </button>
-                  <button
+                    Confirm Delete
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={() => setConfirmDelete(false)}
-                    className="w-full py-2.5 bg-white text-[#1C1C1E] border border-[#E5E5EA] rounded-xl text-sm font-medium hover:bg-[#F2F2F7] transition-colors"
+                    className="w-full"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

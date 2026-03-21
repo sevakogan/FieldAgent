@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { fetchResellerOverview } from "@/lib/actions/reseller";
+import { StatusBadge } from "@/components/platform/Badge";
 
 interface Reseller {
   id: string;
@@ -24,13 +25,6 @@ interface Stats {
   pendingInvoices: number;
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  active: "bg-[#34C759]/10 text-[#34C759]",
-  trial: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-  inactive: "bg-[#8E8E93]/10 text-[#8E8E93]",
-  paid: "bg-[#34C759]/10 text-[#34C759]",
-  pending: "bg-[#FF9F0A]/10 text-[#FF9F0A]",
-};
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
@@ -139,9 +133,7 @@ export default function ResellerOverviewPage() {
                   <div className="text-[13px] font-semibold text-[#1C1C1E]">{c.name}</div>
                   <div className="text-[11px] text-[#8E8E93]">{timeAgo(c.created_at)}</div>
                 </div>
-                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${STATUS_STYLES[c.status] ?? "bg-[#8E8E93]/10 text-[#8E8E93]"}`}>
-                  {c.status}
-                </span>
+                <StatusBadge status={c.status} />
               </div>
             ))}
           </div>

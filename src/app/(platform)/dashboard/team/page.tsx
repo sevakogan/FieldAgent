@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getTeamMembers, type TeamMemberRow } from '@/lib/actions/team'
+import { StatusBadge } from '@/components/platform/Badge'
 
 const ROLE_LABELS: Record<string, string> = {
   owner: 'Owner',
@@ -15,12 +16,6 @@ const ROLE_COLORS: Record<string, string> = {
   owner: '#AF52DE',
   lead: '#007AFF',
   worker: '#34C759',
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  active: '#34C759',
-  invited: '#FF9F0A',
-  deactivated: '#8E8E93',
 }
 
 const PAY_LABELS: Record<string, string> = {
@@ -211,15 +206,7 @@ export default function TeamPage() {
                       </p>
                     )}
                   </div>
-                  <span
-                    className="text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 capitalize"
-                    style={{
-                      backgroundColor: (STATUS_COLORS[member.status] ?? '#8E8E93') + '20',
-                      color: STATUS_COLORS[member.status] ?? '#8E8E93',
-                    }}
-                  >
-                    {member.status}
-                  </span>
+                  <StatusBadge status={member.status} />
                 </div>
               </Link>
             </motion.div>
