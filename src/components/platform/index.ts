@@ -3,7 +3,7 @@ export { Input } from './Input';
 export { TextArea } from './TextArea';
 export { Select } from './Select';
 export { Card } from './Card';
-export { Badge } from './Badge';
+export { Badge, StatusBadge } from './Badge';
 export { Modal } from './Modal';
 export { Sheet } from './Sheet';
 export { Table } from './Table';
