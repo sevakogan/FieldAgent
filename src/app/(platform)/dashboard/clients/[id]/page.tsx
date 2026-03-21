@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getClient, updateClient, deleteClient, type ClientDetail } from '@/lib/actions/clients'
+import { createAddress } from '@/lib/actions/addresses'
 
 const PAYMENT_LABELS: Record<string, string> = {
   per_job: 'Per Job',
@@ -32,6 +33,17 @@ export default function ClientDetailPage() {
   // Delete state
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // Add Property state
+  const [showAddProperty, setShowAddProperty] = useState(false)
+  const [propStreet, setPropStreet] = useState('')
+  const [propUnit, setPropUnit] = useState('')
+  const [propCity, setPropCity] = useState('')
+  const [propState, setPropState] = useState('')
+  const [propZip, setPropZip] = useState('')
+  const [propIsStr, setPropIsStr] = useState(false)
+  const [addingProp, setAddingProp] = useState(false)
+  const [propError, setPropError] = useState<string | null>(null)
 
   const fetchClient = useCallback(async () => {
     setLoading(true)
@@ -89,6 +101,34 @@ export default function ClientDetailPage() {
       setDeleting(false)
       setConfirmDelete(false)
     }
+  }
+
+  const handleAddProperty = async () => {
+    if (!propStreet.trim() || !propCity.trim() || !propState.trim() || !propZip.trim()) {
+      setPropError('Street, city, state, and zip are required')
+      return
+    }
+    setAddingProp(true)
+    setPropError(null)
+
+    const result = await createAddress({
+      client_id: clientId,
+      street: propStreet,
+      unit: propUnit || undefined,
+      city: propCity,
+      state: propState,
+      zip: propZip,
+      is_str: propIsStr,
+    })
+
+    if (result.success) {
+      setShowAddProperty(false)
+      setPropStreet(''); setPropUnit(''); setPropCity(''); setPropState(''); setPropZip(''); setPropIsStr(false)
+      await fetchClient()
+    } else {
+      setPropError(result.error ?? 'Failed to add property')
+    }
+    setAddingProp(false)
   }
 
   if (loading) {
@@ -249,16 +289,51 @@ export default function ClientDetailPage() {
               <h2 className="font-semibold text-[#1C1C1E]">
                 Properties ({client.addresses.length})
               </h2>
-              <Link
-                href={`/dashboard/addresses?client=${clientId}`}
-                className="text-sm text-[#007AFF] font-medium hover:underline"
+              <button
+                onClick={() => setShowAddProperty(!showAddProperty)}
+                className={`text-sm font-medium ${showAddProperty ? 'text-[#FF3B30]' : 'text-[#007AFF]'} hover:underline`}
               >
-                + Add Address
-              </Link>
+                {showAddProperty ? 'Cancel' : '+ Add Property'}
+              </button>
             </div>
 
-            {client.addresses.length === 0 ? (
-              <p className="text-sm text-[#8E8E93] py-4 text-center">No addresses yet.</p>
+            {/* Add Property Form */}
+            {showAddProperty && (
+              <div className="mb-4 p-4 bg-[#F2F2F7] rounded-xl space-y-3">
+                {propError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-2 text-xs">{propError}</div>
+                )}
+                <input type="text" placeholder="Street Address *" value={propStreet} onChange={e => setPropStreet(e.target.value)} className="w-full px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+                <input type="text" placeholder="Unit / Apt (optional)" value={propUnit} onChange={e => setPropUnit(e.target.value)} className="w-full px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+                <div className="grid grid-cols-3 gap-2">
+                  <input type="text" placeholder="City *" value={propCity} onChange={e => setPropCity(e.target.value)} className="px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+                  <input type="text" placeholder="State *" value={propState} onChange={e => setPropState(e.target.value)} className="px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+                  <input type="text" placeholder="ZIP *" value={propZip} onChange={e => setPropZip(e.target.value)} className="px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={propIsStr} onChange={e => setPropIsStr(e.target.checked)} className="w-4 h-4 rounded border-[#E5E5EA] text-[#FF9F0A] focus:ring-[#FF9F0A]/30" />
+                  <span className="text-sm text-[#1C1C1E]">Short-Term Rental (STR)</span>
+                </label>
+                <button
+                  onClick={handleAddProperty}
+                  disabled={addingProp}
+                  className="w-full py-2 bg-[#007AFF] text-white rounded-lg text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+                >
+                  {addingProp ? 'Adding...' : 'Add Property'}
+                </button>
+              </div>
+            )}
+
+            {client.addresses.length === 0 && !showAddProperty ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-[#8E8E93] mb-2">No properties yet.</p>
+                <button
+                  onClick={() => setShowAddProperty(true)}
+                  className="text-sm text-[#007AFF] font-medium hover:underline"
+                >
+                  Add their first property
+                </button>
+              </div>
             ) : (
               <div className="divide-y divide-[#E5E5EA]">
                 {client.addresses.map(addr => (
@@ -309,8 +384,20 @@ export default function ClientDetailPage() {
             <h2 className="font-semibold text-[#1C1C1E] mb-4">Quick Actions</h2>
             <div className="space-y-2">
               <button
+                onClick={() => setShowAddProperty(true)}
+                className="w-full py-2.5 bg-[#34C759] text-white rounded-xl text-sm font-medium hover:bg-[#2DB84D] transition-colors"
+              >
+                + Add Property
+              </button>
+              <Link
+                href={`/dashboard/jobs/new?client=${clientId}`}
+                className="w-full py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors block text-center"
+              >
+                + Schedule Job
+              </Link>
+              <button
                 onClick={startEditing}
-                className="w-full py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
+                className="w-full py-2.5 bg-white text-[#007AFF] border border-[#007AFF] rounded-xl text-sm font-medium hover:bg-[#007AFF]/5 transition-colors"
               >
                 Edit Client
               </button>
