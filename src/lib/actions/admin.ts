@@ -796,3 +796,178 @@ export async function deleteChangelogEntry(id: string): Promise<ActionResult> {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to delete changelog entry' }
   }
 }
+
+// ─── Create Company ────────────────────────────────────────────────
+export async function createAdminCompany(fields: {
+  name: string
+  ownerEmail: string
+  ownerName: string
+  businessType: string
+}): Promise<ActionResult<{ companyId: string }>> {
+  try {
+    const supabase = createAdminClient()
+
+    // Create or find auth user
+    let userId: string
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email: fields.ownerEmail,
+      password: 'TempPass123!',
+      email_confirm: true,
+    })
+
+    if (authError) {
+      // Check if user already exists
+      const { data: existingUsers } = await supabase.auth.admin.listUsers()
+      const found = existingUsers?.users?.find(u => u.email === fields.ownerEmail)
+      if (!found) throw new Error(`Failed to create user: ${authError.message}`)
+      userId = found.id
+    } else {
+      userId = authUser.user.id
+    }
+
+    // Upsert public user
+    await supabase.from('users').upsert({
+      id: userId,
+      email: fields.ownerEmail,
+      full_name: fields.ownerName,
+      role: 'owner',
+    })
+
+    // Create company
+    const slug = fields.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .insert({
+        name: fields.name,
+        slug: slug + '-' + Date.now().toString(36),
+        business_type: fields.businessType,
+        owner_id: userId,
+        status: 'active',
+      })
+      .select('id')
+      .single()
+
+    if (companyError) throw companyError
+
+    // Add owner as company member
+    await supabase.from('company_members').insert({
+      company_id: company.id,
+      user_id: userId,
+      role: 'owner',
+      status: 'active',
+    })
+
+    return { success: true, data: { companyId: company.id } }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to create company' }
+  }
+}
+
+// ─── Create Client (platform-level) ──────────────────────────────
+export async function createAdminClient_record(fields: {
+  fullName: string
+  email: string
+  phone?: string
+  companyId: string
+}): Promise<ActionResult<{ clientId: string }>> {
+  try {
+    const supabase = createAdminClient()
+
+    // Create or find auth user
+    let userId: string
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email: fields.email,
+      password: 'TempPass123!',
+      email_confirm: true,
+    })
+
+    if (authError) {
+      const { data: existingUsers } = await supabase.auth.admin.listUsers()
+      const found = existingUsers?.users?.find(u => u.email === fields.email)
+      if (!found) throw new Error(`Failed to create user: ${authError.message}`)
+      userId = found.id
+    } else {
+      userId = authUser.user.id
+    }
+
+    // Upsert public user
+    await supabase.from('users').upsert({
+      id: userId,
+      email: fields.email,
+      full_name: fields.fullName,
+      phone: fields.phone ?? null,
+      role: 'client',
+    })
+
+    // Create client record
+    const { data: client, error: clientError } = await supabase
+      .from('clients')
+      .insert({ user_id: userId })
+      .select('id')
+      .single()
+
+    if (clientError) throw clientError
+
+    // Link to company
+    await supabase.from('client_companies').insert({
+      client_id: client.id,
+      company_id: fields.companyId,
+    })
+
+    return { success: true, data: { clientId: client.id } }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to create client' }
+  }
+}
+
+// ─── Get All Clients (platform-level) ────────────────────────────
+export async function getAdminClients(): Promise<ActionResult<Array<{
+  id: string
+  full_name: string
+  email: string
+  phone: string | null
+  company_name: string
+  company_id: string
+  created_at: string
+}>>> {
+  try {
+    const supabase = createAdminClient()
+
+    const { data: clientCompanies, error } = await supabase
+      .from('client_companies')
+      .select('client_id, company_id')
+
+    if (error) throw error
+    if (!clientCompanies?.length) return { success: true, data: [] }
+
+    const clientIds = [...new Set(clientCompanies.map(cc => cc.client_id))]
+    const companyIds = [...new Set(clientCompanies.map(cc => cc.company_id))]
+
+    const { data: clients } = await supabase.from('clients').select('id, user_id, created_at').in('id', clientIds)
+    const userIds = (clients ?? []).map(c => c.user_id)
+    const { data: users } = await supabase.from('users').select('id, full_name, email, phone').in('id', userIds)
+    const { data: companies } = await supabase.from('companies').select('id, name').in('id', companyIds)
+
+    const userMap = new Map((users ?? []).map(u => [u.id, u]))
+    const companyMap = new Map((companies ?? []).map(c => [c.id, c.name]))
+    const ccMap = new Map(clientCompanies.map(cc => [cc.client_id, cc.company_id]))
+
+    const rows = (clients ?? []).map(c => {
+      const user = userMap.get(c.user_id)
+      const companyId = ccMap.get(c.id) ?? ''
+      return {
+        id: c.id,
+        full_name: user?.full_name ?? 'Unknown',
+        email: user?.email ?? '',
+        phone: user?.phone ?? null,
+        company_name: companyMap.get(companyId) ?? 'Unknown',
+        company_id: companyId,
+        created_at: c.created_at,
+      }
+    })
+
+    return { success: true, data: rows }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to load clients' }
+  }
+}

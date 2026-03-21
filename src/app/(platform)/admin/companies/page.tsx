@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getAdminCompanies, updateCompanyStatus } from "@/lib/actions/admin";
+import { getAdminCompanies, updateCompanyStatus, createAdminCompany } from "@/lib/actions/admin";
 
 type Company = {
   id: string;
@@ -30,6 +30,34 @@ export default function AdminCompaniesPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // Create company form
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newOwnerEmail, setNewOwnerEmail] = useState("");
+  const [newOwnerName, setNewOwnerName] = useState("");
+  const [newBusinessType, setNewBusinessType] = useState("cleaning");
+  const [creating, setCreating] = useState(false);
+
+  const handleCreateCompany = async () => {
+    if (!newName.trim() || !newOwnerEmail.trim() || !newOwnerName.trim()) return;
+    setCreating(true);
+    const result = await createAdminCompany({
+      name: newName,
+      ownerEmail: newOwnerEmail,
+      ownerName: newOwnerName,
+      businessType: newBusinessType,
+    });
+    if (result.success) {
+      setToast({ message: "Company created successfully", type: "success" });
+      setShowCreate(false);
+      setNewName(""); setNewOwnerEmail(""); setNewOwnerName(""); setNewBusinessType("cleaning");
+      await fetchCompanies();
+    } else {
+      setToast({ message: result.error ?? "Failed to create company", type: "error" });
+    }
+    setCreating(false);
+  };
 
   const fetchCompanies = useCallback(async () => {
     const result = await getAdminCompanies();
@@ -99,10 +127,48 @@ export default function AdminCompaniesPage() {
         </div>
       )}
 
-      <div className="mb-8">
-        <h1 className="text-[28px] font-bold text-[#1C1C1E] tracking-tight">Companies</h1>
-        <p className="text-[14px] text-[#8E8E93] mt-1">Manage all companies on the platform</p>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-[28px] font-bold text-[#1C1C1E] tracking-tight">Companies</h1>
+          <p className="text-[14px] text-[#8E8E93] mt-1">Manage all companies on the platform</p>
+        </div>
+        <button
+          onClick={() => setShowCreate(!showCreate)}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+            showCreate ? 'bg-[#FF3B30] text-white' : 'bg-[#007AFF] text-white hover:bg-[#0066DD]'
+          }`}
+        >
+          {showCreate ? 'Cancel' : '+ Create Company'}
+        </button>
       </div>
+
+      {/* Create Company Form */}
+      {showCreate && (
+        <div className="mb-6 p-5 bg-white rounded-2xl border border-[#E5E5EA] space-y-3">
+          <h3 className="text-sm font-bold text-[#1C1C1E]">New Company</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <input type="text" placeholder="Company Name *" value={newName} onChange={e => setNewName(e.target.value)} className="px-3 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+            <select value={newBusinessType} onChange={e => setNewBusinessType(e.target.value)} className="px-3 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30">
+              <option value="cleaning">Cleaning</option>
+              <option value="lawn_care">Lawn Care</option>
+              <option value="pool_service">Pool Service</option>
+              <option value="pressure_washing">Pressure Washing</option>
+              <option value="pest_control">Pest Control</option>
+              <option value="handyman">Handyman</option>
+              <option value="other">Other</option>
+            </select>
+            <input type="text" placeholder="Owner Full Name *" value={newOwnerName} onChange={e => setNewOwnerName(e.target.value)} className="px-3 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+            <input type="email" placeholder="Owner Email *" value={newOwnerEmail} onChange={e => setNewOwnerEmail(e.target.value)} className="px-3 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
+          </div>
+          <button
+            onClick={handleCreateCompany}
+            disabled={creating || !newName.trim() || !newOwnerEmail.trim() || !newOwnerName.trim()}
+            className="px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors disabled:opacity-50"
+          >
+            {creating ? 'Creating...' : 'Create Company'}
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
