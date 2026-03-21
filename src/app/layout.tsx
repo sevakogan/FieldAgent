@@ -18,6 +18,20 @@ export const viewport: Viewport = {
   themeColor: "#111111",
 };
 
+function BuildStamp() {
+  const version = process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'
+  const buildDate = process.env.NEXT_PUBLIC_BUILD_DATE ?? ''
+  const buildId = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'
+
+  return (
+    <div className="fixed bottom-2 left-3 z-40 pointer-events-none select-none">
+      <span className="text-[10px] font-mono text-black/20 tracking-wide">
+        v{version} · {buildDate} · {buildId}
+      </span>
+    </div>
+  )
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -27,6 +41,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans text-sm text-gray-900 bg-gray-50 antialiased">
         {children}
+        <BuildStamp />
       </body>
     </html>
   );
