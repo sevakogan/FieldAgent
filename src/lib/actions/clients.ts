@@ -9,6 +9,17 @@ export type ActionResult<T = unknown> = {
   error?: string
 }
 
+export type ClientAddress = {
+  id: string
+  street: string
+  unit: string | null
+  city: string
+  state: string
+  zip: string
+  is_str: boolean
+  status: string
+}
+
 export type ClientRow = {
   id: string
   user_id: string
@@ -17,6 +28,7 @@ export type ClientRow = {
   phone: string | null
   payment_schedule: string
   address_count: number
+  addresses: ClientAddress[]
   created_at: string
 }
 
@@ -89,10 +101,10 @@ export async function getClients(): Promise<ActionResult<ClientRow[]>> {
       return { success: false, error: usersError.message }
     }
 
-    // Get address counts per client
+    // Get addresses per client (full details for hover popup)
     const { data: addresses, error: addrError } = await supabase
       .from('addresses')
-      .select('id, client_id')
+      .select('id, client_id, street, unit, city, state, zip, is_str, status')
       .eq('company_id', companyId)
       .in('client_id', clientIds)
 
@@ -100,9 +112,20 @@ export async function getClients(): Promise<ActionResult<ClientRow[]>> {
       return { success: false, error: addrError.message }
     }
 
-    const addressCountMap = new Map<string, number>()
+    const addressMap = new Map<string, ClientAddress[]>()
     for (const addr of addresses ?? []) {
-      addressCountMap.set(addr.client_id, (addressCountMap.get(addr.client_id) ?? 0) + 1)
+      const list = addressMap.get(addr.client_id) ?? []
+      list.push({
+        id: addr.id,
+        street: addr.street,
+        unit: addr.unit,
+        city: addr.city,
+        state: addr.state,
+        zip: addr.zip,
+        is_str: addr.is_str,
+        status: addr.status,
+      })
+      addressMap.set(addr.client_id, list)
     }
 
     const userMap = new Map((users ?? []).map(u => [u.id, u]))
@@ -118,7 +141,8 @@ export async function getClients(): Promise<ActionResult<ClientRow[]>> {
         email: user?.email ?? '',
         phone: user?.phone ?? null,
         payment_schedule: cc?.payment_schedule ?? 'per_job',
-        address_count: addressCountMap.get(client.id) ?? 0,
+        address_count: (addressMap.get(client.id) ?? []).length,
+        addresses: addressMap.get(client.id) ?? [],
         created_at: client.created_at,
       }
     })

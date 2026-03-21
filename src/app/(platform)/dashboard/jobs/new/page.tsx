@@ -10,6 +10,15 @@ import { getAddresses, type AddressRow } from '@/lib/actions/addresses'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
 import { getClients, createClient, type ClientRow } from '@/lib/actions/clients'
 
+type Recurrence = 'one_time' | 'weekly' | 'biweekly' | 'monthly'
+
+const RECURRENCE_OPTIONS: { value: Recurrence; label: string; desc: string }[] = [
+  { value: 'one_time', label: '1×', desc: 'One Time' },
+  { value: 'weekly', label: 'W', desc: 'Weekly' },
+  { value: 'biweekly', label: '2W', desc: 'Bi-Weekly' },
+  { value: 'monthly', label: 'M', desc: 'Monthly' },
+]
+
 type FormData = {
   client_id: string
   address_id: string
@@ -18,6 +27,7 @@ type FormData = {
   scheduled_date: string
   scheduled_time: string
   price: string
+  recurrence: Recurrence
 }
 
 const INITIAL_FORM: FormData = {
@@ -28,6 +38,7 @@ const INITIAL_FORM: FormData = {
   scheduled_date: '',
   scheduled_time: '',
   price: '',
+  recurrence: 'one_time',
 }
 
 export default function NewJobPage() {
@@ -372,6 +383,37 @@ export default function NewJobPage() {
               className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
             />
           </div>
+        </div>
+
+        {/* Recurrence */}
+        <div>
+          <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
+            Frequency
+          </label>
+          <div className="flex gap-2">
+            {RECURRENCE_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleChange('recurrence', opt.value)}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border ${
+                  form.recurrence === opt.value
+                    ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-sm'
+                    : 'bg-white text-[#3C3C43] border-[#E5E5EA] hover:bg-[#F2F2F7]'
+                }`}
+              >
+                <div className="text-xs font-bold">{opt.label}</div>
+                <div className={`text-[10px] mt-0.5 ${form.recurrence === opt.value ? 'text-white/80' : 'text-[#8E8E93]'}`}>
+                  {opt.desc}
+                </div>
+              </button>
+            ))}
+          </div>
+          {form.recurrence !== 'one_time' && (
+            <p className="text-xs text-[#8E8E93] mt-1.5">
+              This will create a recurring schedule starting from the selected date.
+            </p>
+          )}
         </div>
 
         {/* Price */}
