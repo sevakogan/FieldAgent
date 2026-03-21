@@ -105,6 +105,11 @@ export async function getOrCreateCompany(): Promise<{ company: Company; user: Us
 }
 
 export async function getCompanyId(): Promise<string> {
+  // Check for God Mode view-as override
+  const { getViewAsCompanyId } = await import('./godmode')
+  const viewAsId = await getViewAsCompanyId()
+  if (viewAsId) return viewAsId
+
   const { company } = await getOrCreateCompany()
   return company.id
 }

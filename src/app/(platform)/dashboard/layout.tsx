@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
+import ViewingAsBanner from '@/components/platform/ViewingAsBanner'
 
 const NAV_ITEMS = [
   { label: 'Overview', href: '/dashboard', icon: '📊' },
@@ -30,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-[#F2F2F7]">
+      <ViewingAsBanner />
       <aside className={`hidden md:flex flex-col ${collapsed ? 'w-16' : 'w-64'} bg-white border-r border-[#E5E5EA] transition-all duration-300`}>
         <div className="p-4 border-b border-[#E5E5EA] flex items-center justify-between">
           {!collapsed && <h1 className="text-lg font-bold text-[#1C1C1E]">KleanHQ</h1>}
