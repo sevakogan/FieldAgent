@@ -90,7 +90,9 @@ export async function createReferral(fields: {
       .from('referrals')
       .insert({
         company_id: company.id,
+        referrer_type: 'company',
         referrer_user_id: ownerId,
+        referrer_entity_id: company.id,
         referral_code: code,
         referral_link: `https://kleanhq.com/r/${code}`,
         referred_type: 'company',

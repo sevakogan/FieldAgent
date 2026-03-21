@@ -430,55 +430,59 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* ══ Hover Tooltip ══════════════════════════════ */}
+      {/* ══ Hover Tooltip — glass black, above card ══════════════════ */}
       <AnimatePresence>
         {hoverJob && !dragJobId && (
           <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
+            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             className="fixed z-50 pointer-events-none"
             style={{
-              left: Math.min(hoverJob.x - 120, window.innerWidth - 260),
-              top: hoverJob.y - 8,
+              left: Math.min(Math.max(hoverJob.x - 120, 12), typeof window !== 'undefined' ? window.innerWidth - 260 : 800),
+              top: hoverJob.y - 12,
               transform: 'translateY(-100%)',
             }}
           >
-            <div className="bg-[#1C1C1E] text-white rounded-xl px-4 py-3 shadow-xl w-[240px]">
-              <div className="text-xs font-bold mb-1.5">{hoverJob.job.service_name}</div>
+            <div className="bg-black/85 backdrop-blur-xl text-white rounded-2xl px-4 py-3 shadow-2xl shadow-black/40 w-[240px] border border-white/10">
+              <div className="text-[13px] font-bold mb-2">{hoverJob.job.service_name}</div>
               {hoverJob.job.client_name && (
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[10px] text-white/50">Client</span>
-                  <span className="text-[11px]">{hoverJob.job.client_name}</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] text-white/40 w-12">Client</span>
+                  <span className="text-[11px] text-white/90 font-medium">{hoverJob.job.client_name}</span>
                 </div>
               )}
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-[10px] text-white/50">Address</span>
-                <span className="text-[11px]">{hoverJob.job.address_street}</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] text-white/40 w-12">Address</span>
+                <span className="text-[11px] text-white/90">{hoverJob.job.address_street}</span>
               </div>
               {hoverJob.job.worker_name && (
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[10px] text-white/50">Worker</span>
-                  <span className="text-[11px]">{hoverJob.job.worker_name}</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] text-white/40 w-12">Worker</span>
+                  <span className="text-[11px] text-white/90">{hoverJob.job.worker_name}</span>
                 </div>
               )}
               {hoverJob.job.scheduled_time && (
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[10px] text-white/50">Time</span>
-                  <span className="text-[11px]">{formatTime(hoverJob.job.scheduled_time)}</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] text-white/40 w-12">Time</span>
+                  <span className="text-[11px] text-white/90 font-medium">{formatTime(hoverJob.job.scheduled_time)}</span>
                 </div>
               )}
               {hoverJob.job.price != null && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-white/50">Price</span>
-                  <span className="text-[11px] font-semibold text-[#34C759]">${Number(hoverJob.job.price).toFixed(2)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-white/40 w-12">Price</span>
+                  <span className="text-[12px] font-bold text-[#34C759]">${Number(hoverJob.job.price).toFixed(2)}</span>
                 </div>
               )}
-              <div className="text-[9px] text-white/30 mt-1.5 border-t border-white/10 pt-1.5">
+              <div className="text-[9px] text-white/25 mt-2 pt-2 border-t border-white/8">
                 Drag to reschedule · Click to open
               </div>
             </div>
-            <div className="w-3 h-3 bg-[#1C1C1E] rotate-45 mx-auto -mt-1.5" />
+            {/* Arrow pointing down */}
+            <div className="flex justify-center -mt-[1px]">
+              <div className="w-3 h-3 bg-black/85 backdrop-blur-xl rotate-45 border-r border-b border-white/10" />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
