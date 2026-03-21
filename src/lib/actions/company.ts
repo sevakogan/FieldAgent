@@ -144,8 +144,10 @@ export async function getCalendarJobs(year: number, month: number): Promise<Acti
   scheduled_date: string
   scheduled_time: string | null
   address_street: string
+  address_city: string
   worker_name: string | null
   price: number | null
+  client_name: string | null
 }[]>> {
   try {
     const companyId = await getCompanyId()
@@ -181,24 +183,43 @@ export async function getCalendarJobs(year: number, month: number): Promise<Acti
       : { data: [] }
     const workerMap = new Map(workers?.map(w => [w.id, w.full_name]) ?? [])
 
-    // Get addresses
+    // Get addresses with client info
     const addressIds = [...new Set(jobs.map(j => j.address_id))]
     const { data: addresses } = await supabase
       .from('addresses')
-      .select('id, street')
+      .select('id, street, city, client_id')
       .in('id', addressIds)
-    const addressMap = new Map(addresses?.map(a => [a.id, a.street]) ?? [])
+    const addressMap = new Map(addresses?.map(a => [a.id, { street: a.street, city: a.city, client_id: a.client_id }]) ?? [])
 
-    const rows = jobs.map(j => ({
-      id: j.id,
-      service_name: serviceMap.get(j.service_type_id) ?? 'Unknown Service',
-      status: j.status,
-      scheduled_date: j.scheduled_date,
-      scheduled_time: j.scheduled_time,
-      address_street: addressMap.get(j.address_id) ?? '',
-      worker_name: j.assigned_worker_id ? (workerMap.get(j.assigned_worker_id) ?? null) : null,
-      price: j.price ?? null,
-    }))
+    // Get client names
+    const clientIds = [...new Set((addresses ?? []).map(a => a.client_id).filter(Boolean))]
+    let clientNameMap = new Map<string, string>()
+    if (clientIds.length > 0) {
+      const { data: clients } = await supabase.from('clients').select('id, user_id').in('id', clientIds)
+      const userIds = (clients ?? []).map(c => c.user_id)
+      if (userIds.length > 0) {
+        const { data: users } = await supabase.from('users').select('id, full_name').in('id', userIds)
+        const userNameMap = new Map((users ?? []).map(u => [u.id, u.full_name]))
+        clientNameMap = new Map((clients ?? []).map(c => [c.id, userNameMap.get(c.user_id) ?? 'Unknown']))
+      }
+    }
+
+    const rows = jobs.map(j => {
+      const addr = addressMap.get(j.address_id)
+      const clientName = addr?.client_id ? (clientNameMap.get(addr.client_id) ?? null) : null
+      return {
+        id: j.id,
+        service_name: serviceMap.get(j.service_type_id) ?? 'Unknown Service',
+        status: j.status,
+        scheduled_date: j.scheduled_date,
+        scheduled_time: j.scheduled_time,
+        address_street: addr?.street ?? '',
+        address_city: addr?.city ?? '',
+        worker_name: j.assigned_worker_id ? (workerMap.get(j.assigned_worker_id) ?? null) : null,
+        price: j.price ?? null,
+        client_name: clientName,
+      }
+    })
 
     return { success: true, data: rows }
   } catch (err) {

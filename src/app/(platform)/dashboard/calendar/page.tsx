@@ -133,6 +133,9 @@ export default function CalendarPage() {
   }
   const addresses = Array.from(addressMap.keys()).sort()
 
+  // Hover tooltip state
+  const [hoverJob, setHoverJob] = useState<{ job: CalendarJob; x: number; y: number } | null>(null)
+
   // Drag handlers
   function handleDragStart(jobId: string) {
     setDragJobId(jobId)
@@ -310,6 +313,11 @@ export default function CalendarPage() {
                               draggable
                               onDragStart={() => handleDragStart(job.id)}
                               onDragEnd={() => { setDragJobId(null); setDropTarget(null) }}
+                              onMouseEnter={(e) => {
+                                const rect = (e.target as HTMLElement).getBoundingClientRect()
+                                setHoverJob({ job, x: rect.left + rect.width / 2, y: rect.top })
+                              }}
+                              onMouseLeave={() => setHoverJob(null)}
                               className="group cursor-grab active:cursor-grabbing"
                             >
                               <Link
@@ -421,6 +429,59 @@ export default function CalendarPage() {
           )}
         </div>
       )}
+
+      {/* ══ Hover Tooltip ══════════════════════════════ */}
+      <AnimatePresence>
+        {hoverJob && !dragJobId && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            className="fixed z-50 pointer-events-none"
+            style={{
+              left: Math.min(hoverJob.x - 120, window.innerWidth - 260),
+              top: hoverJob.y - 8,
+              transform: 'translateY(-100%)',
+            }}
+          >
+            <div className="bg-[#1C1C1E] text-white rounded-xl px-4 py-3 shadow-xl w-[240px]">
+              <div className="text-xs font-bold mb-1.5">{hoverJob.job.service_name}</div>
+              {hoverJob.job.client_name && (
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[10px] text-white/50">Client</span>
+                  <span className="text-[11px]">{hoverJob.job.client_name}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-[10px] text-white/50">Address</span>
+                <span className="text-[11px]">{hoverJob.job.address_street}</span>
+              </div>
+              {hoverJob.job.worker_name && (
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[10px] text-white/50">Worker</span>
+                  <span className="text-[11px]">{hoverJob.job.worker_name}</span>
+                </div>
+              )}
+              {hoverJob.job.scheduled_time && (
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[10px] text-white/50">Time</span>
+                  <span className="text-[11px]">{formatTime(hoverJob.job.scheduled_time)}</span>
+                </div>
+              )}
+              {hoverJob.job.price != null && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-white/50">Price</span>
+                  <span className="text-[11px] font-semibold text-[#34C759]">${Number(hoverJob.job.price).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="text-[9px] text-white/30 mt-1.5 border-t border-white/10 pt-1.5">
+                Drag to reschedule · Click to open
+              </div>
+            </div>
+            <div className="w-3 h-3 bg-[#1C1C1E] rotate-45 mx-auto -mt-1.5" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ══ Confirm Move Modal ══════════════════════════════ */}
       <AnimatePresence>
