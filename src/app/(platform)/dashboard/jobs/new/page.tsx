@@ -104,6 +104,14 @@ export default function NewJobPage() {
       }
     }
 
+    // When address changes, auto-select the client who owns it
+    if (field === 'address_id' && value) {
+      const selectedAddr = addresses.find(a => a.id === value)
+      if (selectedAddr) {
+        updated.client_id = selectedAddr.client_id
+      }
+    }
+
     // Auto-fill price when service is selected
     if (field === 'service_type_id' && value) {
       const selected = services.find(s => s.id === value)
@@ -458,10 +466,10 @@ export default function NewJobPage() {
           </div>
         </div>
 
-        {/* Price */}
+        {/* Cost of Service */}
         <div>
           <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
-            Price <span className="text-red-500">*</span>
+            $ Cost of Service <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#8E8E93]">$</span>

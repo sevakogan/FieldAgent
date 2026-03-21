@@ -268,15 +268,28 @@ export async function createJob(data: {
 
     // Auto-create pending invoice for this job
     try {
-      // Get the client_id from the address
-      const { data: address } = await supabase
-        .from('addresses')
-        .select('client_id')
-        .eq('id', data.address_id)
-        .single()
+      // Get full context for the invoice: address, client, service
+      const [addressRes, serviceRes] = await Promise.all([
+        supabase.from('addresses').select('client_id, street, city, state, zip').eq('id', data.address_id).single(),
+        supabase.from('service_types').select('name').eq('id', data.service_type_id).single(),
+      ])
+
+      const address = addressRes.data
+      const serviceName = serviceRes.data?.name ?? 'Service'
 
       if (address?.client_id) {
-        // Generate invoice number: INV-{timestamp}
+        // Get client name
+        const { data: clientRecord } = await supabase.from('clients').select('user_id').eq('id', address.client_id).single()
+        let clientName = 'Client'
+        if (clientRecord?.user_id) {
+          const { data: user } = await supabase.from('users').select('full_name').eq('id', clientRecord.user_id).single()
+          clientName = user?.full_name ?? 'Client'
+        }
+
+        // Get company name
+        const { data: company } = await supabase.from('companies').select('name').eq('id', companyId).single()
+
+        const addressLine = `${address.street}, ${address.city}, ${address.state} ${address.zip}`
         const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`
 
         await supabase.from('invoices').insert({
@@ -292,12 +305,20 @@ export async function createJob(data: {
           total: data.price,
           status: 'pending',
           due_date: data.scheduled_date,
-          items: JSON.stringify([{
-            description: 'Service',
-            quantity: 1,
-            unit_price: data.price,
-            total: data.price,
-          }]),
+          items: JSON.stringify({
+            from: company?.name ?? 'Company',
+            to: clientName,
+            address: addressLine,
+            scheduled_date: data.scheduled_date,
+            scheduled_time: data.scheduled_time ?? null,
+            line_items: [{
+              description: serviceName,
+              address: addressLine,
+              quantity: 1,
+              unit_price: data.price,
+              total: data.price,
+            }],
+          }),
         })
       }
     } catch (invoiceErr) {
