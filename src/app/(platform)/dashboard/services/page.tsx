@@ -227,6 +227,7 @@ export default function ServicesPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
+              onClick={() => openEdit(service)}
               className="glass rounded-2xl p-3 hover:shadow-md transition-all cursor-pointer group relative"
             >
               {/* Top row: icon + name + price */}
