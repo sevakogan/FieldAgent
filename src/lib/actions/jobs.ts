@@ -543,3 +543,98 @@ export async function getTeamMembers(): Promise<ActionResult<TeamMember[]>> {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to fetch team members' }
   }
 }
+
+// ─── Worker Mode: Today's Jobs ──────────────────────────────────────
+export type WorkerJob = {
+  id: string
+  service_name: string
+  address_street: string
+  address_city: string
+  client_name: string | null
+  client_phone: string | null
+  scheduled_time: string | null
+  price: number
+  status: JobStatus
+}
+
+export async function getWorkerJobs(): Promise<ActionResult<WorkerJob[]>> {
+  try {
+    const companyId = await getCompanyId()
+    const supabase = createAdminClient()
+
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: jobs, error: jobsError } = await supabase
+      .from('jobs')
+      .select('id, address_id, service_type_id, status, scheduled_time, price')
+      .eq('company_id', companyId)
+      .eq('scheduled_date', today)
+      .not('status', 'eq', 'cancelled')
+      .order('scheduled_time', { ascending: true })
+
+    if (jobsError) return { success: false, error: jobsError.message }
+    if (!jobs || jobs.length === 0) return { success: true, data: [] }
+
+    // Batch-fetch related data
+    const addressIds = [...new Set(jobs.map(j => j.address_id))]
+    const serviceIds = [...new Set(jobs.map(j => j.service_type_id))]
+
+    const [addressResult, serviceResult] = await Promise.all([
+      supabase.from('addresses').select('id, street, city, client_id').in('id', addressIds),
+      supabase.from('service_types').select('id, name').in('id', serviceIds),
+    ])
+
+    const addressMap = new Map(
+      (addressResult.data ?? []).map(a => [a.id, { street: a.street, city: a.city, client_id: a.client_id }])
+    )
+    const serviceMap = new Map(
+      (serviceResult.data ?? []).map(s => [s.id, s.name])
+    )
+
+    // Resolve client names + phones
+    const clientIds = [...new Set(
+      (addressResult.data ?? []).filter(a => a.client_id).map(a => a.client_id!)
+    )]
+
+    let clientUserMap = new Map<string, { name: string; phone: string | null }>()
+
+    if (clientIds.length > 0) {
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, user_id')
+        .in('id', clientIds)
+
+      const userIds = (clients ?? []).map(c => c.user_id)
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, full_name, phone')
+          .in('id', userIds)
+        const userMap = new Map((users ?? []).map(u => [u.id, { name: u.full_name, phone: u.phone }]))
+        clientUserMap = new Map(
+          (clients ?? []).map(c => [c.id, userMap.get(c.user_id) ?? { name: 'Unknown', phone: null }])
+        )
+      }
+    }
+
+    const rows: WorkerJob[] = jobs.map(job => {
+      const addr = addressMap.get(job.address_id)
+      const clientData = addr?.client_id ? clientUserMap.get(addr.client_id) : null
+      return {
+        id: job.id,
+        service_name: serviceMap.get(job.service_type_id) ?? 'Unknown',
+        address_street: addr?.street ?? 'Unknown',
+        address_city: addr?.city ?? '',
+        client_name: clientData?.name ?? null,
+        client_phone: clientData?.phone ?? null,
+        scheduled_time: job.scheduled_time,
+        price: job.price ?? 0,
+        status: job.status,
+      }
+    })
+
+    return { success: true, data: rows }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to fetch worker jobs' }
+  }
+}

@@ -484,6 +484,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </motion.div>
       </main>
 
+      {/* Floating Worker Mode — top right, hidden when on worker-mode */}
+      {!pathname.startsWith('/dashboard/worker-mode') && (
+        <Link
+          href="/dashboard/worker-mode"
+          className="fixed top-4 right-4 z-[45] flex items-center gap-1.5 bg-[#34C759] text-white rounded-2xl px-3 py-2 text-xs font-bold shadow-lg shadow-[#34C759]/30 hover:bg-[#2DB84E] active:bg-[#28A745] transition-colors"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 18v3h20v-3" /><path d="M4 18v-3.7a4 4 0 01.7-2.3L6 10.2a2 2 0 011.7-.9h8.6a2 2 0 011.7.9l1.3 1.8a4 4 0 01.7 2.3V18" /><path d="M6 8V5a1 1 0 011-1h10a1 1 0 011 1v3" />
+          </svg>
+          Work
+        </Link>
+      )}
+
       {/* Floating God Mode — mobile, positioned above bottom nav */}
       <Link
         href="/admin"
