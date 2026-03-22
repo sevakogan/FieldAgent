@@ -5,7 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getCalendarJobs } from '@/lib/actions/company'
-import { updateJob, duplicateJob } from '@/lib/actions/jobs'
+import { updateJob, duplicateJob, createJob } from '@/lib/actions/jobs'
+import { getClients, type ClientRow } from '@/lib/actions/clients'
+import { getAddresses, type AddressRow } from '@/lib/actions/addresses'
+import { getServices, type ServiceRow } from '@/lib/actions/services'
 import { StatusBadge } from '@/components/platform/Badge'
 
 const PACIFIC_TZ = 'America/Los_Angeles'
@@ -64,6 +67,16 @@ export default function CalendarPage() {
   const [confirmMove, setConfirmMove] = useState<{ job: CalendarJob; newDate: string } | null>(null)
   const [moving, setMoving] = useState(false)
   const [weekCount, setWeekCount] = useState(3)
+
+  // Schedule job popup
+  const [showSchedule, setShowSchedule] = useState(false)
+  const [schedClients, setSchedClients] = useState<ClientRow[]>([])
+  const [schedAddresses, setSchedAddresses] = useState<AddressRow[]>([])
+  const [schedServices, setSchedServices] = useState<ServiceRow[]>([])
+  const [schedLoading, setSchedLoading] = useState(false)
+  const [schedForm, setSchedForm] = useState({ client_id: '', address_id: '', service_type_id: '', date: '', time: '', price: '' })
+  const [schedError, setSchedError] = useState('')
+  const [schedSaving, setSchedSaving] = useState(false)
   const [weekOffset, setWeekOffset] = useState(0) // 0 = starting from this week
 
   // Current week + offset, additional weeks go AFTER
@@ -126,6 +139,44 @@ export default function CalendarPage() {
     setConfirmMove(null)
     setMoving(false)
   }
+
+  const openSchedule = async (preDate?: string) => {
+    setShowSchedule(true)
+    setSchedForm({ client_id: '', address_id: '', service_type_id: '', date: preDate ?? '', time: '', price: '' })
+    setSchedError('')
+    setSchedLoading(true)
+    const [c, a, s] = await Promise.all([getClients(), getAddresses(), getServices()])
+    if (c.success && c.data) setSchedClients(c.data)
+    if (a.success && a.data) setSchedAddresses(a.data)
+    if (s.success && s.data) setSchedServices(s.data)
+    setSchedLoading(false)
+  }
+
+  const handleScheduleSubmit = async () => {
+    if (!schedForm.address_id || !schedForm.service_type_id || !schedForm.date) {
+      setSchedError('Select address, service, and date')
+      return
+    }
+    setSchedSaving(true)
+    const result = await createJob({
+      address_id: schedForm.address_id,
+      service_type_id: schedForm.service_type_id,
+      scheduled_date: schedForm.date,
+      scheduled_time: schedForm.time || undefined,
+      price: parseFloat(schedForm.price) || 0,
+    })
+    if (result.success) {
+      setShowSchedule(false)
+      fetchJobs()
+    } else {
+      setSchedError(result.error ?? 'Failed to create job')
+    }
+    setSchedSaving(false)
+  }
+
+  const filteredSchedAddresses = schedForm.client_id
+    ? schedAddresses.filter(a => a.client_id === schedForm.client_id)
+    : schedAddresses
 
   // Build week groups dynamically
   const weeks = useMemo(() => {
@@ -401,6 +452,126 @@ export default function CalendarPage() {
                     </div>
                   )}
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Schedule a Job button — shown when no day selected */}
+          {!selectedDate && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+              <button onClick={() => openSchedule()}
+                className="px-5 py-3 rounded-2xl text-sm font-semibold text-white transition-all hover:shadow-lg active:scale-95"
+                style={{ background: 'linear-gradient(135deg, #007AFF 0%, #0055D4 100%)', boxShadow: '0 4px 16px rgba(0,122,255,0.25)' }}>
+                + Schedule a Job
+              </button>
+            </motion.div>
+          )}
+
+          {/* Schedule Job Popup */}
+          <AnimatePresence>
+            {showSchedule && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                  className="w-full max-w-md rounded-3xl p-5 max-h-[85vh] overflow-y-auto"
+                  style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(40px)', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
+
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-bold text-[#1C1C1E]">Schedule a Job</h3>
+                    <button onClick={() => setShowSchedule(false)} className="w-7 h-7 rounded-full bg-[#F2F2F7] flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+
+                  {schedError && <p className="text-xs text-[#FF3B30] mb-3 bg-[#FF3B30]/8 rounded-xl px-3 py-2">{schedError}</p>}
+
+                  {schedLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-6 h-6 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Client */}
+                      <div>
+                        <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Client</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {schedClients.map(c => (
+                            <button key={c.id} type="button" onClick={() => {
+                              const addrs = schedAddresses.filter(a => a.client_id === c.id)
+                              setSchedForm(f => ({ ...f, client_id: c.id, address_id: addrs.length === 1 ? addrs[0].id : '' }))
+                            }}
+                              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all ${
+                                schedForm.client_id === c.id ? 'bg-[#007AFF] text-white' : 'bg-[#F2F2F7] text-[#3C3C43]'
+                              }`}>{c.full_name}</button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Address */}
+                      <div>
+                        <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Property</label>
+                        <div className="space-y-1">
+                          {filteredSchedAddresses.map(a => (
+                            <button key={a.id} type="button" onClick={() => setSchedForm(f => ({ ...f, address_id: a.id, client_id: f.client_id || a.client_id }))}
+                              className={`w-full text-left px-3 py-2 rounded-xl text-[11px] transition-all ${
+                                schedForm.address_id === a.id ? 'bg-[#007AFF]/10 ring-1 ring-[#007AFF]/20 font-medium' : 'bg-[#F2F2F7] hover:bg-[#E5E5EA]'
+                              }`}>
+                              📍 {a.street}, {a.city}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Service */}
+                      <div>
+                        <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Service</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {schedServices.map(s => (
+                            <button key={s.id} type="button" onClick={() => setSchedForm(f => ({ ...f, service_type_id: s.id, price: String(s.default_price) }))}
+                              className={`px-2.5 py-1.5 rounded-xl text-[11px] transition-all ${
+                                schedForm.service_type_id === s.id ? 'bg-[#007AFF] text-white font-medium' : 'bg-[#F2F2F7] text-[#3C3C43]'
+                              }`}>{getServiceIcon(s.name)} {s.name}</button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Date + Time + Price */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Date</label>
+                          <input type="date" value={schedForm.date} onChange={e => setSchedForm(f => ({ ...f, date: e.target.value }))}
+                            className="w-full px-2.5 py-2 bg-[#F2F2F7] rounded-xl text-[11px] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Time</label>
+                          <input type="time" value={schedForm.time} onChange={e => setSchedForm(f => ({ ...f, time: e.target.value }))}
+                            className="w-full px-2.5 py-2 bg-[#F2F2F7] rounded-xl text-[11px] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Price</label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#8E8E93]">$</span>
+                            <input type="number" step="0.01" value={schedForm.price} onChange={e => setSchedForm(f => ({ ...f, price: e.target.value }))}
+                              className="w-full pl-6 pr-2 py-2 bg-[#F2F2F7] rounded-xl text-[11px] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-1">
+                        <button onClick={handleScheduleSubmit} disabled={schedSaving}
+                          className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white disabled:opacity-50 transition-all"
+                          style={{ background: 'linear-gradient(135deg, #007AFF 0%, #0055D4 100%)' }}>
+                          {schedSaving ? 'Creating...' : 'Create Job'}
+                        </button>
+                        <button onClick={() => setShowSchedule(false)}
+                          className="flex-1 py-2.5 bg-[#F2F2F7] rounded-xl text-xs font-semibold text-[#1C1C1E] hover:bg-[#E5E5EA] transition-colors">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
