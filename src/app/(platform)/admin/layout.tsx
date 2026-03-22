@@ -86,23 +86,37 @@ export default function AdminLayout({
         </div>
       </main>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-[#E5E5EA] z-30 flex justify-around py-2 px-1">
-        {NAV_ITEMS.slice(0, 5).map((item) => {
+      {/* Mobile bottom nav — bigger icons, labels, God Mode */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex justify-around items-center px-2"
+        style={{ height: '84px', paddingBottom: 'env(safe-area-inset-bottom, 0px)', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+        {NAV_ITEMS.slice(0, 4).map((item) => {
           const active = isActive(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1 ${
-                active ? "text-[#8E8E93]" : "text-[#C7C7CC]"
+              className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 ${
+                active ? "text-[#007AFF]" : "text-[#1C1C1E]"
               }`}
             >
-              <NavIcon d={item.icon} />
-              <span className="text-[9px] font-medium">{item.label}</span>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+              </svg>
+              <span className={`text-[11px] font-bold ${active ? 'text-[#007AFF]' : 'text-[#1C1C1E]'}`}>{item.label}</span>
             </Link>
           );
         })}
+        {/* God Mode — go to company dashboard */}
+        <Link
+          href="/dashboard"
+          className="flex flex-col items-center justify-center gap-1 flex-1 py-2 text-[#AF52DE]"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          <span className="text-[11px] font-bold">My Co</span>
+        </Link>
       </nav>
     </div>
   );

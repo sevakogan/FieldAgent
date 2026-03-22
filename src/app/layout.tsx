@@ -25,8 +25,8 @@ function BuildStamp() {
   const buildTime = process.env.NEXT_PUBLIC_BUILD_TIME ?? ''
 
   return (
-    <div className="fixed bottom-2 left-3 z-40 pointer-events-none select-none">
-      <span className="text-[10px] font-mono text-black/20 tracking-wide">
+    <div className="hidden md:block fixed bottom-2 left-3 z-40 pointer-events-none select-none">
+      <span className="text-[10px] font-mono text-black/10 tracking-wide">
         v{version} · {buildDate} {buildTime} · {buildId}
       </span>
     </div>
