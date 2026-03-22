@@ -157,7 +157,7 @@ export default function NewClientPage() {
                       key={opt}
                       type="button"
                       onClick={() => setPaymentSchedule(opt)}
-                      className={`flex-1 py-2.5 rounded-full text-sm font-medium transition-all ${
+                      className={`flex-1 py-2.5 rounded-2xl text-sm font-medium transition-all ${
                         paymentSchedule === opt
                           ? 'bg-[#007AFF] text-white'
                           : 'bg-[#F2F2F7] text-[#3C3C43] hover:bg-[#E5E5EA]'

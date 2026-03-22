@@ -68,7 +68,7 @@ function AddressPopup({ addresses, clientId }: { addresses: ClientAddress[]; cli
                     </div>
                     <div className="flex items-center gap-1.5">
                       {addr.is_str && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#FF9F0A]/15 text-[#FF9F0A] font-semibold">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-xl bg-[#FF9F0A]/15 text-[#FF9F0A] font-semibold">
                           STR
                         </span>
                       )}

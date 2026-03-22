@@ -178,7 +178,7 @@ export default function MarketplacePage() {
               <button
                 key={type.value}
                 onClick={() => setSelectedType(type.value)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap transition-colors ${
                   selectedType === type.value
                     ? "bg-[#1d1d1f] text-white"
                     : "bg-white text-[#1d1d1f] hover:bg-[#e5e5e7]"

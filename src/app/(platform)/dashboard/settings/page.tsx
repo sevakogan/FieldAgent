@@ -292,7 +292,7 @@ export default function SettingsPage() {
                       key={key}
                       onClick={() => toggleType(key)}
                       whileTap={{ scale: 0.95 }}
-                      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200 border-2 ${
+                      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 border-2 ${
                         isSelected
                           ? 'border-transparent text-white shadow-md'
                           : 'border-[#E5E5EA] text-[#3C3C43] bg-white hover:bg-[#F2F2F7]'
@@ -364,8 +364,8 @@ export default function SettingsPage() {
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2">
                                           <span className="text-sm font-medium text-[#1C1C1E]">{svc.name}</span>
-                                          {exists && <span className="text-[10px] text-[#34C759] font-semibold bg-[#34C759]/10 px-1.5 py-0.5 rounded-full">Added</span>}
-                                          {svc.isOutdoor && <span className="text-[10px] text-[#FF9F0A] font-semibold bg-[#FF9F0A]/10 px-1.5 py-0.5 rounded-full">Outdoor</span>}
+                                          {exists && <span className="text-[10px] text-[#34C759] font-semibold bg-[#34C759]/10 px-1.5 py-0.5 rounded-xl">Added</span>}
+                                          {svc.isOutdoor && <span className="text-[10px] text-[#FF9F0A] font-semibold bg-[#FF9F0A]/10 px-1.5 py-0.5 rounded-xl">Outdoor</span>}
                                         </div>
                                         <p className="text-xs text-[#8E8E93]">{svc.duration} min · {svc.checklist.length} checklist items</p>
                                       </div>

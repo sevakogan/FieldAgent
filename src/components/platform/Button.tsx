@@ -62,7 +62,7 @@ export function Button({
         transition-all duration-150 select-none
         disabled:opacity-40 disabled:cursor-not-allowed
         min-h-[44px]
-        ${pill ? 'rounded-full' : 'rounded-xl'}
+        ${pill ? 'rounded-2xl' : 'rounded-xl'}
         ${VARIANT_STYLES[variant]}
         ${SIZE_STYLES[size]}
         ${className}

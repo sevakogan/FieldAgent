@@ -265,7 +265,7 @@ export default function TeamPayoutsPage() {
                   </td>
                   <td className="p-4">
                     <span
-                      className="text-xs px-2.5 py-1 rounded-full font-medium capitalize"
+                      className="text-xs px-2.5 py-1 rounded-2xl font-medium capitalize"
                       style={{
                         backgroundColor: (STATUS_COLORS[payout.status] ?? '#8E8E93') + '20',
                         color: STATUS_COLORS[payout.status] ?? '#8E8E93',

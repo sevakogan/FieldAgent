@@ -130,7 +130,7 @@ export default function QuoteDetailPage() {
           {quote.title || 'Untitled Quote'}
         </h1>
         <span
-          className="text-xs px-2.5 py-1 rounded-full font-medium capitalize"
+          className="text-xs px-2.5 py-1 rounded-2xl font-medium capitalize"
           style={{
             backgroundColor: (STATUS_COLORS[quote.status] ?? '#8E8E93') + '20',
             color: STATUS_COLORS[quote.status] ?? '#8E8E93',

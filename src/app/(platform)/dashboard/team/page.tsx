@@ -70,7 +70,7 @@ function InvitePopup({ onClose, onInvited }: { onClose: () => void; onInvited: (
         <div className="flex gap-1.5">
           {(['worker', 'lead'] as const).map(r => (
             <button key={r} type="button" onClick={() => setRole(r)}
-              className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${
+              className={`flex-1 py-2 rounded-2xl text-xs font-semibold transition-all ${
                 role === r ? 'bg-[#007AFF] text-white' : 'bg-[#F2F2F7] text-[#3C3C43]'
               }`}>
               {r === 'worker' ? '👷 Worker' : '🏷️ Lead'}
@@ -148,10 +148,10 @@ export default function TeamPage() {
         <input type="text" placeholder="Search by name, email, or phone..."
           value={search} onChange={(e) => setSearch(e.target.value)}
           className="w-full sm:w-96 px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30" />
-        <div className="flex gap-1.5 bg-white border border-[#E5E5EA] rounded-full p-1">
+        <div className="flex gap-1.5 bg-white border border-[#E5E5EA] rounded-2xl p-1">
           {(['all', 'lead', 'worker'] as const).map(r => (
             <button key={r} onClick={() => setRoleFilter(r)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
                 roleFilter === r ? 'bg-[#007AFF] text-white' : 'text-[#8E8E93] hover:text-[#1C1C1E]'
               }`}>
               {r === 'all' ? 'All' : ROLE_LABELS[r]}
@@ -201,7 +201,7 @@ export default function TeamPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-sm font-semibold text-[#1C1C1E] truncate">{member.full_name}</h3>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0"
+                      <span className="text-[10px] px-2 py-0.5 rounded-xl font-medium shrink-0"
                         style={{ backgroundColor: (ROLE_COLORS[member.role] ?? '#8E8E93') + '20', color: ROLE_COLORS[member.role] ?? '#8E8E93' }}>
                         {ROLE_LABELS[member.role] ?? member.role}
                       </span>

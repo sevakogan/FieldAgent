@@ -142,7 +142,7 @@ export default function InvoiceDetailPage() {
       <div className="flex items-center gap-3 mb-6">
         <h1 className="text-2xl font-bold text-[#1C1C1E]">{invoice.invoice_number}</h1>
         <span
-          className="text-xs px-2.5 py-1 rounded-full font-medium capitalize"
+          className="text-xs px-2.5 py-1 rounded-2xl font-medium capitalize"
           style={{
             backgroundColor: (STATUS_COLORS[invoice.status] ?? '#8E8E93') + '20',
             color: STATUS_COLORS[invoice.status] ?? '#8E8E93',

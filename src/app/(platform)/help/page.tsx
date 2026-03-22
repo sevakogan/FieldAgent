@@ -131,7 +131,7 @@ export default function HelpPage() {
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap transition-colors ${
               !selectedCategory
                 ? "bg-[#1d1d1f] text-white"
                 : "bg-white text-[#1d1d1f] hover:bg-[#e5e5e7]"
@@ -143,7 +143,7 @@ export default function HelpPage() {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap transition-colors ${
                 selectedCategory === cat
                   ? "bg-[#1d1d1f] text-white"
                   : "bg-white text-[#1d1d1f] hover:bg-[#e5e5e7]"

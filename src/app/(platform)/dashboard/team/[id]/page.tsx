@@ -203,7 +203,7 @@ export default function TeamMemberDetailPage() {
                 <h1 className="text-xl font-bold text-[#1C1C1E]">{member.full_name}</h1>
                 <div className="flex items-center gap-2 mt-1">
                   <span
-                    className="text-xs px-2.5 py-0.5 rounded-full font-medium"
+                    className="text-xs px-2.5 py-0.5 rounded-xl font-medium"
                     style={{
                       backgroundColor: (ROLE_COLORS[member.role] ?? '#8E8E93') + '20',
                       color: ROLE_COLORS[member.role] ?? '#8E8E93',
@@ -212,7 +212,7 @@ export default function TeamMemberDetailPage() {
                     {ROLE_LABELS[member.role] ?? member.role}
                   </span>
                   <span
-                    className="text-xs px-2.5 py-0.5 rounded-full font-medium capitalize"
+                    className="text-xs px-2.5 py-0.5 rounded-xl font-medium capitalize"
                     style={{
                       backgroundColor: (STATUS_COLORS[member.status] ?? '#8E8E93') + '20',
                       color: STATUS_COLORS[member.status] ?? '#8E8E93',

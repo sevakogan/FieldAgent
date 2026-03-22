@@ -116,7 +116,7 @@ export default function InvoicesPage() {
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap transition-colors ${
               activeTab === tab.value
                 ? 'bg-[#007AFF] text-white'
                 : 'bg-white text-[#8E8E93] border border-[#E5E5EA] hover:bg-[#F2F2F7]'
@@ -171,7 +171,7 @@ export default function InvoicesPage() {
                   </td>
                   <td className="p-4">
                     <span
-                      className="text-xs px-2.5 py-1 rounded-full font-medium capitalize"
+                      className="text-xs px-2.5 py-1 rounded-2xl font-medium capitalize"
                       style={{
                         backgroundColor: (STATUS_COLORS[invoice.status] ?? '#8E8E93') + '20',
                         color: STATUS_COLORS[invoice.status] ?? '#8E8E93',
