@@ -1,250 +1,159 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { getClients, updateClient, type ClientRow, type ClientAddress } from '@/lib/actions/clients'
+import { getClients, type ClientRow, type ClientAddress } from '@/lib/actions/clients'
+import { Button } from '@/components/platform/Button'
 
-const PAYMENT_LABELS: Record<string, string> = {
-  per_job: 'Per Job',
-  monthly: 'Monthly',
-}
+const PAYMENT_LABELS: Record<string, string> = { per_job: 'Per Job', monthly: 'Monthly' }
 
-// ── Address Hover Popup ──────────────────────────────────────────────
-function AddressPopup({ addresses, clientId }: { addresses: ClientAddress[]; clientId: string }) {
-  const [show, setShow] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  if (addresses.length === 0) {
-    return (
-      <Link
-        href={`/dashboard/clients/${clientId}`}
-        className="text-sm text-[#007AFF] hover:underline font-medium"
-      >
-        + Add
-      </Link>
-    )
-  }
-
+// ── Phone Action ────────────────────────────────────────────────────
+function PhoneLink({ phone }: { phone: string | null }) {
+  if (!phone) return null
   return (
-    <div
-      ref={ref}
-      className="relative"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      <Link
-        href={`/dashboard/clients/${clientId}`}
-        className="text-sm text-[#007AFF] font-bold hover:underline cursor-pointer"
-      >
-        {addresses.length}
-      </Link>
-
-      <AnimatePresence>
-        {show && (
-          <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 bg-white rounded-2xl border border-[#E5E5EA] shadow-xl p-3"
-          >
-            <div className="text-xs font-semibold text-[#8E8E93] uppercase mb-2">Properties</div>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {addresses.map(addr => (
-                <Link
-                  key={addr.id}
-                  href={`/dashboard/addresses/${addr.id}`}
-                  className="block p-2 rounded-xl hover:bg-[#F2F2F7] transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-[#1C1C1E]">
-                        {addr.street}{addr.unit ? `, ${addr.unit}` : ''}
-                      </p>
-                      <p className="text-xs text-[#8E8E93]">
-                        {addr.city}, {addr.state} {addr.zip}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {addr.is_str && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-xl bg-[#FF9F0A]/15 text-[#FF9F0A] font-semibold">
-                          STR
-                        </span>
-                      )}
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: addr.status === 'active' ? '#34C759' : '#8E8E93' }}
-                      />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            {/* Arrow */}
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-white border-r border-b border-[#E5E5EA] rotate-45" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <a href={`tel:${phone}`} className="text-xs text-[#007AFF] hover:underline flex items-center gap-1"
+      onClick={e => e.stopPropagation()}>
+      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+      </svg>
+      {phone}
+    </a>
   )
 }
 
-// ── Phone Button (click to dial) ─────────────────────────────────────
-function PhoneButton({ phone }: { phone: string | null }) {
-  const [showDialer, setShowDialer] = useState(false)
-
-  if (!phone) return <span className="text-sm text-[#C7C7CC]">—</span>
+// ── Client Card ─────────────────────────────────────────────────────
+function ClientCard({ client, index }: { client: ClientRow; index: number }) {
+  const [expanded, setExpanded] = useState(false)
+  const hasNoAddress = client.addresses.length === 0
 
   return (
-    <div className="relative">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.03 }}
+      className={`glass rounded-2xl overflow-hidden transition-all ${
+        hasNoAddress ? 'ring-1 ring-[#FF3B30]/20' : ''
+      }`}
+    >
+      {/* Client row — clickable to expand */}
       <button
-        onClick={(e) => {
-          e.stopPropagation()
-          setShowDialer(!showDialer)
-        }}
-        className="text-sm text-[#007AFF] hover:underline font-medium flex items-center gap-1"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-3 p-3 text-left hover:bg-white/40 transition-colors"
       >
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-        </svg>
-        {phone}
+        {/* Avatar */}
+        <div className="w-9 h-9 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-xs font-bold shrink-0">
+          {client.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[#1C1C1E] truncate">{client.full_name}</span>
+            {hasNoAddress && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-lg bg-[#FF3B30]/10 text-[#FF3B30] font-semibold whitespace-nowrap">
+                ⚠ No Property
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 mt-0.5">
+            <span className="text-xs text-[#8E8E93] truncate">{client.email}</span>
+            <PhoneLink phone={client.phone} />
+          </div>
+        </div>
+
+        {/* Right side: property count + payment + chevron */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-right hidden sm:block">
+            <span className="text-[10px] text-[#8E8E93] uppercase">{PAYMENT_LABELS[client.payment_schedule] ?? client.payment_schedule}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-lg ${
+              client.addresses.length > 0
+                ? 'bg-[#007AFF]/10 text-[#007AFF]'
+                : 'bg-[#FF3B30]/10 text-[#FF3B30]'
+            }`}>
+              {client.addresses.length} {client.addresses.length === 1 ? 'prop' : 'props'}
+            </span>
+            <motion.svg
+              className="w-4 h-4 text-[#AEAEB2]"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </motion.svg>
+          </div>
+        </div>
       </button>
 
+      {/* Expanded: properties list */}
       <AnimatePresence>
-        {showDialer && (
+        {expanded && (
           <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="absolute z-50 top-full left-0 mt-2 bg-white rounded-2xl border border-[#E5E5EA] shadow-xl p-3 w-52"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
           >
-            <div className="text-xs font-semibold text-[#8E8E93] uppercase mb-2">Quick Actions</div>
-            <div className="space-y-1">
-              <a
-                href={`tel:${phone}`}
-                className="flex items-center gap-2 p-2 rounded-xl hover:bg-[#F2F2F7] transition-colors text-sm text-[#1C1C1E]"
-              >
-                <span className="w-8 h-8 rounded-full bg-[#34C759]/10 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-[#34C759]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                </span>
-                Call
-              </a>
-              <a
-                href={`sms:${phone}`}
-                className="flex items-center gap-2 p-2 rounded-xl hover:bg-[#F2F2F7] transition-colors text-sm text-[#1C1C1E]"
-              >
-                <span className="w-8 h-8 rounded-full bg-[#007AFF]/10 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </span>
-                Text
-              </a>
-              <button
-                onClick={() => navigator.clipboard.writeText(phone)}
-                className="flex items-center gap-2 p-2 rounded-xl hover:bg-[#F2F2F7] transition-colors text-sm text-[#1C1C1E] w-full text-left"
-              >
-                <span className="w-8 h-8 rounded-full bg-[#8E8E93]/10 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </span>
-                Copy
-              </button>
+            <div className="px-3 pb-3 border-t border-[#E5E5EA]/50">
+              {client.addresses.length === 0 ? (
+                <div className="pt-3 text-center">
+                  <p className="text-xs text-[#8E8E93] mb-2">No properties yet</p>
+                  <Link href={`/dashboard/clients/${client.id}`}>
+                    <Button variant="primary" size="sm">+ Add Property</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="pt-2 space-y-1.5">
+                  {client.addresses.map((addr: ClientAddress) => (
+                    <Link
+                      key={addr.id}
+                      href={`/dashboard/addresses/${addr.id}`}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[#F2F2F7]/60 hover:bg-[#E5E5EA]/60 transition-colors group/addr"
+                    >
+                      <svg className="w-4 h-4 text-[#8E8E93] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-[#1C1C1E] truncate">
+                          {addr.street}{addr.unit ? `, ${addr.unit}` : ''}
+                        </p>
+                        <p className="text-[10px] text-[#8E8E93]">{addr.city}, {addr.state} {addr.zip}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {addr.is_str && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-lg bg-[#FF9F0A]/10 text-[#FF9F0A] font-semibold">STR</span>
+                        )}
+                        <span className={`w-1.5 h-1.5 rounded-full ${addr.status === 'active' ? 'bg-[#34C759]' : 'bg-[#8E8E93]'}`} />
+                        <svg className="w-3 h-3 text-[#C7C7CC] group-hover/addr:text-[#007AFF] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </div>
+                    </Link>
+                  ))}
+
+                  {/* Add property + view client actions */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <Link href={`/dashboard/clients/${client.id}`}
+                      className="text-[10px] text-[#007AFF] font-semibold hover:underline">
+                      + Add Property
+                    </Link>
+                    <span className="text-[#E5E5EA]">·</span>
+                    <Link href={`/dashboard/clients/${client.id}`}
+                      className="text-[10px] text-[#8E8E93] font-medium hover:text-[#007AFF] hover:underline transition-colors">
+                      View Client →
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  )
-}
-
-// ── Inline Edit Cell ─────────────────────────────────────────────────
-function EditableCell({
-  value,
-  field,
-  clientId,
-  type = 'text',
-  onSaved,
-}: {
-  value: string
-  field: string
-  clientId: string
-  type?: 'text' | 'email' | 'select'
-  onSaved: () => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [editValue, setEditValue] = useState(value)
-  const [saving, setSaving] = useState(false)
-  const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null)
-
-  useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus()
-      if ('select' in inputRef.current) inputRef.current.select()
-    }
-  }, [editing])
-
-  const handleSave = async () => {
-    if (editValue === value) {
-      setEditing(false)
-      return
-    }
-    setSaving(true)
-    const updateData: Record<string, string> = { [field]: editValue }
-    await updateClient(clientId, updateData)
-    setSaving(false)
-    setEditing(false)
-    onSaved()
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSave()
-    if (e.key === 'Escape') { setEditValue(value); setEditing(false) }
-  }
-
-  if (editing) {
-    if (type === 'select') {
-      return (
-        <select
-          ref={inputRef as React.RefObject<HTMLSelectElement>}
-          value={editValue}
-          onChange={e => setEditValue(e.target.value)}
-          onBlur={handleSave}
-          disabled={saving}
-          className="px-2 py-1 bg-[#F2F2F7] border border-[#007AFF] rounded-lg text-sm focus:outline-none w-full max-w-[120px]"
-        >
-          <option value="per_job">Per Job</option>
-          <option value="monthly">Monthly</option>
-        </select>
-      )
-    }
-    return (
-      <input
-        ref={inputRef as React.RefObject<HTMLInputElement>}
-        type={type}
-        value={editValue}
-        onChange={e => setEditValue(e.target.value)}
-        onBlur={handleSave}
-        onKeyDown={handleKeyDown}
-        disabled={saving}
-        className="px-2 py-1 bg-[#F2F2F7] border border-[#007AFF] rounded-lg text-sm focus:outline-none w-full max-w-[200px]"
-      />
-    )
-  }
-
-  return (
-    <span
-      onClick={(e) => { e.stopPropagation(); setEditing(true) }}
-      className="text-sm text-[#1C1C1E] cursor-text hover:bg-[#007AFF]/5 px-1 -mx-1 py-0.5 rounded transition-colors inline-block"
-      title="Click to edit"
-    >
-      {type === 'select' ? (PAYMENT_LABELS[value] ?? value) : (value || '—')}
-    </span>
+    </motion.div>
   )
 }
 
@@ -267,9 +176,7 @@ export default function ClientsPage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => {
-    fetchClients()
-  }, [fetchClients])
+  useEffect(() => { fetchClients() }, [fetchClients])
 
   const filtered = clients.filter(c => {
     const q = search.toLowerCase()
@@ -282,13 +189,16 @@ export default function ClientsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">Clients</h1>
-        <Link
-          href="/dashboard/clients/new"
-          className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
-        >
-          + Add Client
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-2xl font-bold text-[#1C1C1E]">Clients & Properties</h1>
+        <Link href="/dashboard/clients/new">
+          <Button variant="primary" size="sm" icon={
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          }>
+            Add Client
+          </Button>
         </Link>
       </div>
 
@@ -297,7 +207,7 @@ export default function ClientsPage() {
         placeholder="Search by name, email, or phone..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full md:w-96 px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+        className="w-full md:w-96 px-4 py-2.5 glass rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
       />
 
       {loading && (
@@ -307,119 +217,31 @@ export default function ClientsPage() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">
-          {error}
-        </div>
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">{error}</div>
       )}
 
       {!loading && !error && clients.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-2xl p-12 text-center"
-        >
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-2xl p-12 text-center">
           <div className="text-4xl mb-3">👤</div>
           <h2 className="text-lg font-semibold text-[#1C1C1E] mb-1">No clients yet</h2>
           <p className="text-sm text-[#8E8E93] mb-5">Add your first client to get started.</p>
-          <Link
-            href="/dashboard/clients/new"
-            className="inline-block px-5 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
-          >
-            Add Your First Client
+          <Link href="/dashboard/clients/new">
+            <Button variant="primary">Add Your First Client</Button>
           </Link>
         </motion.div>
       )}
 
       {!loading && !error && clients.length > 0 && (
-        <div className="glass rounded-2xl overflow-visible">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[#E5E5EA]">
-                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Name</th>
-                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Email</th>
-                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden lg:table-cell">Phone</th>
-                <th className="text-center p-3 text-xs font-medium text-[#8E8E93] uppercase">Properties</th>
-                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Payment</th>
-                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden lg:table-cell">Created</th>
-                <th className="text-right p-3 text-xs font-medium text-[#8E8E93] uppercase w-16"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E5E5EA]">
-              {filtered.map((client, i) => {
-                const hasNoAddress = client.addresses.length === 0
-                return (
-                <motion.tr
-                  key={client.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
-                  className={`transition-colors group ${hasNoAddress ? 'bg-[#FF3B30]/[0.03]' : 'hover:bg-[#F9F9FB]'}`}
-                >
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <EditableCell
-                        value={client.full_name}
-                        field="full_name"
-                        clientId={client.id}
-                        onSaved={fetchClients}
-                      />
-                      {hasNoAddress && (
-                        <Link
-                          href={`/dashboard/clients/${client.id}`}
-                          className="text-[10px] px-2 py-0.5 rounded-full bg-[#FF3B30]/10 text-[#FF3B30] font-semibold whitespace-nowrap hover:bg-[#FF3B30]/20 transition-colors"
-                        >
-                          ⚠ No Property
-                        </Link>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-3 hidden md:table-cell">
-                    <EditableCell
-                      value={client.email}
-                      field="email"
-                      clientId={client.id}
-                      type="email"
-                      onSaved={fetchClients}
-                    />
-                  </td>
-                  <td className="p-3 hidden lg:table-cell">
-                    <PhoneButton phone={client.phone} />
-                  </td>
-                  <td className="p-3 text-center">
-                    <AddressPopup addresses={client.addresses} clientId={client.id} />
-                  </td>
-                  <td className="p-3 hidden md:table-cell">
-                    <EditableCell
-                      value={client.payment_schedule}
-                      field="payment_schedule"
-                      clientId={client.id}
-                      type="select"
-                      onSaved={fetchClients}
-                    />
-                  </td>
-                  <td className="p-3 text-sm text-[#8E8E93] hidden lg:table-cell">
-                    {new Date(client.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="p-3 text-right">
-                    <Link
-                      href={`/dashboard/clients/${client.id}`}
-                      className="text-xs text-[#007AFF] opacity-0 group-hover:opacity-100 transition-opacity font-medium hover:underline"
-                    >
-                      Open →
-                    </Link>
-                  </td>
-                </motion.tr>
-                )
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-sm text-[#8E8E93]">
-                    No clients match your search.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="space-y-2">
+          {filtered.map((client, i) => (
+            <ClientCard key={client.id} client={client} index={i} />
+          ))}
+          {filtered.length === 0 && (
+            <div className="py-12 text-center text-sm text-[#8E8E93]">
+              No clients match your search.
+            </div>
+          )}
         </div>
       )}
     </div>
