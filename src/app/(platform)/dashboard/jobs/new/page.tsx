@@ -97,10 +97,12 @@ export default function NewJobPage() {
   function handleChange(field: keyof FormData, value: string) {
     const updated = { ...form, [field]: value }
 
-    // When client changes, reset address if it doesn't belong to the new client
+    // When client changes, auto-select address if they only have one, otherwise reset
     if (field === 'client_id') {
       const clientAddresses = addresses.filter(a => a.client_id === value)
-      if (!clientAddresses.some(a => a.id === form.address_id)) {
+      if (clientAddresses.length === 1) {
+        updated.address_id = clientAddresses[0].id
+      } else if (!clientAddresses.some(a => a.id === form.address_id)) {
         updated.address_id = ''
       }
     }
