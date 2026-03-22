@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { getJob, updateJobStatus, updateJob, deleteJob, getTeamMembers, type JobDetail, type TeamMember } from '@/lib/actions/jobs'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
 import type { JobStatus } from '@/types/database'
@@ -63,6 +63,50 @@ const STATUS_PILL_COLORS: Record<string, { active: string; inactive: string }> =
   approved: { active: 'bg-[#5AC8FA] text-white', inactive: 'bg-[#5AC8FA]/10 text-[#2E8EB8]' },
 }
 
+// ── Collapsible Card ────────────────────────────────────────────────────
+function CollapsibleCard({ title, icon, children, defaultOpen = true, delay = 0 }: {
+  title: string; icon?: string; children: React.ReactNode; defaultOpen?: boolean; delay?: number
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
+      className="glass rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-4 hover:bg-[#F2F2F7]/50 transition-colors"
+      >
+        <h2 className="text-sm font-bold text-[#1C1C1E] flex items-center gap-1.5">
+          {icon && <span>{icon}</span>}
+          {title}
+        </h2>
+        <motion.svg
+          className="w-4 h-4 text-[#C7C7CC]"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </motion.svg>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
 // ── Tasks List (clickable to complete) ───────────────────────────────────
 function TasksList({ job, onUpdate }: { job: JobDetail; onUpdate: () => void }) {
   const [completing, setCompleting] = useState<string | null>(null)
@@ -120,15 +164,17 @@ const POOL_FIELDS = [
   { key: 'water_temp', label: 'Water Temp', placeholder: '78', unit: '°F' },
 ]
 
-function WaterChemistryForm({ jobId, existingData, onSave }: { jobId: string; existingData: Record<string, string> | null; onSave: () => void }) {
+function WaterChemistryForm({ jobId, existingData }: { jobId: string; existingData: Record<string, string> | null; onSave: () => void }) {
   const [values, setValues] = useState<Record<string, string>>(existingData ?? {})
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   async function handleSave() {
     setSaving(true)
     await updateJob(jobId, { custom_field_values: values } as Parameters<typeof updateJob>[1])
-    onSave()
     setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
   }
 
   return (
@@ -155,7 +201,7 @@ function WaterChemistryForm({ jobId, existingData, onSave }: { jobId: string; ex
         disabled={saving}
         className="mt-3 px-4 py-2 rounded-xl text-xs font-bold bg-[#5AC8FA] text-white hover:bg-[#4AB8EA] transition-colors disabled:opacity-50 w-full"
       >
-        {saving ? 'Saving...' : 'Save Readings'}
+        {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Readings'}
       </button>
     </div>
   )
@@ -278,8 +324,10 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updating, setUpdating] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [showCancelPopup, setShowCancelPopup] = useState(false)
+  const [cancelNote, setCancelNote] = useState('')
+  const [cancelRescheduleDate, setCancelRescheduleDate] = useState('')
 
   // Edit state
   const [editPrice, setEditPrice] = useState('')
@@ -376,16 +424,7 @@ export default function JobDetailPage() {
     setUpdating(false)
   }
 
-  async function handleDelete() {
-    setUpdating(true)
-    const result = await deleteJob(jobId)
-    if (result.success) {
-      router.push('/dashboard/jobs')
-    } else {
-      setError(result.error ?? 'Failed to delete job')
-      setUpdating(false)
-    }
-  }
+  // Delete removed from Beta V1 — only cancel with reschedule
 
   if (loading) {
     return (
@@ -657,55 +696,38 @@ export default function JobDetailPage() {
             )}
           </motion.div>
 
-          {/* Tasks — clickable to complete */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="glass rounded-2xl p-5">
-            <h2 className="text-lg font-bold text-[#1C1C1E] mb-3">Tasks</h2>
+          {/* Tasks — collapsible, clickable to complete */}
+          <CollapsibleCard title="Tasks" icon="✅" delay={0.1}>
             <TasksList job={job} onUpdate={fetchJob} />
-          </motion.div>
+          </CollapsibleCard>
 
           {/* Water Chemistry — for pool services */}
           {job.service_name?.toLowerCase().includes('pool') && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-              className="glass rounded-2xl p-5">
-              <h2 className="text-sm font-bold text-[#1C1C1E] mb-3">💧 Water Chemistry</h2>
+            <CollapsibleCard title="Water Chemistry" icon="💧" delay={0.15}>
               <WaterChemistryForm jobId={jobId} existingData={job.custom_field_values as Record<string, string> | null} onSave={fetchJob} />
-            </motion.div>
+            </CollapsibleCard>
           )}
 
           {/* Photos */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="glass rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-[#1C1C1E]">📸 Photos</h2>
+          <CollapsibleCard title="Photos" icon="📸" delay={0.2}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-[#8E8E93]">Date, time & GPS auto-captured</p>
               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#007AFF] text-white hover:bg-[#0066DD] transition-all">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Add Photo
+                + Add Photo
               </button>
             </div>
-            <p className="text-xs text-[#8E8E93] italic">Photos will include date, time, and GPS location automatically.</p>
-          </motion.div>
+          </CollapsibleCard>
 
           {/* Expenses */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-            className="glass rounded-2xl p-5">
+          <CollapsibleCard title="Expenses" icon="💰" delay={0.25}>
             <ExpenseSection jobId={jobId} existingTotal={Number(job.expenses_total)} onUpdate={fetchJob} />
-          </motion.div>
+          </CollapsibleCard>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Pricing */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass rounded-2xl p-5"
-          >
-            <h2 className="text-xs font-medium text-[#8E8E93] uppercase tracking-wider mb-2">Pricing</h2>
+          {/* Pricing — default minimized */}
+          <CollapsibleCard title="Pricing" icon="💲" defaultOpen={false} delay={0.1}>
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-[#8E8E93]">Service</span>
@@ -730,9 +752,9 @@ export default function JobDetailPage() {
                 </div>
               )}
             </div>
-          </motion.div>
+          </CollapsibleCard>
 
-          {/* Actions — simplified: primary + cancel only */}
+          {/* Actions — primary + cancel with popup */}
           {!isTerminal && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -766,7 +788,7 @@ export default function JobDetailPage() {
               {nextStatuses.includes('cancelled') && (
                 <Button
                   variant="danger"
-                  onClick={() => handleStatusChange('cancelled')}
+                  onClick={() => setShowCancelPopup(true)}
                   disabled={updating}
                   className="w-full"
                 >
@@ -776,44 +798,70 @@ export default function JobDetailPage() {
             </motion.div>
           )}
 
-          {/* Delete */}
-          {job.status !== 'charged' && (
-            <div>
-              {showDeleteConfirm ? (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
-                  <p className="text-sm text-red-700">Are you sure you want to delete this job? This cannot be undone.</p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={handleDelete}
-                      disabled={updating}
-                      loading={updating}
-                      className="flex-1"
-                    >
-                      Yes, Delete
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setShowDeleteConfirm(false)}
-                      className="flex-1"
-                    >
-                      No, Keep
-                    </Button>
+          {/* Cancel Popup */}
+          <AnimatePresence>
+            {showCancelPopup && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4"
+                onClick={() => setShowCancelPopup(false)}>
+                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-sm rounded-3xl p-5"
+                  style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(40px)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
+                  <h3 className="text-base font-bold text-[#1C1C1E] mb-4">Cancel Job</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-[#1C1C1E] mb-1 block">Reason</label>
+                      <textarea
+                        value={cancelNote}
+                        onChange={(e) => setCancelNote(e.target.value)}
+                        placeholder="Why is this job being cancelled?"
+                        rows={2}
+                        className="w-full px-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF3B30]/30 resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-[#1C1C1E] mb-1 block">Reschedule to (optional)</label>
+                      <input
+                        type="date"
+                        value={cancelRescheduleDate}
+                        onChange={(e) => setCancelRescheduleDate(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF3B30]/30"
+                      />
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <Button
-                  variant="danger"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full"
-                >
-                  Delete Job
-                </Button>
-              )}
-            </div>
-          )}
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={async () => {
+                        setUpdating(true)
+                        if (cancelRescheduleDate) {
+                          await updateJob(jobId, { scheduled_date: cancelRescheduleDate, cancellation_reason: cancelNote || 'Rescheduled' })
+                        } else {
+                          await updateJobStatus(jobId, 'cancelled')
+                          if (cancelNote) await updateJob(jobId, { cancellation_reason: cancelNote })
+                        }
+                        setShowCancelPopup(false)
+                        setCancelNote('')
+                        setCancelRescheduleDate('')
+                        await fetchJob()
+                        setUpdating(false)
+                      }}
+                      disabled={updating}
+                      className="flex-1 py-2.5 bg-[#FF3B30] text-white rounded-xl text-xs font-bold hover:bg-[#E0352B] transition-colors disabled:opacity-50"
+                    >
+                      {updating ? 'Saving...' : cancelRescheduleDate ? 'Reschedule' : 'Cancel Job'}
+                    </button>
+                    <button
+                      onClick={() => { setShowCancelPopup(false); setCancelNote(''); setCancelRescheduleDate('') }}
+                      className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-xs font-semibold hover:bg-[#E5E5EA] transition-colors"
+                    >
+                      Keep Job
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
