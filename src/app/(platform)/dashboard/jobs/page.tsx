@@ -204,7 +204,7 @@ function JobCard({
   const borderColor = STATUS_BORDER_COLORS[job.status] ?? 'border-l-[#8E8E93]'
 
   const fullAddress = `${job.address_street}${job.address_city ? `, ${job.address_city}` : ''}`
-  const mapsUrl = `https://maps.apple.com/?daddr=${encodeURIComponent(fullAddress)}`
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`
 
   return (
     <motion.div
@@ -246,15 +246,15 @@ function JobCard({
       {/* Row 3: Action buttons — always visible for scheduled jobs */}
       {(job.status === 'scheduled' || job.status === 'approved') && (
         <div className="flex items-center gap-2 mt-2.5 pl-[calc(4rem+0.625rem+0.5rem+0.5rem)]">
-          {/* Drive — opens Apple Maps navigation */}
+          {/* Drive — opens Google Maps navigation */}
           <a
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold bg-[#007AFF] text-white hover:bg-[#0066DD] active:scale-95 transition-all shadow-sm"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#007AFF] text-white hover:bg-[#0066DD] active:scale-[0.97] transition-all shadow-sm min-w-[72px]"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -265,9 +265,9 @@ function JobCard({
           <button
             onClick={(e) => { e.stopPropagation(); onStart(e) }}
             disabled={isStarting}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold bg-[#34C759] text-white hover:bg-[#2DB84E] active:scale-95 disabled:opacity-50 transition-all shadow-sm"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#34C759] text-white hover:bg-[#2DB84E] active:scale-[0.97] disabled:opacity-50 transition-all shadow-sm min-w-[72px]"
           >
-            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
             </svg>
             {isStarting ? '...' : 'Start'}
@@ -276,9 +276,9 @@ function JobCard({
           {/* Skip — opens skip modal */}
           <button
             onClick={(e) => { e.stopPropagation(); onSkip(e) }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold bg-[#FF9F0A]/15 text-[#CC7F08] hover:bg-[#FF9F0A]/25 active:scale-95 transition-all"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#FF9F0A]/15 text-[#CC7F08] hover:bg-[#FF9F0A]/25 active:scale-[0.97] transition-all min-w-[64px]"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
             </svg>
             Skip

@@ -1,18 +1,14 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  AreaChart, Area, XAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
-} from 'recharts'
-import {
   getDashboardStats, getRecentJobs, getRecentActivity,
-  getWeeklyRevenue, getJobStatusCounts,
+  getJobStatusCounts,
   type DashboardStats, type RecentJob, type ActivityEntry,
-  type WeeklyRevenuePoint, type JobStatusCount,
+  type JobStatusCount,
 } from '@/lib/actions/dashboard'
 import { StatusBadge } from '@/components/platform/Badge'
 import { Button } from '@/components/platform/Button'
@@ -62,20 +58,19 @@ export default function DashboardOverview() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [jobs, setJobs] = useState<RecentJob[]>([])
   const [activity, setActivity] = useState<ActivityEntry[]>([])
-  const [weeklyRevenue, setWeeklyRevenue] = useState<WeeklyRevenuePoint[]>([])
   const [statusCounts, setStatusCounts] = useState<JobStatusCount[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedCalDate, setSelectedCalDate] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
-      const [s, j, a, w, sc] = await Promise.all([
+      const [s, j, a, sc] = await Promise.all([
         getDashboardStats(), getRecentJobs(), getRecentActivity(),
-        getWeeklyRevenue(), getJobStatusCounts(),
+        getJobStatusCounts(),
       ])
       if (s.success && s.data) setStats(s.data)
       if (j.success && j.data) setJobs(j.data)
       if (a.success && a.data) setActivity(a.data)
-      if (w.success && w.data) setWeeklyRevenue(w.data)
       if (sc.success && sc.data) setStatusCounts(sc.data)
       setLoading(false)
     }
@@ -211,71 +206,22 @@ export default function DashboardOverview() {
         </motion.div>
       )}
 
-      {/* ── Charts Row ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* Revenue chart */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="glass rounded-2xl p-3">
-          <p className="text-xs font-semibold text-[#1C1C1E] mb-2">Revenue This Week</p>
-          <ResponsiveContainer width="100%" height={140}>
-            <AreaChart data={(weeklyRevenue.length > 0 ? weeklyRevenue : [
-              { day: 'Mon', amount: 450 }, { day: 'Tue', amount: 680 }, { day: 'Wed', amount: 520 },
-              { day: 'Thu', amount: 890 }, { day: 'Fri', amount: 760 }, { day: 'Sat', amount: 340 }, { day: 'Sun', amount: 0 },
-            ]) as Array<Record<string, unknown>>}>
-              <defs>
-                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#007AFF" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#007AFF" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#AEAEB2' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 12, fontSize: 11 }} />
-              <Area type="monotone" dataKey="amount" stroke="#007AFF" strokeWidth={2} fill="url(#revGrad)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </motion.div>
-
-        {/* Jobs donut */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-          className="glass rounded-2xl p-3">
-          <p className="text-xs font-semibold text-[#1C1C1E] mb-2">Jobs by Status</p>
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <ResponsiveContainer width={120} height={120}>
-                <PieChart>
-                  <Pie data={statusCounts.length > 0 ? statusCounts : [
-                    { status: 'scheduled', count: 5 }, { status: 'in_progress', count: 3 },
-                    { status: 'completed', count: 8 }, { status: 'pending_review', count: 2 },
-                  ]} dataKey="count" nameKey="status" cx="50%" cy="50%" innerRadius={35} outerRadius={50} paddingAngle={3}>
-                    {(statusCounts.length > 0 ? statusCounts : [
-                      { status: 'scheduled', count: 5 }, { status: 'in_progress', count: 3 },
-                      { status: 'completed', count: 8 }, { status: 'pending_review', count: 2 },
-                    ]).map((entry) => (
-                      <Cell key={entry.status} fill={STATUS_CHART_COLORS[entry.status] ?? '#8E8E93'} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-lg font-bold text-[#1C1C1E]">
-                  {statusCounts.reduce((s, c) => s + c.count, 0) || 18}
-                </span>
-              </div>
+      {/* ── Jobs by Status (compact horizontal) ─────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        className="glass rounded-2xl p-3">
+        <div className="flex items-center gap-3 overflow-x-auto">
+          {(statusCounts.length > 0 ? statusCounts : [
+            { status: 'scheduled', count: 0 }, { status: 'in_progress', count: 0 },
+            { status: 'completed', count: 0 },
+          ]).map(s => (
+            <div key={s.status} className="flex items-center gap-1.5 shrink-0">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_CHART_COLORS[s.status] ?? '#8E8E93' }} />
+              <span className="text-xs text-[#8E8E93] capitalize">{s.status.replace(/_/g, ' ')}</span>
+              <span className="text-xs font-bold text-[#1C1C1E]">{s.count}</span>
             </div>
-            <div className="flex-1 space-y-1">
-              {(statusCounts.length > 0 ? statusCounts : [
-                { status: 'scheduled', count: 5 }, { status: 'completed', count: 8 },
-              ]).slice(0, 5).map(s => (
-                <div key={s.status} className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: STATUS_CHART_COLORS[s.status] ?? '#8E8E93' }} />
-                  <span className="text-[10px] text-[#8E8E93] capitalize flex-1">{s.status.replace(/_/g, ' ')}</span>
-                  <span className="text-[10px] font-bold text-[#1C1C1E]">{s.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      </div>
+          ))}
+        </div>
+      </motion.div>
 
       {/* ── Today's Jobs (Colored Cards Grid) ─────────────────────── */}
       <div>
@@ -339,61 +285,97 @@ export default function DashboardOverview() {
         )}
       </div>
 
-      {/* ── Week Strip + Activity ─────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Week strip */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="md:col-span-2 glass rounded-2xl p-3">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-[#1C1C1E]">This Week</p>
-            <Link href="/dashboard/calendar" className="text-[10px] text-[#007AFF] font-medium hover:underline">Open Calendar →</Link>
-          </div>
-          <div className="grid grid-cols-7 gap-1.5">
-            {weekDays.map(day => {
-              const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
-              const isToday = key === todayKey
-              const count = jobsByWeekDay.get(key) ?? 0
-              return (
-                <Link key={key} href="/dashboard/calendar"
-                  className={`flex flex-col items-center py-2 rounded-xl transition-colors ${
-                    isToday ? 'bg-[#007AFF] text-white shadow-md shadow-[#007AFF]/25' : 'hover:bg-[#F2F2F7]'
-                  }`}>
-                  <span className={`text-[9px] font-bold uppercase ${isToday ? 'text-white/70' : 'text-[#C7C7CC]'}`}>
-                    {day.toLocaleDateString('en-US', { weekday: 'narrow', timeZone: PACIFIC_TZ })}
-                  </span>
-                  <span className={`text-base font-bold ${isToday ? 'text-white' : 'text-[#1C1C1E]'}`}>
-                    {day.getDate()}
-                  </span>
-                  {count > 0 && (
-                    <span className={`w-1 h-1 rounded-full mt-0.5 ${isToday ? 'bg-white' : 'bg-[#007AFF]'}`} />
-                  )}
-                </Link>
-              )
-            })}
-          </div>
-        </motion.div>
+      {/* ── Calendar with inline job expansion ─────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+        className="glass rounded-2xl p-3">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-[#1C1C1E]">This Week</p>
+          <Link href="/dashboard/calendar" className="text-[10px] text-[#007AFF] font-medium hover:underline">Full Calendar →</Link>
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {weekDays.map(day => {
+            const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+            const isToday = key === todayKey
+            const isSelected = selectedCalDate === key
+            const count = jobsByWeekDay.get(key) ?? 0
+            return (
+              <button key={key}
+                onClick={() => setSelectedCalDate(isSelected ? null : key)}
+                className={`flex flex-col items-center py-2 rounded-xl transition-all ${
+                  isSelected ? 'bg-[#007AFF] text-white shadow-md shadow-[#007AFF]/25 scale-105' :
+                  isToday ? 'bg-[#007AFF]/10 text-[#007AFF] ring-2 ring-[#007AFF]/30' : 'hover:bg-[#F2F2F7]'
+                }`}>
+                <span className={`text-[9px] font-bold uppercase ${isSelected ? 'text-white/70' : isToday ? 'text-[#007AFF]/60' : 'text-[#C7C7CC]'}`}>
+                  {day.toLocaleDateString('en-US', { weekday: 'narrow', timeZone: PACIFIC_TZ })}
+                </span>
+                <span className={`text-base font-bold ${isSelected ? 'text-white' : isToday ? 'text-[#007AFF]' : 'text-[#1C1C1E]'}`}>
+                  {day.getDate()}
+                </span>
+                {count > 0 && (
+                  <span className={`w-1 h-1 rounded-full mt-0.5 ${isSelected || isToday ? 'bg-white' : 'bg-[#007AFF]'}`} />
+                )}
+              </button>
+            )
+          })}
+        </div>
 
-        {/* Recent Activity */}
+        {/* Inline expanded jobs for selected date */}
+        <AnimatePresence>
+          {selectedCalDate && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="border-t border-[#E5E5EA] mt-3 pt-3 space-y-2">
+                {(() => {
+                  const dayJobs = jobs.filter(j => j.scheduled_date === selectedCalDate)
+                  if (dayJobs.length === 0) {
+                    return <p className="text-xs text-[#8E8E93] text-center py-2">No jobs on this day</p>
+                  }
+                  return dayJobs.map(job => {
+                    const palette = getServicePalette(job.service_name)
+                    return (
+                      <div key={job.id}
+                        onClick={() => router.push(`/dashboard/jobs/${job.id}`)}
+                        className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-[#F2F2F7] transition-colors border-l-3"
+                        style={{ borderLeftColor: palette.border }}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-[#1C1C1E] truncate">{job.service_name}</p>
+                          <p className="text-[10px] text-[#8E8E93] truncate">{job.address_street} · {job.scheduled_time ? formatTime(job.scheduled_time) : 'No time'}</p>
+                        </div>
+                        <span className="text-xs font-bold text-[#1C1C1E]">{job.price ? `$${Number(job.price).toFixed(0)}` : ''}</span>
+                        <StatusBadge status={job.status} />
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* ── Activity ─────────────────────────────────────────────── */}
+      {activity.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
           className="glass rounded-2xl p-3">
-          <p className="text-xs font-semibold text-[#1C1C1E] mb-2">Activity</p>
-          {activity.length === 0 ? (
-            <p className="text-[10px] text-[#8E8E93] text-center py-4">No recent activity</p>
-          ) : (
-            <div className="space-y-2">
-              {activity.slice(0, 5).map(item => (
-                <div key={item.id} className="flex gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#007AFF] mt-1.5 shrink-0" />
-                  <div>
-                    <p className="text-[11px] text-[#1C1C1E]">{item.action} {item.entity_type}</p>
-                    <p className="text-[9px] text-[#C7C7CC]">{timeAgo(item.created_at)}</p>
-                  </div>
+          <p className="text-xs font-semibold text-[#1C1C1E] mb-2">Recent Activity</p>
+          <div className="space-y-2">
+            {activity.slice(0, 5).map(item => (
+              <div key={item.id} className="flex gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#007AFF] mt-1.5 shrink-0" />
+                <div>
+                  <p className="text-[11px] text-[#1C1C1E]">{item.action} {item.entity_type}</p>
+                  <p className="text-[9px] text-[#C7C7CC]">{timeAgo(item.created_at)}</p>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
         </motion.div>
-      </div>
+      )}
     </div>
   )
 }

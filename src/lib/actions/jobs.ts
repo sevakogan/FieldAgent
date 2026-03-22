@@ -385,6 +385,9 @@ export async function updateJob(
     price?: number
     status?: string
     cancellation_reason?: string
+    checklist_results?: Record<string, boolean>
+    custom_field_values?: Record<string, string>
+    expenses_total?: number
   }
 ): Promise<ActionResult> {
   try {
@@ -400,6 +403,9 @@ export async function updateJob(
     if (data.price !== undefined) update.price = data.price
     if (data.status !== undefined) update.status = data.status
     if (data.cancellation_reason !== undefined) update.cancellation_reason = data.cancellation_reason
+    if (data.checklist_results !== undefined) update.checklist_results = data.checklist_results
+    if (data.custom_field_values !== undefined) update.custom_field_values = data.custom_field_values
+    if (data.expenses_total !== undefined) update.expenses_total = data.expenses_total
 
     if (Object.keys(update).length === 0) {
       return { success: true }

@@ -63,6 +63,212 @@ const STATUS_PILL_COLORS: Record<string, { active: string; inactive: string }> =
   approved: { active: 'bg-[#5AC8FA] text-white', inactive: 'bg-[#5AC8FA]/10 text-[#2E8EB8]' },
 }
 
+// ── Tasks List (clickable to complete) ───────────────────────────────────
+function TasksList({ job, onUpdate }: { job: JobDetail; onUpdate: () => void }) {
+  const [completing, setCompleting] = useState<string | null>(null)
+
+  const checklistItems: [string, boolean][] = job.checklist_results
+    ? Object.entries(job.checklist_results).map(([k, v]) => [k, Boolean(v)])
+    : ((job.service_checklist_items as string[]) ?? []).map((item) => [item, false])
+
+  if (checklistItems.length === 0) {
+    return <p className="text-sm text-[#8E8E93] italic">No tasks defined. Add checklist items in Services.</p>
+  }
+
+  async function toggleTask(taskName: string, currentDone: boolean) {
+    setCompleting(taskName)
+    const current = (job.checklist_results ?? {}) as Record<string, boolean>
+    const updated = { ...current, [taskName]: !currentDone }
+    await updateJob(job.id, { checklist_results: updated } as Parameters<typeof updateJob>[1])
+    onUpdate()
+    setCompleting(null)
+  }
+
+  return (
+    <div className="space-y-1">
+      {checklistItems.map(([name, done]) => (
+        <button
+          key={name}
+          onClick={() => toggleTask(name, done)}
+          disabled={completing === name}
+          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
+            done ? 'bg-[#34C759]/8' : 'hover:bg-[#F2F2F7] active:bg-[#E5E5EA]'
+          } ${completing === name ? 'opacity-50' : ''}`}
+        >
+          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors ${
+            done ? 'bg-[#34C759] border-[#34C759]' : 'border-[#D1D1D6]'
+          }`}>
+            {done && <span className="text-white text-xs font-bold">✓</span>}
+          </div>
+          <span className={`text-sm font-medium ${done ? 'text-[#8E8E93] line-through' : 'text-[#1C1C1E]'}`}>
+            {name}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ── Water Chemistry Form (pool services) ────────────────────────────────
+const POOL_FIELDS = [
+  { key: 'ph', label: 'pH Level', placeholder: '7.2-7.8', unit: '' },
+  { key: 'chlorine_free', label: 'Free Chlorine', placeholder: '1-3', unit: 'ppm' },
+  { key: 'chlorine_total', label: 'Total Chlorine', placeholder: '1-5', unit: 'ppm' },
+  { key: 'alkalinity', label: 'Alkalinity', placeholder: '80-120', unit: 'ppm' },
+  { key: 'calcium', label: 'Calcium Hardness', placeholder: '200-400', unit: 'ppm' },
+  { key: 'cya', label: 'CYA (Stabilizer)', placeholder: '30-50', unit: 'ppm' },
+  { key: 'water_temp', label: 'Water Temp', placeholder: '78', unit: '°F' },
+]
+
+function WaterChemistryForm({ jobId, existingData, onSave }: { jobId: string; existingData: Record<string, string> | null; onSave: () => void }) {
+  const [values, setValues] = useState<Record<string, string>>(existingData ?? {})
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    await updateJob(jobId, { custom_field_values: values } as Parameters<typeof updateJob>[1])
+    onSave()
+    setSaving(false)
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-2">
+        {POOL_FIELDS.map(f => (
+          <div key={f.key}>
+            <label className="text-[10px] text-[#8E8E93] font-medium">{f.label}</label>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={values[f.key] ?? ''}
+                onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                placeholder={f.placeholder}
+                className="w-full px-2.5 py-1.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+              />
+              {f.unit && <span className="text-[10px] text-[#8E8E93] shrink-0">{f.unit}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="mt-3 px-4 py-2 rounded-xl text-xs font-bold bg-[#5AC8FA] text-white hover:bg-[#4AB8EA] transition-colors disabled:opacity-50 w-full"
+      >
+        {saving ? 'Saving...' : 'Save Readings'}
+      </button>
+    </div>
+  )
+}
+
+// ── Expense Section ─────────────────────────────────────────────────────
+function ExpenseSection({ jobId, existingTotal, onUpdate }: { jobId: string; existingTotal: number; onUpdate: () => void }) {
+  const [showAdd, setShowAdd] = useState(false)
+  const [desc, setDesc] = useState('')
+  const [amount, setAmount] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [expenses, setExpenses] = useState<Array<{ description: string; amount: number }>>([])
+
+  async function handleAdd() {
+    const amt = parseFloat(amount)
+    if (!desc.trim() || isNaN(amt) || amt <= 0) return
+    setAdding(true)
+
+    const autoApproved = amt < 30
+    const newExpenses = [...expenses, { description: desc, amount: amt }]
+    setExpenses(newExpenses)
+
+    // Update job expenses_total
+    const newTotal = existingTotal + amt
+    await updateJob(jobId, { expenses_total: newTotal } as Parameters<typeof updateJob>[1])
+
+    setDesc('')
+    setAmount('')
+    setShowAdd(false)
+    setAdding(false)
+    onUpdate()
+
+    if (!autoApproved) {
+      alert(`Expense of $${amt.toFixed(2)} requires owner approval (over $30).`)
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-bold text-[#1C1C1E]">💰 Expenses</h2>
+        <button
+          onClick={() => setShowAdd(!showAdd)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#FF9F0A]/15 text-[#CC7F08] hover:bg-[#FF9F0A]/25 transition-all"
+        >
+          + Add Expense
+        </button>
+      </div>
+
+      {expenses.length > 0 && (
+        <div className="space-y-1 mb-3">
+          {expenses.map((exp, i) => (
+            <div key={i} className="flex items-center justify-between p-2 bg-[#F2F2F7] rounded-lg text-xs">
+              <span className="text-[#1C1C1E]">{exp.description}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold">${exp.amount.toFixed(2)}</span>
+                {exp.amount < 30 && <span className="text-[8px] text-[#34C759] font-bold">AUTO ✓</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {existingTotal > 0 && expenses.length === 0 && (
+        <p className="text-xs text-[#8E8E93] mb-2">Total expenses: ${existingTotal.toFixed(2)}</p>
+      )}
+
+      {showAdd && (
+        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="overflow-hidden">
+          <div className="border border-[#E5E5EA] rounded-xl p-3 space-y-2">
+            <input
+              type="text"
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              placeholder="What was it? (e.g. Chlorine)"
+              className="w-full px-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF9F0A]/30"
+            />
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#8E8E93]">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full pl-6 pr-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF9F0A]/30"
+                />
+              </div>
+              <button
+                onClick={handleAdd}
+                disabled={adding || !desc.trim() || !amount}
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-[#FF9F0A] text-white hover:bg-[#E68F09] disabled:opacity-50 transition-colors"
+              >
+                {adding ? '...' : 'Add'}
+              </button>
+              <button
+                onClick={() => { setShowAdd(false); setDesc(''); setAmount('') }}
+                className="px-3 py-2 rounded-lg text-xs text-[#8E8E93] hover:bg-[#F2F2F7]"
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="text-[10px] text-[#8E8E93]">Under $30 = auto-approved. Over $30 requires owner approval.</p>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  )
+}
+
+// ── Main Component ──────────────────────────────────────────────────────
+
 export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -451,45 +657,42 @@ export default function JobDetailPage() {
             )}
           </motion.div>
 
-          {/* Tasks / Checklist — always visible, bold heading */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass rounded-2xl p-5"
-          >
+          {/* Tasks — clickable to complete */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="glass rounded-2xl p-5">
             <h2 className="text-lg font-bold text-[#1C1C1E] mb-3">Tasks</h2>
-            {(() => {
-              const checklistItems = job.checklist_results
-                ? Object.entries(job.checklist_results)
-                : (job.service_checklist_items as string[] ?? []).map((item: string) => [item, false] as const)
+            <TasksList job={job} onUpdate={fetchJob} />
+          </motion.div>
 
-              if (checklistItems.length === 0) {
-                return (
-                  <p className="text-sm text-[#8E8E93] italic">No tasks defined for this service type. Add checklist items in Services to see them here.</p>
-                )
-              }
+          {/* Water Chemistry — for pool services */}
+          {job.service_name?.toLowerCase().includes('pool') && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              className="glass rounded-2xl p-5">
+              <h2 className="text-sm font-bold text-[#1C1C1E] mb-3">💧 Water Chemistry</h2>
+              <WaterChemistryForm jobId={jobId} existingData={job.custom_field_values as Record<string, string> | null} onSave={fetchJob} />
+            </motion.div>
+          )}
 
-              return (
-                <div className="space-y-1.5">
-                  {checklistItems.map(([key, value], i) => {
-                    const done = Boolean(value)
-                    return (
-                      <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#F2F2F7] transition-colors">
-                        <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 ${
-                          done ? 'bg-[#34C759] border-[#34C759]' : 'border-[#D1D1D6]'
-                        }`}>
-                          {done && <span className="text-white text-[10px] font-bold">✓</span>}
-                        </div>
-                        <span className={`text-sm font-medium ${done ? 'text-[#8E8E93] line-through' : 'text-[#1C1C1E]'}`}>
-                          {key}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()}
+          {/* Photos */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="glass rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-[#1C1C1E]">📸 Photos</h2>
+              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#007AFF] text-white hover:bg-[#0066DD] transition-all">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Add Photo
+              </button>
+            </div>
+            <p className="text-xs text-[#8E8E93] italic">Photos will include date, time, and GPS location automatically.</p>
+          </motion.div>
+
+          {/* Expenses */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            className="glass rounded-2xl p-5">
+            <ExpenseSection jobId={jobId} existingTotal={Number(job.expenses_total)} onUpdate={fetchJob} />
           </motion.div>
         </div>
 
