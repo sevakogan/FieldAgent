@@ -393,21 +393,17 @@ function MobileWeekStrip({ days, selectedDate, onDayClick, jobs }: {
 }
 
 // ─── Desktop Month View ──────────────────────────────────────────────
-function MonthView({ jobs, month, year, onDayClick, selectedDate, onJobMove }: {
+function MonthView({ jobs, month, year, onDayClick, selectedDate }: {
   jobs: CalendarJob[]
   month: number
   year: number
   onDayClick: (date: string) => void
   selectedDate: string | null
-  onJobMove?: (jobId: string, newDate: string) => void
 }) {
   const todayKey = getTodayKey()
   const firstDay = new Date(year, month, 1)
   const startPad = firstDay.getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const [dragJob, setDragJob] = useState<CalendarJob | null>(null)
-  const [dropTarget, setDropTarget] = useState<string | null>(null)
-  const [confirmMove, setConfirmMove] = useState<{ job: CalendarJob; newDate: string } | null>(null)
 
   const jobsByDate = useMemo(() => {
     const map = new Map<string, CalendarJob[]>()
@@ -423,113 +419,80 @@ function MonthView({ jobs, month, year, onDayClick, selectedDate, onJobMove }: {
     return arr
   }, [startPad, daysInMonth])
 
-  const handleDrop = (dateKey: string) => {
-    if (!dragJob || dragJob.scheduled_date === dateKey) { setDragJob(null); setDropTarget(null); return }
-    setConfirmMove({ job: dragJob, newDate: dateKey })
-    setDragJob(null)
-    setDropTarget(null)
-  }
-
-  const confirmMoveAction = async () => {
-    if (!confirmMove || !onJobMove) return
-    await onJobMove(confirmMove.job.id, confirmMove.newDate)
-    setConfirmMove(null)
-  }
-
   return (
-    <>
-      <div className="rounded-2xl overflow-hidden" style={{
-        background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.4)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.5)',
-      }}>
-        <div className="grid grid-cols-7 border-b border-[#E5E5EA]/30">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-            <div key={d} className="py-2.5 text-center text-[10px] font-bold text-[#AEAEB2] uppercase tracking-widest">{d}</div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7">
-          {cells.map((day, i) => {
-            if (day === null) return <div key={i} className="min-h-[100px] border-r border-b border-[#E5E5EA]/15 bg-[#F9F9FB]/30" />
-            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-            const isToday = dateKey === todayKey
-            const isSelected = dateKey === selectedDate
-            const isDrop = dropTarget === dateKey
-            const dayJobs = jobsByDate.get(dateKey) ?? []
-
-            return (
-              <div
-                key={i}
-                onClick={() => onDayClick(dateKey)}
-                onDragOver={(e) => { e.preventDefault(); setDropTarget(dateKey) }}
-                onDragLeave={() => setDropTarget(null)}
-                onDrop={() => handleDrop(dateKey)}
-                className={`min-h-[100px] p-1.5 border-r border-b border-[#E5E5EA]/15 text-left transition-all cursor-pointer hover:bg-[#007AFF]/[0.02] ${
-                  isSelected ? 'bg-[#007AFF]/[0.04]' : ''
-                } ${isDrop ? 'bg-[#007AFF]/[0.08] ring-2 ring-[#007AFF]/20 ring-inset' : ''}`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className={`text-xs font-semibold inline-flex items-center justify-center ${
-                    isToday ? 'w-7 h-7 rounded-full bg-[#007AFF] text-white shadow-md shadow-[#007AFF]/25' : 'text-[#1C1C1E]'
-                  }`}>{day}</span>
-                  {dayJobs.length > 0 && (
-                    <span className="text-[8px] text-[#AEAEB2] font-medium">{dayJobs.length} job{dayJobs.length > 1 ? 's' : ''}</span>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  {dayJobs.slice(0, 3).map(j => (
-                    <JobPill key={j.id} job={j} onDragStart={setDragJob} />
-                  ))}
-                  {dayJobs.length > 3 && (
-                    <p className="text-[8px] text-[#8E8E93] pl-1 font-medium">+{dayJobs.length - 3} more</p>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+    <div className="rounded-3xl overflow-hidden" style={{
+      background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(24px)',
+      border: '1px solid rgba(255,255,255,0.5)',
+      boxShadow: '0 12px 40px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.6)',
+    }}>
+      {/* Day headers */}
+      <div className="grid grid-cols-7 border-b border-[#E5E5EA]/20 px-2 pt-3 pb-2">
+        {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
+          <div key={d} className="text-center text-[10px] font-bold text-[#C7C7CC] tracking-widest">{d}</div>
+        ))}
       </div>
 
-      {/* Confirm move modal */}
-      <AnimatePresence>
-        {confirmMove && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-sm rounded-2xl p-5"
-              style={{
-                background: 'rgba(255,255,255,0.85)',
-                backdropFilter: 'blur(40px)',
-                border: '1px solid rgba(255,255,255,0.5)',
-                boxShadow: '0 16px 48px rgba(0,0,0,0.12)',
-              }}
+      {/* Day cells */}
+      <div className="grid grid-cols-7 gap-[1px] p-2">
+        {cells.map((day, i) => {
+          if (day === null) return <div key={i} className="min-h-[88px]" />
+
+          const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const isToday = dateKey === todayKey
+          const isSelected = dateKey === selectedDate
+          const dayJobs = jobsByDate.get(dateKey) ?? []
+          const jobCount = dayJobs.length
+          const isPast = new Date(dateKey + 'T23:59:59') < new Date(getTodayKey() + 'T00:00:00')
+
+          return (
+            <motion.button
+              key={i}
+              onClick={() => onDayClick(dateKey)}
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              className={`min-h-[88px] rounded-2xl flex flex-col items-center justify-start pt-2 pb-1.5 transition-all relative ${
+                isSelected
+                  ? 'bg-[#007AFF]/8 ring-1 ring-[#007AFF]/20'
+                  : isToday
+                    ? 'bg-white'
+                    : isPast && jobCount === 0
+                      ? 'bg-[#F9F9FB]/40'
+                      : 'bg-white/50 hover:bg-white/80'
+              }`}
+              style={isToday ? {
+                boxShadow: '0 4px 16px rgba(0,122,255,0.10), 0 1px 4px rgba(0,0,0,0.04)',
+              } : jobCount > 0 ? {
+                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+              } : undefined}
             >
-              <h3 className="text-sm font-bold text-[#1C1C1E] mb-2">Move Job?</h3>
-              <p className="text-xs text-[#8E8E93] mb-4">
-                Move <strong>{confirmMove.job.service_name}</strong> to{' '}
-                <strong>{new Date(confirmMove.newDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</strong>?
-              </p>
-              <div className="flex gap-2">
-                <button onClick={confirmMoveAction}
-                  className="flex-1 py-2.5 bg-[#007AFF] text-white rounded-xl text-xs font-semibold hover:bg-[#0066DD] transition-colors">
-                  Move Job
-                </button>
-                <button onClick={() => setConfirmMove(null)}
-                  className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-xs font-semibold hover:bg-[#E5E5EA] transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+              {/* Date number */}
+              <span className={`text-sm font-semibold ${
+                isPast && jobCount === 0 ? 'text-[#D1D1D6]' : 'text-[#1C1C1E]'
+              }`}>{day}</span>
+
+              {/* Job count — big colored number */}
+              {jobCount > 0 && (
+                <span className={`text-2xl font-bold mt-0.5 leading-none ${
+                  jobCount >= 6 ? 'text-[#FF3B30]' : jobCount >= 3 ? 'text-[#FF9F0A]' : 'text-[#34C759]'
+                }`}>{jobCount}</span>
+              )}
+
+              {/* Today indicator */}
+              {isToday && (
+                <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#007AFF] shadow-sm shadow-[#007AFF]/30" />
+              )}
+            </motion.button>
+          )
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center justify-end gap-4 px-4 pb-3">
+        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#34C759]" /><span className="text-[9px] text-[#8E8E93]">1–2</span></div>
+        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF9F0A]" /><span className="text-[9px] text-[#8E8E93]">3–5</span></div>
+        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF3B30]" /><span className="text-[9px] text-[#8E8E93]">6+</span></div>
+      </div>
+    </div>
   )
 }
 
@@ -704,12 +667,16 @@ export default function CalendarPage() {
         <div className="flex items-center gap-3">
           {/* View toggle */}
           <div className="flex bg-[#F2F2F7] rounded-xl p-0.5">
-            {(['month', 'week', 'day'] as const).map(mode => (
-              <button key={mode} onClick={() => setViewMode(mode)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
-                  viewMode === mode ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93] hover:text-[#3C3C43]'
+            {([
+              { key: 'month' as const, label: 'Month' },
+              { key: 'week' as const, label: 'Week' },
+              { key: 'day' as const, label: 'Day' },
+            ]).map(({ key, label }) => (
+              <button key={key} onClick={() => setViewMode(key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  viewMode === key ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93] hover:text-[#3C3C43]'
                 }`}>
-                {mode}
+                {label}
               </button>
             ))}
           </div>
@@ -776,8 +743,7 @@ export default function CalendarPage() {
             <motion.div key="month" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {/* Desktop month */}
               <div className="hidden md:block">
-                <MonthView jobs={jobs} month={month} year={year} onDayClick={handleDayClick} selectedDate={selectedDate}
-                  onJobMove={async (jobId, newDate) => { await updateJob(jobId, { scheduled_date: newDate }); fetchJobs() }} />
+                <MonthView jobs={jobs} month={month} year={year} onDayClick={handleDayClick} selectedDate={selectedDate} />
               </div>
               {/* Mobile month */}
               <div className="md:hidden space-y-4">
