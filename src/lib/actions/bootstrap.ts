@@ -6,6 +6,12 @@ import type { Company, User } from '@/types/database'
 const SYSTEM_EMAIL = 'admin@kleanhq.local'
 const SYSTEM_PASSWORD = 'KleanHQ-Admin-2026!'
 
+// In-memory cache to avoid repeated DB lookups on every server action
+let cachedCompanyId: string | null = null
+let cachedOwnerId: string | null = null
+let cacheTime = 0
+const CACHE_TTL = 60_000 // 1 minute
+
 export async function getOrCreateCompany(): Promise<{ company: Company; user: User }> {
   const supabase = createAdminClient()
 
@@ -17,6 +23,9 @@ export async function getOrCreateCompany(): Promise<{ company: Company; user: Us
     .single()
 
   if (existingCompany) {
+    cachedCompanyId = existingCompany.id
+    cachedOwnerId = existingCompany.owner_id
+    cacheTime = Date.now()
     const { data: user } = await supabase
       .from('users')
       .select('*')
@@ -110,11 +119,14 @@ export async function getCompanyId(): Promise<string> {
   const viewAsId = await getViewAsCompanyId()
   if (viewAsId) return viewAsId
 
+  // Use cache if fresh
+  if (cachedCompanyId && Date.now() - cacheTime < CACHE_TTL) return cachedCompanyId
   const { company } = await getOrCreateCompany()
   return company.id
 }
 
 export async function getOwnerId(): Promise<string> {
+  if (cachedOwnerId && Date.now() - cacheTime < CACHE_TTL) return cachedOwnerId
   const { user } = await getOrCreateCompany()
   return user.id
 }

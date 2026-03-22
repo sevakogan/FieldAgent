@@ -190,18 +190,17 @@ function WaterChemistryForm({ jobId, existingData, allCustomFields, onCollapse }
 
   return (
     <div>
-      <div className="space-y-1.5">
+      <div className="grid grid-cols-3 gap-2">
         {POOL_FIELDS.map(f => (
-          <div key={f.key} className="flex items-center gap-2">
-            <span className="text-[10px] text-[#8E8E93] w-20 shrink-0 text-right">{f.label}</span>
+          <div key={f.key}>
+            <label className="text-[9px] text-[#8E8E93] mb-0.5 block">{f.label}{f.unit ? ` (${f.unit})` : ''}</label>
             <input
               type="text"
               value={values[f.key] ?? ''}
               onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
               placeholder={f.placeholder}
-              className="flex-1 px-2 py-1 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#5AC8FA]/40 max-w-[100px]"
+              className="w-full px-2 py-1.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#5AC8FA]/40"
             />
-            {f.unit && <span className="text-[9px] text-[#C7C7CC] w-6">{f.unit}</span>}
           </div>
         ))}
       </div>
@@ -286,41 +285,38 @@ function ExpenseSection({ jobId, existingTotal, existingExpenses, allCustomField
 
       {showAdd && (
         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="overflow-hidden">
-          <div className="border border-[#E5E5EA] rounded-xl p-3 space-y-2">
+          <div className="flex items-center gap-1.5 mt-1">
             <input
               type="text"
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              placeholder="What was it? (e.g. Chlorine)"
-              className="w-full px-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF9F0A]/30"
+              placeholder="Item"
+              className="flex-1 min-w-0 px-2.5 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF9F0A]/30"
             />
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#8E8E93]">$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full pl-6 pr-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF9F0A]/30"
-                />
-              </div>
-              <button
-                onClick={handleAdd}
-                disabled={adding || !desc.trim() || !amount}
-                className="px-4 py-2 rounded-lg text-xs font-bold bg-[#FF9F0A] text-white hover:bg-[#E68F09] disabled:opacity-50 transition-colors"
-              >
-                {adding ? '...' : 'Add'}
-              </button>
-              <button
-                onClick={() => { setShowAdd(false); setDesc(''); setAmount('') }}
-                className="px-3 py-2 rounded-lg text-xs text-[#8E8E93] hover:bg-[#F2F2F7]"
-              >
-                Cancel
-              </button>
+            <div className="relative w-20 shrink-0">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-[#8E8E93]">$</span>
+              <input
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0"
+                className="w-full pl-5 pr-1 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF9F0A]/30"
+              />
             </div>
-            <p className="text-[10px] text-[#8E8E93]">Under $30 = auto-approved. Over $30 requires owner approval.</p>
+            <button
+              onClick={handleAdd}
+              disabled={adding || !desc.trim() || !amount}
+              className="px-3 py-2 rounded-lg text-xs font-bold bg-[#FF9F0A] text-white hover:bg-[#E68F09] disabled:opacity-50 transition-colors shrink-0"
+            >
+              {adding ? '...' : 'Add'}
+            </button>
+            <button
+              onClick={() => { setShowAdd(false); setDesc(''); setAmount('') }}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[#8E8E93] hover:bg-[#F2F2F7] shrink-0"
+            >
+              ✕
+            </button>
           </div>
         </motion.div>
       )}
@@ -473,10 +469,13 @@ export default function JobDetailPage() {
 
   return (
     <div>
-      <Link href="/dashboard/jobs" className="text-[#007AFF] text-sm mb-2 inline-block">&larr; Jobs</Link>
-
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">Job Details</h1>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/jobs" className="w-8 h-8 rounded-xl bg-[#F2F2F7] flex items-center justify-center hover:bg-[#E5E5EA] transition-colors shrink-0">
+            <svg className="w-4 h-4 text-[#1C1C1E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          </Link>
+          <h1 className="text-xl font-bold text-[#1C1C1E]">Job Details</h1>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           {primaryAction && !isTerminal && (
             <Button
@@ -739,9 +738,16 @@ export default function JobDetailPage() {
           <CollapsibleCard title="Photos" icon="📸" delay={0.2}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-[#8E8E93]">Date, time & GPS auto-captured</p>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#007AFF] text-white hover:bg-[#0066DD] transition-all">
+              <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#007AFF] text-white hover:bg-[#0066DD] transition-all cursor-pointer">
                 + Add Photo
-              </button>
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    // TODO: Upload to Supabase storage
+                    alert(`Photo "${file.name}" selected (${(file.size / 1024).toFixed(0)}KB). Upload coming soon.`)
+                  }
+                }} />
+              </label>
             </div>
           </CollapsibleCard>
 

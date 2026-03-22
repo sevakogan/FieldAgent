@@ -104,38 +104,38 @@ const IconChevron = ({ open }: { open: boolean }) => (
 
 // ─── Smaller icons for mobile tab bar ────────────────────────────────
 function TabIcon({ name, active }: { name: string; active: boolean }) {
-  const color = active ? '#007AFF' : '#1C1C1E'
-  const sw = 1.8
+  const color = active ? '#007AFF' : '#8E8E93'
+  const fill = active ? '#007AFF' : 'none'
 
   switch (name) {
     case 'overview':
       return (
-        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="10" width="4" height="10" rx="1" /><rect x="10" y="4" width="4" height="16" rx="1" /><rect x="16" y="8" width="4" height="12" rx="1" />
+        <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={active ? 0 : 1.5} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />{!active && <polyline points="9 22 9 12 15 12 15 22" />}
         </svg>
       )
     case 'calendar':
       return (
-        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+        <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill={active ? color : 'none'} stroke={active ? 'none' : color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="3" fill={active ? color : 'none'} /><path d="M16 2v4M8 2v4" stroke={active ? 'white' : color} strokeWidth={1.5} /><path d="M3 10h18" stroke={active ? 'white' : color} strokeWidth={1.5} />
         </svg>
       )
     case 'jobs':
       return (
-        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+        <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill={fill} stroke={active ? 'none' : color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
           <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
         </svg>
       )
     case 'clients':
       return (
-        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+        <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill={fill} stroke={active ? 'none' : color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
         </svg>
       )
     case 'more':
       return (
-        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="19" r="1.5" />
+        <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5}>
+          <circle cx="12" cy="5" r="1" fill={color} /><circle cx="12" cy="12" r="1" fill={color} /><circle cx="12" cy="19" r="1" fill={color} />
         </svg>
       )
     default:
