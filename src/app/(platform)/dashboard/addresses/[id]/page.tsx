@@ -467,34 +467,24 @@ export default function AddressDetailPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs text-[#8E8E93] mb-1">Service Type</label>
-                    <div className="space-y-1.5">
+                    <div className="flex flex-wrap gap-1">
                       {availableServices.length === 0 ? (
-                        <p className="text-xs text-[#8E8E93] py-2">All services already assigned</p>
+                        <p className="text-[10px] text-[#8E8E93] py-1">All services assigned</p>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                          {availableServices.map(svc => (
-                            <button
-                              key={svc.id}
-                              type="button"
-                              onClick={() => handleServiceTypeChange(svc.id)}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all ${
-                                addSvcTypeId === svc.id
-                                  ? 'bg-[#007AFF]/10 border-[#007AFF] border ring-1 ring-[#007AFF]/20'
-                                  : 'bg-[#F2F2F7]/60 border border-transparent hover:bg-[#E5E5EA]/60'
-                              }`}
-                            >
-                              <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                addSvcTypeId === svc.id ? 'border-[#007AFF]' : 'border-[#C7C7CC]'
-                              }`}>
-                                {addSvcTypeId === svc.id && <span className="w-2 h-2 rounded-full bg-[#007AFF]" />}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-[#1C1C1E] truncate">{svc.name}</p>
-                                <p className="text-[10px] text-[#8E8E93]">${Number(svc.default_price).toFixed(2)}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
+                        availableServices.map(svc => (
+                          <button
+                            key={svc.id}
+                            type="button"
+                            onClick={() => handleServiceTypeChange(svc.id)}
+                            className={`px-2.5 py-1 rounded-xl text-[11px] transition-all ${
+                              addSvcTypeId === svc.id
+                                ? 'bg-[#007AFF] text-white font-semibold shadow-sm'
+                                : 'bg-[#F2F2F7]/80 text-[#3C3C43] hover:bg-[#E5E5EA]'
+                            }`}
+                          >
+                            {svc.name} <span className="opacity-60">${Number(svc.default_price).toFixed(0)}</span>
+                          </button>
+                        ))
                       )}
                     </div>
                   </div>
