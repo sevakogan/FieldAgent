@@ -63,19 +63,20 @@ export default function CalendarPage() {
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [confirmMove, setConfirmMove] = useState<{ job: CalendarJob; newDate: string } | null>(null)
   const [moving, setMoving] = useState(false)
-  const [weekCount, setWeekCount] = useState(3) // 1, 2, 3, or 4 weeks
+  const [weekCount, setWeekCount] = useState(3)
+  const [weekOffset, setWeekOffset] = useState(0) // 0 = starting from this week
 
-  // Current week always first, additional weeks go AFTER
+  // Current week + offset, additional weeks go AFTER
   const days = useMemo(() => {
     const today = new Date()
     const thisWeekSunday = new Date(today)
-    thisWeekSunday.setDate(today.getDate() - today.getDay())
+    thisWeekSunday.setDate(today.getDate() - today.getDay() + (weekOffset * 7))
     return Array.from({ length: weekCount * 7 }, (_, i) => {
       const d = new Date(thisWeekSunday)
       d.setDate(thisWeekSunday.getDate() + i)
       return d
     })
-  }, [weekCount])
+  }, [weekCount, weekOffset])
 
   const todayKey = getTodayKey()
   const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: PACIFIC_TZ })
@@ -172,9 +173,18 @@ export default function CalendarPage() {
               </button>
             ))}
           </div>
-          <button onClick={() => setSelectedDate(todayKey)}
+          {/* Navigation */}
+          <button onClick={() => setWeekOffset(w => w - 1)}
+            className="w-8 h-8 rounded-lg hover:bg-[#F2F2F7] flex items-center justify-center transition-colors">
+            <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
+          <button onClick={() => { setWeekOffset(0); setSelectedDate(todayKey) }}
             className="px-3 py-1.5 bg-[#007AFF] text-white rounded-xl text-xs font-semibold hover:bg-[#0066DD] transition-colors">
             Today
+          </button>
+          <button onClick={() => setWeekOffset(w => w + 1)}
+            className="w-8 h-8 rounded-lg hover:bg-[#F2F2F7] flex items-center justify-center transition-colors">
+            <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="9 18 15 12 9 6" /></svg>
           </button>
           <Link href="/dashboard/jobs/new"
             className="px-4 py-2 bg-[#1C1C1E] text-white rounded-2xl text-xs font-semibold hover:bg-[#3C3C43] transition-colors">
@@ -413,13 +423,21 @@ export default function CalendarPage() {
                 background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(40px)',
                 border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)',
               }}>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-2xl">{getServiceIcon(confirmMove.job.service_name)}</span>
-                <div>
-                  <h3 className="text-sm font-bold text-[#1C1C1E]">Move Job?</h3>
-                  <p className="text-xs text-[#8E8E93]">{confirmMove.job.service_name}</p>
+              <h3 className="text-sm font-bold text-[#1C1C1E] mb-3">Move Job?</h3>
+              {/* Job details — same as hover tooltip */}
+              <div className="rounded-2xl p-3 mb-3" style={{ backgroundColor: getColor(confirmMove.job.service_name).light, borderLeft: `3px solid ${getColor(confirmMove.job.service_name).bg}` }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-base">{getServiceIcon(confirmMove.job.service_name)}</span>
+                  <span className="text-sm font-bold text-[#1C1C1E]">{confirmMove.job.service_name}</span>
                 </div>
+                <p className="text-[11px] text-[#636366] flex items-center gap-1">👤 {confirmMove.job.client_name ?? 'Unknown'}</p>
+                <p className="text-[11px] text-[#636366] flex items-center gap-1">📍 {confirmMove.job.address_street}</p>
+                <p className="text-[11px] text-[#636366] flex items-center gap-1">🕐 {fmtTime(confirmMove.job.scheduled_time)}</p>
+                {confirmMove.job.price != null && (
+                  <p className="text-sm font-bold text-[#34C759] mt-1">${Number(confirmMove.job.price).toFixed(0)}</p>
+                )}
               </div>
+              {/* Date change arrow */}
               <div className="flex items-center gap-2 mb-4 text-xs text-[#636366]">
                 <span className="px-2 py-1 bg-[#F2F2F7] rounded-lg font-medium">
                   {new Date(confirmMove.job.scheduled_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
