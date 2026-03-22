@@ -261,8 +261,9 @@ function WaterChemistryForm({ jobId, existingData, allCustomFields, onCollapse }
                 value={values[f.key] ?? ''}
                 onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
                 placeholder={f.placeholder}
-                className="w-full px-1.5 py-1 bg-[#F2F2F7] rounded-lg text-[11px] text-center font-medium focus:outline-none focus:ring-1 focus:ring-[#5AC8FA]/40"
-                style={status ? { borderBottom: `2px solid ${CHEM_COLORS[status]}` } : { border: '1px solid #E5E5EA' }}
+                className={`w-full px-1.5 py-1 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-[11px] text-center font-medium focus:outline-none focus:ring-1 focus:ring-[#5AC8FA]/40 ${
+                  status === 'bad' ? 'text-[#FF3B30] font-bold' : status === 'warn' ? 'text-[#FF9F0A] font-bold' : status === 'good' ? 'text-[#34C759]' : ''
+                }`}
               />
             </div>
           )
@@ -465,6 +466,8 @@ export default function JobDetailPage() {
   const [cancelRescheduleDate, setCancelRescheduleDate] = useState('')
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
   const [waterChemOpen, setWaterChemOpen] = useState(true)
+  const [showClientPopup, setShowClientPopup] = useState(false)
+  const [showAddressPopup, setShowAddressPopup] = useState(false)
 
   // Edit state
   const [editPrice, setEditPrice] = useState('')
@@ -644,16 +647,8 @@ export default function JobDetailPage() {
               border: '1px solid rgba(0,122,255,0.08)',
             }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-[#1C1C1E]">Details</h2>
-              {!editing && !isTerminal && (
-                <button
-                  onClick={handleStartEditing}
-                  className="text-[#007AFF] text-sm font-medium hover:underline"
-                >
-                  Edit
-                </button>
-              )}
+            <div className="mb-3">
+              <h2 className="text-xs font-bold text-[#8E8E93] uppercase tracking-wider">Details</h2>
             </div>
 
             {editing ? (
@@ -818,50 +813,42 @@ export default function JobDetailPage() {
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
-                {/* Client — name + phone prominent */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5AC8FA] to-[#007AFF] flex items-center justify-center text-white text-[10px] font-bold">
-                      {(job.client_name ?? 'C').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#1C1C1E]">{job.client_name ?? 'Client'}</p>
-                      {job.client_phone && (
-                        <a href={`tel:${job.client_phone}`} className="text-[11px] text-[#007AFF]">{job.client_phone}</a>
-                      )}
-                    </div>
+              <div className="space-y-2.5">
+                {/* Client row — avatar + name + phone + view button */}
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5AC8FA] to-[#007AFF] flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                    {(job.client_name ?? 'C').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#1C1C1E] truncate">{job.client_name ?? 'Client'}</p>
+                    {job.client_phone && <p className="text-[10px] text-[#8E8E93]">{job.client_phone}</p>}
+                  </div>
+                  <button onClick={() => setShowClientPopup(true)} className="px-2 py-1 rounded-lg text-[10px] font-medium text-[#007AFF] bg-[#007AFF]/8 hover:bg-[#007AFF]/15 transition-all">View</button>
                   {job.client_phone && (
-                    <a href={`tel:${job.client_phone}`}
-                      className="w-9 h-9 rounded-xl bg-[#34C759] flex items-center justify-center shadow-md shadow-[#34C759]/30 hover:bg-[#2DB84E] active:scale-90 transition-all">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
+                    <a href={`tel:${job.client_phone}`} className="w-8 h-8 rounded-xl bg-[#34C759] flex items-center justify-center shadow-sm hover:bg-[#2DB84E] active:scale-90 transition-all shrink-0">
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                     </a>
                   )}
                 </div>
 
-                {/* Address — tap to open maps */}
-                <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-2.5 rounded-xl bg-[#F2F2F7] hover:bg-[#E5E5EA] transition-colors group">
-                  <span className="text-base">📍</span>
-                  <span className="text-xs text-[#1C1C1E] font-medium flex-1 truncate group-hover:text-[#007AFF]">{fullAddress}</span>
-                  <svg className="w-3.5 h-3.5 text-[#C7C7CC] group-hover:text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                </a>
+                {/* Address row — tap address for maps, view button for property popup */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">📍</span>
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-[#007AFF] font-medium flex-1 truncate hover:underline">{fullAddress}</a>
+                  <button onClick={() => setShowAddressPopup(true)} className="px-2 py-1 rounded-lg text-[10px] font-medium text-[#007AFF] bg-[#007AFF]/8 hover:bg-[#007AFF]/15 transition-all shrink-0">View</button>
+                </div>
 
-                {/* Job type pill + date + worker */}
+                {/* Job pill + date/time + worker — single compact row */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-3 py-1 rounded-xl text-[11px] font-bold bg-gradient-to-r from-[#5AC8FA]/20 to-[#007AFF]/20 text-[#007AFF] border border-[#007AFF]/15">
-                    {job.service_name}
-                  </span>
-                  <span className="text-[11px] text-[#636366]">
+                  <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-[#007AFF]/10 text-[#007AFF]">{job.service_name}</span>
+                  <span className="text-[10px] text-[#636366]">
                     {new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     {job.scheduled_time ? ` · ${job.scheduled_time}` : ''}
                   </span>
+                  <span className="text-[10px] text-[#8E8E93]">· 👷 {job.worker_name ?? 'You'}</span>
                 </div>
-                <div className="text-[11px] text-[#8E8E93]">👷 {job.worker_name ?? 'You'}</div>
               </div>
             )}
           </motion.div>
@@ -1073,6 +1060,72 @@ export default function JobDetailPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* ── Client Popup ── */}
+      <AnimatePresence>
+        {showClientPopup && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4" onClick={() => setShowClientPopup(false)}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(40px)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-[#1C1C1E]">Client</h3>
+                <button onClick={() => setShowClientPopup(false)} className="w-7 h-7 rounded-full bg-[#F2F2F7] flex items-center justify-center text-xs text-[#8E8E93]">✕</button>
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#5AC8FA] to-[#007AFF] flex items-center justify-center text-white text-sm font-bold">
+                  {(job.client_name ?? 'C').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-[#1C1C1E]">{job.client_name ?? 'Unknown'}</p>
+                  {job.client_phone && <a href={`tel:${job.client_phone}`} className="text-sm text-[#007AFF]">{job.client_phone}</a>}
+                </div>
+              </div>
+              {job.client_phone && (
+                <a href={`tel:${job.client_phone}`} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#34C759] text-white text-sm font-bold hover:bg-[#2DB84E] transition-all mb-2">
+                  📞 Call
+                </a>
+              )}
+              <Link href={`/dashboard/clients`} onClick={() => setShowClientPopup(false)}
+                className="flex items-center justify-center w-full py-2 rounded-xl bg-[#F2F2F7] text-[#007AFF] text-xs font-medium hover:bg-[#E5E5EA] transition-all">
+                Open Full Profile →
+              </Link>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Address/Property Popup ── */}
+      <AnimatePresence>
+        {showAddressPopup && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4" onClick={() => setShowAddressPopup(false)}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(40px)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-[#1C1C1E]">Property</h3>
+                <button onClick={() => setShowAddressPopup(false)} className="w-7 h-7 rounded-full bg-[#F2F2F7] flex items-center justify-center text-xs text-[#8E8E93]">✕</button>
+              </div>
+              <div className="space-y-2 mb-4">
+                <p className="text-sm font-semibold text-[#1C1C1E]">{fullAddress}</p>
+                <p className="text-xs text-[#8E8E93]">Client: {job.client_name ?? 'Unknown'}</p>
+                <p className="text-xs text-[#8E8E93]">Service: {job.service_name}</p>
+              </div>
+              <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-bold hover:bg-[#0066DD] transition-all mb-2">
+                📍 Navigate
+              </a>
+              <Link href={`/dashboard/addresses`} onClick={() => setShowAddressPopup(false)}
+                className="flex items-center justify-center w-full py-2 rounded-xl bg-[#F2F2F7] text-[#007AFF] text-xs font-medium hover:bg-[#E5E5EA] transition-all">
+                View Property Details →
+              </Link>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Action Buttons (inline at bottom, mobile) ── */}
       {!isTerminal && (
