@@ -190,8 +190,7 @@ export default function CalendarPage() {
             background: 'rgba(255,255,255,0.5)', boxShadow: '0 4px 24px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.4)',
           }}>
           {weeks.map((week, wi) => (
-            <div key={wi} className={wi > 0 ? 'mt-4' : ''}>
-              <p className="text-[10px] font-bold text-[#AEAEB2] uppercase tracking-widest mb-2 px-1">{week.label}</p>
+            <div key={wi}>
               <div className="grid grid-cols-7 gap-1.5">
                 {wi === 0 && (
                   // Day headers only on first week
@@ -245,29 +244,29 @@ export default function CalendarPage() {
                             className={`text-xl font-bold mt-0.5 leading-none ${
                               count >= 6 ? 'text-[#FF3B30]' : count >= 3 ? 'text-[#FF9F0A]' : 'text-[#34C759]'
                             }`}>{count}</motion.span>
-                          {/* Job mini-cards inside the cell */}
-                          <div className="w-full px-1 mt-1 space-y-0.5">
-                            {dayJobs.slice(0, 2).map(j => {
+                          {/* Job dots + client name */}
+                          <div className="w-full px-1 mt-1 space-y-[2px]">
+                            {dayJobs.slice(0, 3).map(j => {
                               const c = getColor(j.service_name)
                               return (
-                                <div key={j.id} className="flex items-center gap-1 rounded-lg px-1 py-0.5"
-                                  style={{ backgroundColor: c.light }}>
-                                  {j.worker_name ? (
-                                    <span className="w-3 h-3 rounded-full text-white text-[6px] font-bold flex items-center justify-center shrink-0"
-                                      style={{ backgroundColor: c.bg }}>
-                                      {j.worker_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                                    </span>
-                                  ) : (
-                                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: c.bg }} />
-                                  )}
-                                  <span className="text-[7px] font-semibold truncate" style={{ color: c.text }}>
-                                    {j.client_name?.split(' ')[0] ?? j.service_name.split(' ')[0]}
+                                <div key={j.id} className="flex items-center gap-1 group/job relative">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.bg }} />
+                                  <span className="text-[8px] font-medium truncate text-[#636366]">
+                                    {j.client_name?.split(' ')[0]?.toLowerCase() ?? j.service_name.split(' ')[0]?.toLowerCase()}
                                   </span>
+                                  {/* Hover tooltip */}
+                                  <div className="absolute z-50 bottom-full left-0 mb-1 w-44 rounded-xl p-2 pointer-events-none opacity-0 group-hover/job:opacity-100 transition-opacity"
+                                    style={{ background: 'rgba(28,28,30,0.92)', backdropFilter: 'blur(12px)' }}>
+                                    <p className="text-[10px] text-white font-bold">{j.client_name ?? 'Unknown'}</p>
+                                    <p className="text-[9px] text-white/60">{j.address_street}</p>
+                                    <p className="text-[9px] text-white/60">{j.service_name} · {fmtTime(j.scheduled_time)}</p>
+                                    {j.price != null && <p className="text-[10px] text-[#34C759] font-bold mt-0.5">${Number(j.price).toFixed(0)}</p>}
+                                  </div>
                                 </div>
                               )
                             })}
-                            {count > 2 && (
-                              <p className="text-[7px] text-[#8E8E93] text-center font-medium">+{count - 2}</p>
+                            {count > 3 && (
+                              <p className="text-[7px] text-[#AEAEB2] text-center">+{count - 3}</p>
                             )}
                           </div>
                         </>
