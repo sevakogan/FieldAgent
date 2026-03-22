@@ -65,15 +65,14 @@ export default function CalendarPage() {
   const [moving, setMoving] = useState(false)
   const [weekCount, setWeekCount] = useState(3) // 1, 2, 3, or 4 weeks
 
+  // Current week always first, additional weeks go AFTER
   const days = useMemo(() => {
     const today = new Date()
-    const start = new Date(today)
-    // Center today: go back enough weeks so today is in the middle
-    const weeksBack = Math.floor(weekCount / 2)
-    start.setDate(today.getDate() - today.getDay() - (weeksBack * 7))
+    const thisWeekSunday = new Date(today)
+    thisWeekSunday.setDate(today.getDate() - today.getDay())
     return Array.from({ length: weekCount * 7 }, (_, i) => {
-      const d = new Date(start)
-      d.setDate(start.getDate() + i)
+      const d = new Date(thisWeekSunday)
+      d.setDate(thisWeekSunday.getDate() + i)
       return d
     })
   }, [weekCount])
@@ -83,15 +82,17 @@ export default function CalendarPage() {
   const rangeLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[days.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
 
   const now = new Date()
-  const fetchJobs = useCallback(async () => {
-    setLoading(true)
+  const initialLoadDone = useState(false)
+  const fetchJobs = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setLoading(true)
     const result = await getCalendarJobs(now.getFullYear(), now.getMonth())
     if (result.success && result.data) setJobs(result.data as CalendarJob[])
-    setLoading(false)
+    if (showSpinner) setLoading(false)
+    if (!initialLoadDone[0]) { initialLoadDone[1](true); setLoading(false) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => { fetchJobs() }, [fetchJobs])
+  useEffect(() => { fetchJobs(true) }, [fetchJobs])
 
   const jobsByDate = useMemo(() => {
     const map = new Map<string, CalendarJob[]>()
@@ -115,7 +116,10 @@ export default function CalendarPage() {
     if (!confirmMove) return
     setMoving(true)
     await updateJob(confirmMove.job.id, { scheduled_date: confirmMove.newDate })
-    await fetchJobs()
+    // Optimistic: move the job in local state immediately
+    setJobs(prev => prev.map(j => j.id === confirmMove.job.id ? { ...j, scheduled_date: confirmMove.newDate } : j))
+    // Background refresh for consistency
+    fetchJobs()
     setConfirmMove(null)
     setMoving(false)
   }
@@ -368,8 +372,8 @@ export default function CalendarPage() {
                               <button
                                 onClick={async (e) => {
                                   e.stopPropagation()
-                                  await duplicateJob(job.id)
-                                  await fetchJobs()
+                                  const result = await duplicateJob(job.id)
+                                  if (result.success) fetchJobs() // silent refresh, no spinner
                                 }}
                                 title="Duplicate job"
                                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#007AFF]/10 text-[#8E8E93] hover:text-[#007AFF] transition-colors"
