@@ -26,3 +26,4 @@ export { RadioGroup } from './RadioGroup';
 export { ProgressBar } from './ProgressBar';
 export { Stat } from './Stat';
 export { default as PasswordGate } from './PasswordGate';
+export { TimelineView } from './TimelineView';

@@ -7,6 +7,8 @@ import Link from 'next/link'
 import { getJobs, updateJobStatus, type JobRow } from '@/lib/actions/jobs'
 import { StatusBadge } from '@/components/platform/Badge'
 import { Button } from '@/components/platform/Button'
+import { SegmentedControl } from '@/components/platform/SegmentedControl'
+import { TimelineView } from '@/components/platform/TimelineView'
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -379,6 +381,7 @@ export default function JobsPage() {
   const [startingJobId, setStartingJobId] = useState<string | null>(null)
   const [weekOffset, setWeekOffset] = useState(0)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list')
   const dayRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const days = useMemo(() => get7DayRange(weekOffset), [weekOffset])
@@ -444,6 +447,25 @@ export default function JobsPage() {
     return groups
   }, [filtered])
 
+  // Jobs for the timeline view: filtered by search + status but scoped to visible week
+  const timelineJobs = useMemo(() => {
+    const dayKeys = new Set(days.map(formatDateKey))
+    return jobs.filter((j) => {
+      if (!dayKeys.has(j.scheduled_date)) return false
+      if (search) {
+        const q = search.toLowerCase()
+        const matchesSearch =
+          j.address_street.toLowerCase().includes(q) ||
+          j.address_city.toLowerCase().includes(q) ||
+          j.service_name.toLowerCase().includes(q) ||
+          (j.worker_name ?? '').toLowerCase().includes(q) ||
+          (j.client_name ?? '').toLowerCase().includes(q)
+        if (!matchesSearch) return false
+      }
+      return true
+    })
+  }, [jobs, days, search])
+
   // Count jobs per date for badge dots on calendar
   const jobCountByDate = useMemo(() => {
     const counts = new Map<string, number>()
@@ -498,11 +520,23 @@ export default function JobsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-2xl font-bold text-[#1C1C1E]">Jobs</h1>
-        <Link href="/dashboard/jobs/new">
-          <Button size="sm" icon={<span className="text-sm">+</span>}>
-            New Job
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="hidden md:block">
+            <SegmentedControl
+              segments={[
+                { value: 'list', label: 'List' },
+                { value: 'timeline', label: 'Timeline' },
+              ]}
+              value={viewMode}
+              onChange={(v) => setViewMode(v as 'list' | 'timeline')}
+            />
+          </div>
+          <Link href="/dashboard/jobs/new">
+            <Button size="sm" icon={<span className="text-sm">+</span>}>
+              New Job
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* 7-Day Calendar Strip */}
@@ -571,56 +605,72 @@ export default function JobsPage() {
         </motion.div>
       )}
 
-      {/* No matches after filtering */}
-      {!loading && !error && jobs.length > 0 && filtered.length === 0 && (
-        <div className="glass rounded-2xl p-10 text-center">
-          <p className="text-sm text-[#8E8E93]">No jobs match your filters.</p>
-          {selectedDate && (
-            <button
-              onClick={() => setSelectedDate(null)}
-              className="mt-3 text-sm text-[#007AFF] font-medium hover:underline"
-            >
-              Show all dates
-            </button>
-          )}
+      {/* Timeline View (desktop only, hidden on mobile) */}
+      {!loading && !error && jobs.length > 0 && viewMode === 'timeline' && (
+        <div className="hidden md:block">
+          <TimelineView
+            days={days}
+            jobs={timelineJobs}
+            onJobClick={handleCardClick}
+          />
         </div>
       )}
 
-      {/* Job cards grouped by day */}
-      {!loading && !error && filtered.length > 0 && (
-        <div className="space-y-6">
-          {[...groupedByDate.entries()].map(([dateStr, dayJobs]) => (
-            <div
-              key={dateStr}
-              ref={(el) => {
-                if (el) dayRefs.current.set(dateStr, el)
-              }}
-            >
-              {/* Day header */}
-              <div className="flex items-center gap-3 mb-3">
-                <h2 className="text-sm font-bold text-[#1C1C1E]">
-                  {formatDayHeader(dateStr)}
-                </h2>
-                <span className="text-xs text-[#8E8E93] font-medium">
-                  {dayJobs.length} job{dayJobs.length !== 1 ? 's' : ''}
-                </span>
-                <div className="flex-1 h-px bg-[#E5E5EA]" />
-              </div>
-
-              {/* Cards grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {dayJobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    onStart={(e) => handleStartJob(e, job.id)}
-                    isStarting={startingJobId === job.id}
-                    onClick={() => handleCardClick(job.id)}
-                  />
-                ))}
-              </div>
+      {/* List View — always visible in list mode, mobile fallback in timeline mode */}
+      {!loading && !error && jobs.length > 0 && (
+        <div className={viewMode === 'timeline' ? 'md:hidden' : ''}>
+          {/* No matches after filtering */}
+          {filtered.length === 0 && (
+            <div className="glass rounded-2xl p-10 text-center">
+              <p className="text-sm text-[#8E8E93]">No jobs match your filters.</p>
+              {selectedDate && (
+                <button
+                  onClick={() => setSelectedDate(null)}
+                  className="mt-3 text-sm text-[#007AFF] font-medium hover:underline"
+                >
+                  Show all dates
+                </button>
+              )}
             </div>
-          ))}
+          )}
+
+          {/* Job cards grouped by day */}
+          {filtered.length > 0 && (
+            <div className="space-y-6">
+              {[...groupedByDate.entries()].map(([dateStr, dayJobs]) => (
+                <div
+                  key={dateStr}
+                  ref={(el) => {
+                    if (el) dayRefs.current.set(dateStr, el)
+                  }}
+                >
+                  {/* Day header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <h2 className="text-sm font-bold text-[#1C1C1E]">
+                      {formatDayHeader(dateStr)}
+                    </h2>
+                    <span className="text-xs text-[#8E8E93] font-medium">
+                      {dayJobs.length} job{dayJobs.length !== 1 ? 's' : ''}
+                    </span>
+                    <div className="flex-1 h-px bg-[#E5E5EA]" />
+                  </div>
+
+                  {/* Cards grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {dayJobs.map((job) => (
+                      <JobCard
+                        key={job.id}
+                        job={job}
+                        onStart={(e) => handleStartJob(e, job.id)}
+                        isStarting={startingJobId === job.id}
+                        onClick={() => handleCardClick(job.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
