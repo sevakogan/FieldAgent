@@ -126,30 +126,34 @@ function TasksList({ job, onUpdate }: { job: JobDetail; onUpdate: () => void }) 
 
   const [showAddTask, setShowAddTask] = useState(false)
   const [newTaskName, setNewTaskName] = useState('')
+  // Local state for tasks — no page refresh
+  const [localTasks, setLocalTasks] = useState<[string, boolean][]>(checklistItems)
 
   async function addCustomTask() {
     if (!newTaskName.trim()) return
-    const current = (job.checklist_results ?? {}) as Record<string, boolean>
-    const updated = { ...current, [newTaskName.trim()]: false }
-    await updateJob(job.id, { checklist_results: updated } as Parameters<typeof updateJob>[1])
+    const newTasks: [string, boolean][] = [...localTasks, [newTaskName.trim(), false]]
+    setLocalTasks(newTasks)
     setNewTaskName('')
     setShowAddTask(false)
-    onUpdate()
+    // Save to DB in background
+    const obj = Object.fromEntries(newTasks)
+    await updateJob(job.id, { checklist_results: obj } as Parameters<typeof updateJob>[1])
   }
 
   async function toggleTask(taskName: string, currentDone: boolean) {
     setCompleting(taskName)
-    const current = (job.checklist_results ?? {}) as Record<string, boolean>
-    const updated = { ...current, [taskName]: !currentDone }
-    await updateJob(job.id, { checklist_results: updated } as Parameters<typeof updateJob>[1])
-    onUpdate()
+    const newTasks: [string, boolean][] = localTasks.map(([n, d]) => n === taskName ? [n, !d] : [n, d])
+    setLocalTasks(newTasks)
+    // Save to DB in background
+    const obj = Object.fromEntries(newTasks)
+    await updateJob(job.id, { checklist_results: obj } as Parameters<typeof updateJob>[1])
     setCompleting(null)
   }
 
   return (
     <div>
       <div className="space-y-1">
-        {checklistItems.map(([name, done]) => (
+        {localTasks.map(([name, done]) => (
           <button
             key={name}
             onClick={() => toggleTask(name, done)}
@@ -389,7 +393,7 @@ function ExpenseSection({ jobId, existingTotal, existingExpenses, allCustomField
 
 // ── Photo Section ───────────────────────────────────────────────────────
 function PhotoSection({ jobId }: { jobId: string }) {
-  const [photos, setPhotos] = useState<Array<{ name: string; url: string; size: number; time: string }>>([])
+  const [photos, setPhotos] = useState<Array<{ name: string; url: string; time: string }>>([])
   const [uploading, setUploading] = useState(false)
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -398,24 +402,22 @@ function PhotoSection({ jobId }: { jobId: string }) {
     setUploading(true)
 
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      const ext = file.name.split('.').pop() ?? 'jpg'
-      const path = `jobs/${jobId}/${Date.now()}.${ext}`
+      const { uploadJobPhoto } = await import('@/lib/actions/photos')
+      const fd = new FormData()
+      fd.append('photo', file)
+      const result = await uploadJobPhoto(jobId, fd)
 
-      const { error } = await supabase.storage.from('job-media').upload(path, file, { upsert: true })
-      if (error) throw error
-
-      const { data: urlData } = supabase.storage.from('job-media').getPublicUrl(path)
-      const now = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })
-
-      setPhotos(prev => [...prev, { name: file.name, url: urlData.publicUrl, size: file.size, time: now }])
+      if (result.success && result.url) {
+        const now = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })
+        setPhotos(prev => [...prev, { name: file.name, url: result.url!, time: now }])
+      } else {
+        alert(result.error ?? 'Upload failed')
+      }
     } catch (err) {
       console.error('Upload failed:', err)
-      alert('Upload failed. Check storage bucket permissions.')
+      alert('Upload failed')
     }
     setUploading(false)
-    // Reset input
     e.target.value = ''
   }
 
@@ -631,11 +633,16 @@ export default function JobDetailPage() {
       <div className="grid md:grid-cols-3 gap-6">
         {/* Main content */}
         <div className="md:col-span-2 space-y-6">
-          {/* Details card */}
+          {/* Details card — 3D Miami style */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-2xl p-5"
+            className="rounded-2xl p-5 relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(240,248,255,0.9) 50%, rgba(230,245,255,0.85) 100%)',
+              boxShadow: '0 8px 32px rgba(0,122,255,0.08), 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)',
+              border: '1px solid rgba(0,122,255,0.08)',
+            }}
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-[#1C1C1E]">Details</h2>
@@ -811,35 +818,50 @@ export default function JobDetailPage() {
                 )}
               </div>
             ) : (
-              <div className="space-y-2 text-xs">
-                {/* Address — compact with maps link */}
+              <div className="space-y-3">
+                {/* Client — name + phone prominent */}
                 <div className="flex items-center justify-between">
-                  <span className="text-[#8E8E93]">📍</span>
-                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="text-[#007AFF] font-medium hover:underline flex-1 ml-2 truncate">{fullAddress}</a>
-                </div>
-                {/* Service + Date/Time on one row */}
-                <div className="flex items-center gap-3">
-                  <span className="text-[#1C1C1E] font-semibold">{job.service_name}</span>
-                  <span className="text-[#8E8E93]">·</span>
-                  <span className="text-[#636366]">{new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                  {job.scheduled_time && <span className="text-[#636366]">{job.scheduled_time}</span>}
-                </div>
-                {/* Client + phone */}
-                {(job.client_name || job.client_phone) && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#1C1C1E] font-medium">{job.client_name ?? 'Client'}</span>
-                    {job.client_phone && (
-                      <a href={`tel:${job.client_phone}`}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#34C759]/10 text-[#34C759] font-bold text-xs hover:bg-[#34C759]/20 transition-all">
-                        📞 {job.client_phone}
-                      </a>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5AC8FA] to-[#007AFF] flex items-center justify-center text-white text-[10px] font-bold">
+                      {(job.client_name ?? 'C').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#1C1C1E]">{job.client_name ?? 'Client'}</p>
+                      {job.client_phone && (
+                        <a href={`tel:${job.client_phone}`} className="text-[11px] text-[#007AFF]">{job.client_phone}</a>
+                      )}
+                    </div>
                   </div>
-                )}
-                {/* Worker */}
-                <div className="text-[#8E8E93]">Worker: <span className="text-[#1C1C1E] font-medium">{job.worker_name ?? 'You'}</span></div>
+                  {job.client_phone && (
+                    <a href={`tel:${job.client_phone}`}
+                      className="w-9 h-9 rounded-xl bg-[#34C759] flex items-center justify-center shadow-md shadow-[#34C759]/30 hover:bg-[#2DB84E] active:scale-90 transition-all">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
+
+                {/* Address — tap to open maps */}
+                <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-[#F2F2F7] hover:bg-[#E5E5EA] transition-colors group">
+                  <span className="text-base">📍</span>
+                  <span className="text-xs text-[#1C1C1E] font-medium flex-1 truncate group-hover:text-[#007AFF]">{fullAddress}</span>
+                  <svg className="w-3.5 h-3.5 text-[#C7C7CC] group-hover:text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
+
+                {/* Job type pill + date + worker */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-3 py-1 rounded-xl text-[11px] font-bold bg-gradient-to-r from-[#5AC8FA]/20 to-[#007AFF]/20 text-[#007AFF] border border-[#007AFF]/15">
+                    {job.service_name}
+                  </span>
+                  <span className="text-[11px] text-[#636366]">
+                    {new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {job.scheduled_time ? ` · ${job.scheduled_time}` : ''}
+                  </span>
+                </div>
+                <div className="text-[11px] text-[#8E8E93]">👷 {job.worker_name ?? 'You'}</div>
               </div>
             )}
           </motion.div>
