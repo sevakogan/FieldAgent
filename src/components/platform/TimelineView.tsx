@@ -3,8 +3,6 @@
 import { useMemo, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 
-// ── Types ────────────────────────────────────────────────────────────────
-
 interface TimelineJob {
   id: string
   address_street: string
@@ -23,73 +21,47 @@ interface TimelineViewProps {
   onJobClick: (jobId: string) => void
 }
 
-// ── Constants ────────────────────────────────────────────────────────────
-
 const PACIFIC_TZ = 'America/Los_Angeles'
-const HOUR_HEIGHT = 60
+const HOUR_HEIGHT = 72
 const START_HOUR = 6
 const END_HOUR = 20
 const TOTAL_HOURS = END_HOUR - START_HOUR
 const DEFAULT_DURATION_HOURS = 1
 
-const TIMELINE_CARD_BG: Record<string, string> = {
-  scheduled: 'bg-[#007AFF]/8',
-  driving: 'bg-[#5AC8FA]/10',
-  arrived: 'bg-[#FF9F0A]/10',
-  in_progress: 'bg-[#FFD60A]/12',
-  pending_review: 'bg-[#AF52DE]/8',
-  completed: 'bg-[#34C759]/8',
-  charged: 'bg-[#34C759]/8',
-  cancelled: 'bg-[#8E8E93]/8',
-  requested: 'bg-[#8E8E93]/8',
-  approved: 'bg-[#5AC8FA]/8',
-  revision_needed: 'bg-[#FF3B30]/8',
-}
-
-const TIMELINE_CARD_BORDER: Record<string, string> = {
-  scheduled: 'border-l-[#007AFF]',
-  driving: 'border-l-[#5AC8FA]',
-  arrived: 'border-l-[#FF9F0A]',
-  in_progress: 'border-l-[#FFD60A]',
-  pending_review: 'border-l-[#AF52DE]',
-  completed: 'border-l-[#34C759]',
-  charged: 'border-l-[#34C759]',
-  cancelled: 'border-l-[#8E8E93]',
-  requested: 'border-l-[#8E8E93]',
-  approved: 'border-l-[#5AC8FA]',
-  revision_needed: 'border-l-[#FF3B30]',
-}
-
-const WORKER_COLORS = [
-  'bg-[#34C759]',
-  'bg-[#007AFF]',
-  'bg-[#AF52DE]',
-  'bg-[#FF9F0A]',
-  'bg-[#FF3B30]',
-  'bg-[#5AC8FA]',
+// Pastel card colors — rotate by service name hash for variety (like the screenshot)
+const CARD_PALETTES = [
+  { bg: 'rgba(0, 122, 255, 0.08)', border: '#007AFF', text: '#0055B3' },    // blue
+  { bg: 'rgba(175, 82, 222, 0.08)', border: '#AF52DE', text: '#8B44B8' },   // purple
+  { bg: 'rgba(255, 159, 10, 0.10)', border: '#FF9F0A', text: '#CC7F08' },   // orange
+  { bg: 'rgba(52, 199, 89, 0.08)', border: '#34C759', text: '#248A3D' },    // green
+  { bg: 'rgba(255, 45, 85, 0.08)', border: '#FF2D55', text: '#D62246' },    // pink
+  { bg: 'rgba(90, 200, 250, 0.10)', border: '#5AC8FA', text: '#2E8EB8' },   // cyan
+  { bg: 'rgba(255, 214, 10, 0.12)', border: '#FFD60A', text: '#B8860B' },   // yellow
+  { bg: 'rgba(88, 86, 214, 0.08)', border: '#5856D6', text: '#4745AB' },    // indigo
 ]
 
-// ── Helpers ──────────────────────────────────────────────────────────────
+const WORKER_COLORS = ['#34C759', '#007AFF', '#AF52DE', '#FF9F0A', '#FF3B30', '#5AC8FA']
+
+function hashStr(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+function getCardPalette(serviceName: string) {
+  return CARD_PALETTES[hashStr(serviceName) % CARD_PALETTES.length]
+}
 
 function formatDateKey(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 function isTodayCheck(date: Date): boolean {
-  const now = new Date()
-  const pacificStr = now.toLocaleDateString('en-CA', { timeZone: PACIFIC_TZ })
-  return formatDateKey(date) === pacificStr
+  return formatDateKey(date) === new Date().toLocaleDateString('en-CA', { timeZone: PACIFIC_TZ })
 }
 
 function formatDayLabel(date: Date): string {
   return date.toLocaleDateString('en-US', { weekday: 'short', timeZone: PACIFIC_TZ })
-}
-
-function formatDayNumber(date: Date): number {
-  return date.getDate()
 }
 
 function formatHourLabel(hour: number): string {
@@ -102,196 +74,144 @@ function formatHourLabel(hour: number): string {
 function formatTime12h(time24: string): string {
   const [hStr, mStr] = time24.split(':')
   const h = parseInt(hStr, 10)
-  const ampm = h >= 12 ? 'PM' : 'AM'
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
-  return `${h12}:${mStr} ${ampm}`
+  return `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${mStr} ${h >= 12 ? 'PM' : 'AM'}`
 }
 
 function getEndTime(startTime: string): string {
   const [hStr, mStr] = startTime.split(':')
-  const h = parseInt(hStr, 10) + DEFAULT_DURATION_HOURS
-  return `${String(h).padStart(2, '0')}:${mStr}`
+  return `${String(parseInt(hStr, 10) + DEFAULT_DURATION_HOURS).padStart(2, '0')}:${mStr}`
 }
 
 function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
 function getWorkerColor(name: string): string {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return WORKER_COLORS[Math.abs(hash) % WORKER_COLORS.length]
+  return WORKER_COLORS[hashStr(name) % WORKER_COLORS.length]
 }
 
 function getPacificNowHours(): number {
-  const now = new Date()
-  const pacificStr = now.toLocaleTimeString('en-US', {
-    timeZone: PACIFIC_TZ,
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-  const [h, m] = pacificStr.split(':').map(Number)
+  const s = new Date().toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour12: false, hour: '2-digit', minute: '2-digit' })
+  const [h, m] = s.split(':').map(Number)
   return h + m / 60
 }
 
 function getPacificTodayKey(): string {
-  const now = new Date()
-  return now.toLocaleDateString('en-CA', { timeZone: PACIFIC_TZ })
+  return new Date().toLocaleDateString('en-CA', { timeZone: PACIFIC_TZ })
 }
 
-// ── Positioned Job Card ──────────────────────────────────────────────────
+function getJobPosition(job: TimelineJob): { topPx: number; heightPx: number } {
+  if (!job.scheduled_time) return { topPx: 2, heightPx: HOUR_HEIGHT - 4 }
+  const [hStr, mStr] = job.scheduled_time.split(':')
+  const fractional = parseInt(hStr, 10) + parseInt(mStr, 10) / 60
+  const clamped = Math.max(fractional, START_HOUR)
+  return { topPx: (clamped - START_HOUR) * HOUR_HEIGHT + 2, heightPx: DEFAULT_DURATION_HOURS * HOUR_HEIGHT - 4 }
+}
 
-function TimelineCard({
-  job,
-  topPx,
-  heightPx,
-  onClick,
-}: {
-  job: TimelineJob
-  topPx: number
-  heightPx: number
-  onClick: () => void
-}) {
-  const bg = TIMELINE_CARD_BG[job.status] ?? 'bg-[#F2F2F7]'
-  const border = TIMELINE_CARD_BORDER[job.status] ?? 'border-l-[#8E8E93]'
-  const timeRange = job.scheduled_time
-    ? `${formatTime12h(job.scheduled_time)} - ${formatTime12h(getEndTime(job.scheduled_time))}`
-    : 'No time set'
+// ── Job Card ──────────────────────────────────────────────────────────
+function TimelineCard({ job, topPx, heightPx, onClick }: { job: TimelineJob; topPx: number; heightPx: number; onClick: () => void }) {
+  const palette = getCardPalette(job.service_name)
+  const timeRange = job.scheduled_time ? `${formatTime12h(job.scheduled_time)} – ${formatTime12h(getEndTime(job.scheduled_time))}` : 'No time'
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.2 }}
-      className={`absolute left-1 right-1 rounded-xl p-1.5 cursor-pointer border-l-2 ${bg} ${border}
-        hover:shadow-md hover:scale-[1.02] transition-all z-10 overflow-hidden`}
-      style={{ top: `${topPx}px`, height: `${Math.max(heightPx, 28)}px` }}
+      transition={{ duration: 0.25 }}
+      className="absolute left-1 right-1 rounded-2xl cursor-pointer hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] transition-all z-10 overflow-hidden border-l-[3px]"
+      style={{
+        top: `${topPx}px`,
+        height: `${Math.max(heightPx, 36)}px`,
+        background: palette.bg,
+        borderLeftColor: palette.border,
+      }}
       onClick={onClick}
     >
-      <p className="text-[10px] font-semibold text-[#1C1C1E] truncate leading-tight">
-        {job.service_name}
-      </p>
-      <p className="text-[9px] text-[#8E8E93] truncate leading-tight">
-        {timeRange}
-      </p>
-      {heightPx >= 44 && job.worker_name && (
-        <div className="flex items-center gap-1 mt-0.5">
-          <div
-            className={`w-4 h-4 rounded-full ${getWorkerColor(job.worker_name)} text-white text-[7px] font-bold flex items-center justify-center shrink-0`}
-          >
-            {getInitials(job.worker_name)}
-          </div>
-          <span className="text-[8px] text-[#8E8E93] truncate">
-            {job.worker_name}
-          </span>
+      <div className="p-2 h-full flex flex-col justify-between">
+        <div>
+          <p className="text-[11px] font-bold truncate leading-tight" style={{ color: palette.text }}>
+            {job.service_name}
+          </p>
+          <p className="text-[9px] text-[#8E8E93] leading-tight mt-0.5">{timeRange}</p>
         </div>
-      )}
-      {heightPx >= 56 && (
-        <p className="text-[8px] text-[#636366] truncate mt-0.5">
-          {job.address_street}
-        </p>
-      )}
+        {heightPx >= 52 && (
+          <div className="flex items-center justify-between mt-1">
+            {job.worker_name ? (
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-4 rounded-full text-white text-[7px] font-bold flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: getWorkerColor(job.worker_name) }}>
+                  {getInitials(job.worker_name)}
+                </div>
+                <span className="text-[8px] text-[#636366] truncate max-w-[60px]">{job.worker_name.split(' ')[0]}</span>
+              </div>
+            ) : <div />}
+            <span className="text-[9px] font-semibold text-[#1C1C1E]">${Number(job.price).toFixed(0)}</span>
+          </div>
+        )}
+      </div>
     </motion.div>
   )
 }
 
-// ── Current Time Indicator ───────────────────────────────────────────────
-
-function CurrentTimeIndicator({ columnIndex }: { columnIndex: number }) {
+// ── Current Time Line ─────────────────────────────────────────────────
+function CurrentTimeLine() {
   const nowHours = getPacificNowHours()
   if (nowHours < START_HOUR || nowHours > END_HOUR) return null
   const topPx = (nowHours - START_HOUR) * HOUR_HEIGHT
-  // The indicator spans across the "today" column only
-  // columnIndex is 0-based among the 7 day columns
   return (
-    <div
-      className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
-      style={{ top: `${topPx}px` }}
-    >
-      <div className="w-2 h-2 rounded-full bg-[#FF3B30] -ml-1 shrink-0" />
-      <div className="flex-1 h-[2px] bg-[#FF3B30]" />
+    <div className="absolute left-0 right-0 z-30 pointer-events-none flex items-center" style={{ top: `${topPx}px` }}>
+      <div className="w-2.5 h-2.5 rounded-full bg-[#FF3B30] -ml-1 shrink-0 shadow-sm" />
+      <div className="flex-1 h-[2px] bg-[#FF3B30] shadow-sm" />
     </div>
   )
 }
 
-// ── Main Timeline View ───────────────────────────────────────────────────
-
+// ── Main Component ────────────────────────────────────────────────────
 export function TimelineView({ days, jobs, onJobClick }: TimelineViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const todayKey = getPacificTodayKey()
 
-  // Group jobs by date key, only for the 7 visible days
   const dayKeys = useMemo(() => days.map(formatDateKey), [days])
   const jobsByDay = useMemo(() => {
     const map = new Map<string, TimelineJob[]>()
-    for (const key of dayKeys) {
-      map.set(key, [])
-    }
+    for (const key of dayKeys) map.set(key, [])
     for (const job of jobs) {
       const existing = map.get(job.scheduled_date)
-      if (existing) {
-        map.set(job.scheduled_date, [...existing, job])
-      }
+      if (existing) map.set(job.scheduled_date, [...existing, job])
     }
     return map
   }, [jobs, dayKeys])
 
-  // Scroll to current time on mount
   useEffect(() => {
     if (!scrollRef.current) return
-    const nowHours = getPacificNowHours()
-    const scrollTarget = Math.max(0, (nowHours - START_HOUR - 1) * HOUR_HEIGHT)
+    const scrollTarget = Math.max(0, (getPacificNowHours() - START_HOUR - 1) * HOUR_HEIGHT)
     scrollRef.current.scrollTop = scrollTarget
   }, [])
 
-  const hours = useMemo(
-    () => Array.from({ length: TOTAL_HOURS }, (_, i) => START_HOUR + i),
-    []
-  )
-
-  const todayColIndex = dayKeys.indexOf(todayKey)
+  const hours = useMemo(() => Array.from({ length: TOTAL_HOURS }, (_, i) => START_HOUR + i), [])
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
       className="glass rounded-2xl overflow-hidden"
     >
-      {/* Sticky header row with day names */}
-      <div className="flex border-b border-[#E5E5EA]">
-        {/* Time gutter header */}
-        <div className="w-16 shrink-0 border-r border-[#E5E5EA] bg-white/60 backdrop-blur-sm" />
-        {/* Day column headers */}
+      {/* Day headers */}
+      <div className="flex border-b border-[#E5E5EA]/50">
+        <div className="w-14 shrink-0" />
         <div className="flex-1 grid grid-cols-7">
           {days.map((day, i) => {
             const key = dayKeys[i]
             const today = key === todayKey
             return (
-              <div
-                key={key}
-                className={`flex flex-col items-center py-2.5 border-r border-[#E5E5EA] last:border-r-0
-                  ${today ? 'bg-[#007AFF]/5' : 'bg-white/60 backdrop-blur-sm'}`}
-              >
-                <span className={`text-[10px] font-semibold uppercase ${today ? 'text-[#007AFF]' : 'text-[#8E8E93]'}`}>
+              <div key={key} className={`flex flex-col items-center py-3 border-r border-[#E5E5EA]/30 last:border-r-0 ${today ? 'bg-[#007AFF]/[0.04]' : ''}`}>
+                <span className={`text-[10px] font-semibold uppercase tracking-wider ${today ? 'text-[#007AFF]' : 'text-[#AEAEB2]'}`}>
                   {formatDayLabel(day)}
                 </span>
-                <span
-                  className={`text-lg font-bold leading-tight mt-0.5
-                    ${today
-                      ? 'w-8 h-8 rounded-full bg-[#007AFF] text-white flex items-center justify-center'
-                      : 'text-[#1C1C1E]'
-                    }`}
-                >
-                  {formatDayNumber(day)}
+                <span className={`text-lg font-bold mt-0.5 leading-none ${
+                  today ? 'w-9 h-9 rounded-full bg-[#007AFF] text-white flex items-center justify-center' : 'text-[#1C1C1E]'
+                }`}>
+                  {day.getDate()}
                 </span>
               </div>
             )
@@ -299,73 +219,43 @@ export function TimelineView({ days, jobs, onJobClick }: TimelineViewProps) {
         </div>
       </div>
 
-      {/* Scrollable grid body */}
-      <div
-        ref={scrollRef}
-        className="overflow-y-auto"
-        style={{ maxHeight: 'calc(100vh - 340px)' }}
-      >
-        <div className="flex" style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
-          {/* Time gutter */}
-          <div className="w-16 shrink-0 border-r border-[#E5E5EA] relative">
-            {hours.map((hour) => (
-              <div
-                key={hour}
-                className="absolute w-full pr-2 text-right"
-                style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }}
-              >
-                <span className="text-[10px] font-medium text-[#8E8E93] -translate-y-1/2 inline-block">
-                  {formatHourLabel(hour)}
-                </span>
+      {/* Scrollable time grid */}
+      <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+        <div className="flex relative" style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
+          {/* Time labels */}
+          <div className="w-14 shrink-0 relative">
+            {hours.map(hour => (
+              <div key={hour} className="absolute w-full pr-2 text-right" style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT - 6}px` }}>
+                <span className="text-[10px] font-medium text-[#AEAEB2]">{formatHourLabel(hour)}</span>
               </div>
             ))}
           </div>
 
           {/* Day columns */}
-          <div className="flex-1 grid grid-cols-7 relative">
+          <div className="flex-1 grid grid-cols-7">
             {days.map((day, colIdx) => {
               const key = dayKeys[colIdx]
               const today = key === todayKey
               const dayJobs = jobsByDay.get(key) ?? []
 
               return (
-                <div
-                  key={key}
-                  className={`relative border-r border-[#E5E5EA] last:border-r-0 ${today ? 'bg-[#007AFF]/[0.03]' : ''}`}
-                >
-                  {/* Hour grid lines */}
-                  {hours.map((hour) => (
-                    <div
-                      key={hour}
-                      className="absolute left-0 right-0 border-t border-[#F2F2F7]"
-                      style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }}
-                    />
+                <div key={key} className={`relative border-r border-[#E5E5EA]/20 last:border-r-0 ${today ? 'bg-[#007AFF]/[0.02]' : ''}`}>
+                  {/* Hour lines */}
+                  {hours.map(hour => (
+                    <div key={hour} className="absolute left-0 right-0 border-t border-[#E5E5EA]/30" style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }} />
+                  ))}
+                  {/* Half-hour lines */}
+                  {hours.map(hour => (
+                    <div key={`${hour}h`} className="absolute left-0 right-0 border-t border-dashed border-[#E5E5EA]/15" style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }} />
                   ))}
 
-                  {/* Half-hour grid lines (dashed) */}
-                  {hours.map((hour) => (
-                    <div
-                      key={`${hour}-half`}
-                      className="absolute left-0 right-0 border-t border-dashed border-[#F2F2F7]/60"
-                      style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }}
-                    />
-                  ))}
-
-                  {/* Current time indicator */}
-                  {today && todayColIndex >= 0 && <CurrentTimeIndicator columnIndex={colIdx} />}
+                  {/* Current time */}
+                  {today && <CurrentTimeLine />}
 
                   {/* Job cards */}
-                  {dayJobs.map((job) => {
+                  {dayJobs.map(job => {
                     const { topPx, heightPx } = getJobPosition(job)
-                    return (
-                      <TimelineCard
-                        key={job.id}
-                        job={job}
-                        topPx={topPx}
-                        heightPx={heightPx}
-                        onClick={() => onJobClick(job.id)}
-                      />
-                    )
+                    return <TimelineCard key={job.id} job={job} topPx={topPx} heightPx={heightPx} onClick={() => onJobClick(job.id)} />
                   })}
                 </div>
               )
@@ -375,25 +265,4 @@ export function TimelineView({ days, jobs, onJobClick }: TimelineViewProps) {
       </div>
     </motion.div>
   )
-}
-
-// ── Position calculator ──────────────────────────────────────────────────
-
-function getJobPosition(job: TimelineJob): { topPx: number; heightPx: number } {
-  if (!job.scheduled_time) {
-    // No time set - place at 6 AM
-    return { topPx: 2, heightPx: HOUR_HEIGHT - 4 }
-  }
-
-  const [hStr, mStr] = job.scheduled_time.split(':')
-  const hour = parseInt(hStr, 10)
-  const minute = parseInt(mStr, 10)
-  const fractionalHour = hour + minute / 60
-
-  // Clamp within visible range
-  const clampedStart = Math.max(fractionalHour, START_HOUR)
-  const topPx = (clampedStart - START_HOUR) * HOUR_HEIGHT + 1
-  const heightPx = DEFAULT_DURATION_HOURS * HOUR_HEIGHT - 2
-
-  return { topPx, heightPx }
 }
