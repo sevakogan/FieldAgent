@@ -18,3 +18,17 @@
 - Job form should show the address-specific price, not the default
 - All times must use Pacific Time (America/Los_Angeles)
 - NEVER deploy to production unless user explicitly says "deploy to prod"
+
+## 2026-03-21 — Clients + Addresses Combined (UX RULE)
+**Rule:** Clients and Addresses are ONE flow, not separate pages.
+- An address CANNOT exist without a client (FK constraint: addresses.client_id)
+- When creating a client, offer to add their first address inline (optional, can skip)
+- If a client has NO addresses, show a red warning bar on their row in the list
+- The client detail page shows their addresses directly — no need for a separate Addresses page
+- The sidebar "Addresses" link can go to a filtered view or redirect to clients
+- This reduces navigation and makes the workflow: Create Client → Add Address → Add Services → Schedule Job
+
+## Rules (updated)
+- Clients and addresses are a combined flow — never require separate navigation
+- Client without address = red warning in list view
+- Client creation form includes optional address step

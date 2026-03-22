@@ -117,8 +117,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: 'People',
     items: [
-      { label: 'Clients', href: '/dashboard/clients', icon: <IconClients /> },
-      { label: 'Addresses', href: '/dashboard/addresses', icon: <IconAddresses /> },
+      { label: 'Clients & Properties', href: '/dashboard/clients', icon: <IconClients /> },
       { label: 'Team', href: '/dashboard/team', icon: <IconTeam /> },
     ],
   },

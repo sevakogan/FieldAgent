@@ -345,21 +345,33 @@ export default function ClientsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5E5EA]">
-              {filtered.map((client, i) => (
+              {filtered.map((client, i) => {
+                const hasNoAddress = client.addresses.length === 0
+                return (
                 <motion.tr
                   key={client.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
-                  className="hover:bg-[#F9F9FB] transition-colors group"
+                  className={`transition-colors group ${hasNoAddress ? 'bg-[#FF3B30]/[0.03]' : 'hover:bg-[#F9F9FB]'}`}
                 >
                   <td className="p-4">
-                    <EditableCell
-                      value={client.full_name}
-                      field="full_name"
-                      clientId={client.id}
-                      onSaved={fetchClients}
-                    />
+                    <div className="flex items-center gap-2">
+                      <EditableCell
+                        value={client.full_name}
+                        field="full_name"
+                        clientId={client.id}
+                        onSaved={fetchClients}
+                      />
+                      {hasNoAddress && (
+                        <Link
+                          href={`/dashboard/clients/${client.id}`}
+                          className="text-[10px] px-2 py-0.5 rounded-full bg-[#FF3B30]/10 text-[#FF3B30] font-semibold whitespace-nowrap hover:bg-[#FF3B30]/20 transition-colors"
+                        >
+                          ⚠ No Property
+                        </Link>
+                      )}
+                    </div>
                   </td>
                   <td className="p-4 hidden md:table-cell">
                     <EditableCell
@@ -397,7 +409,8 @@ export default function ClientsPage() {
                     </Link>
                   </td>
                 </motion.tr>
-              ))}
+                )
+              })}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-sm text-[#8E8E93]">
