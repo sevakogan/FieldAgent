@@ -61,3 +61,12 @@
 3. If user clicks Undo → restore the item
 4. If 15 seconds pass → actually delete
 5. This applies EVERYWHERE: services, addresses, clients, jobs, team members, invoices, etc.
+
+## 2026-03-21 — Call Button on Jobs + Dialer Fallback
+**Rule:** Every job row should have a call button to call the client.
+- Click call → option to use dialer (Twilio/VoIP) or regular phone (tel: link)
+- Dialer can fall back to regular call if not configured
+- This pattern should exist wherever a phone number is shown
+
+## 2026-03-21 — Jobs Page = 7-Day Calendar + Cards
+**Rule:** The jobs page should show a 7-day rolling calendar at the top with job cards organized by day/time below it. Not just a flat table.

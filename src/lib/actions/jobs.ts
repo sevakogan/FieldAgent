@@ -22,6 +22,8 @@ export type JobRow = {
   price: number
   source: string
   created_at: string
+  client_name: string | null
+  client_phone: string | null
 }
 
 export type JobDetail = Job & {
@@ -83,7 +85,7 @@ export async function getJobs(filters?: {
     const [addressResult, serviceResult, memberResult] = await Promise.all([
       supabase
         .from('addresses')
-        .select('id, street, city')
+        .select('id, street, city, client_id')
         .in('id', addressIds),
       supabase
         .from('service_types')
@@ -98,7 +100,7 @@ export async function getJobs(filters?: {
     ])
 
     const addressMap = new Map(
-      (addressResult.data ?? []).map(a => [a.id, { street: a.street, city: a.city }])
+      (addressResult.data ?? []).map(a => [a.id, { street: a.street, city: a.city, client_id: a.client_id }])
     )
     const serviceMap = new Map(
       (serviceResult.data ?? []).map(s => [s.id, s.name])
@@ -121,8 +123,44 @@ export async function getJobs(filters?: {
       (memberResult.data ?? []).map(m => [m.id, userNameMap.get(m.user_id) ?? 'Unknown'])
     )
 
+    // Resolve client_id -> user_id -> (full_name, phone) for each address
+    const clientIds = [...new Set(
+      (addressResult.data ?? []).filter(a => a.client_id).map(a => a.client_id!)
+    )]
+
+    let clientUserMap = new Map<string, { name: string; phone: string | null }>()
+
+    if (clientIds.length > 0) {
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, user_id')
+        .in('id', clientIds)
+
+      const clientUserIds = (clients ?? []).filter(c => c.user_id).map(c => c.user_id!)
+      if (clientUserIds.length > 0) {
+        const { data: clientUsers } = await supabase
+          .from('users')
+          .select('id, full_name, phone')
+          .in('id', clientUserIds)
+
+        const clientUserDataMap = new Map(
+          (clientUsers ?? []).map(u => [u.id, { name: u.full_name, phone: u.phone }])
+        )
+
+        for (const client of (clients ?? [])) {
+          if (client.user_id) {
+            const userData = clientUserDataMap.get(client.user_id)
+            if (userData) {
+              clientUserMap = new Map([...clientUserMap, [client.id, userData]])
+            }
+          }
+        }
+      }
+    }
+
     const rows: JobRow[] = jobs.map(job => {
       const addr = addressMap.get(job.address_id)
+      const clientData = addr?.client_id ? clientUserMap.get(addr.client_id) : null
       return {
         id: job.id,
         address_street: addr?.street ?? 'Unknown',
@@ -135,6 +173,8 @@ export async function getJobs(filters?: {
         price: job.price,
         source: job.source,
         created_at: job.created_at,
+        client_name: clientData?.name ?? null,
+        client_phone: clientData?.phone ?? null,
       }
     })
 
