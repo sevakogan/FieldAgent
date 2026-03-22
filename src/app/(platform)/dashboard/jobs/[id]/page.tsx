@@ -936,32 +936,29 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      {/* ── Sticky Bottom Action Bar (mobile) — side by side ── */}
+      {/* ── Action Buttons (inline at bottom, mobile) ── */}
       {!isTerminal && (
-        <div className="fixed bottom-[84px] left-0 right-0 z-40 px-4 md:hidden">
-          <div className="flex gap-2 p-2.5 rounded-2xl"
-            style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(24px)', boxShadow: '0 -4px 24px rgba(0,0,0,0.1)' }}>
-            {nextStatuses.includes('cancelled') && (
-              <button
-                onClick={() => setShowCancelPopup(true)}
-                className="px-4 py-3 rounded-xl text-xs font-bold bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-all shrink-0"
-              >
-                Cancel
-              </button>
-            )}
-            {primaryAction && (
-              <button
-                onClick={() => {
-                  if (primaryAction.targetStatus === 'completed') setShowCompleteConfirm(true)
-                  else handleStatusChange(primaryAction.targetStatus)
-                }}
-                disabled={updating}
-                className="flex-1 py-3 rounded-xl text-sm font-bold bg-[#34C759] text-white hover:bg-[#2DB84E] disabled:opacity-50 transition-all"
-              >
-                {updating ? '...' : primaryAction.label}
-              </button>
-            )}
-          </div>
+        <div className="md:hidden flex gap-2 mt-6 mb-24">
+          {nextStatuses.includes('cancelled') && (
+            <button
+              onClick={() => setShowCancelPopup(true)}
+              className="px-5 py-3.5 rounded-xl text-sm font-bold bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-all shrink-0"
+            >
+              Cancel
+            </button>
+          )}
+          {primaryAction && (
+            <button
+              onClick={() => {
+                if (primaryAction.targetStatus === 'completed') setShowCompleteConfirm(true)
+                else handleStatusChange(primaryAction.targetStatus)
+              }}
+              disabled={updating}
+              className="flex-1 py-3.5 rounded-xl text-sm font-bold bg-[#34C759] text-white hover:bg-[#2DB84E] disabled:opacity-50 transition-all"
+            >
+              {updating ? '...' : primaryAction.label}
+            </button>
+          )}
         </div>
       )}
     </div>
