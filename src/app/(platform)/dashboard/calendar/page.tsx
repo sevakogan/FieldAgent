@@ -79,7 +79,9 @@ export default function CalendarPage() {
   }, [weekCount, weekOffset])
 
   const todayKey = getTodayKey()
-  const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: PACIFIC_TZ })
+  // Use the first day of the visible range for the month label
+  const visibleMonth = days.length > 7 ? days[7] : days[0] // Use second week's start for better label
+  const currentMonth = visibleMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: PACIFIC_TZ })
   const rangeLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[days.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
 
   const now = new Date()
