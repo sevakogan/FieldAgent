@@ -480,16 +480,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
 
 
-      {/* Floating God Mode — mobile, positioned above bottom nav */}
+      {/* Floating admin eye — mobile, above bottom nav */}
       <Link
         href="/admin"
-        className="fixed bottom-20 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#AF52DE] text-white text-xs font-bold shadow-lg shadow-[#AF52DE]/30 hover:bg-[#9B3DC8] transition-colors md:hidden"
+        className="fixed bottom-[100px] right-4 z-50 w-10 h-10 rounded-full bg-[#AF52DE] text-white flex items-center justify-center shadow-lg shadow-[#AF52DE]/30 hover:bg-[#9B3DC8] active:scale-90 transition-all md:hidden"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
-        God Mode
       </Link>
 
       {/* Mobile Bottom Navigation */}
