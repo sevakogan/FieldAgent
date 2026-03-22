@@ -63,22 +63,24 @@ export default function CalendarPage() {
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [confirmMove, setConfirmMove] = useState<{ job: CalendarJob; newDate: string } | null>(null)
   const [moving, setMoving] = useState(false)
+  const [weekCount, setWeekCount] = useState(3) // 1, 2, 3, or 4 weeks
 
-  // 3 weeks centered on today
   const days = useMemo(() => {
     const today = new Date()
     const start = new Date(today)
-    start.setDate(today.getDate() - today.getDay() - 7) // Start 1 week before this week's Sunday
-    return Array.from({ length: 21 }, (_, i) => {
+    // Center today: go back enough weeks so today is in the middle
+    const weeksBack = Math.floor(weekCount / 2)
+    start.setDate(today.getDate() - today.getDay() - (weeksBack * 7))
+    return Array.from({ length: weekCount * 7 }, (_, i) => {
       const d = new Date(start)
       d.setDate(start.getDate() + i)
       return d
     })
-  }, [])
+  }, [weekCount])
 
   const todayKey = getTodayKey()
   const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: PACIFIC_TZ })
-  const rangeLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[20].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+  const rangeLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[days.length - 1].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
 
   const now = new Date()
   const fetchJobs = useCallback(async () => {
@@ -118,12 +120,33 @@ export default function CalendarPage() {
     setMoving(false)
   }
 
-  // Week labels
-  const weeks = [
-    { label: 'Last Week', days: days.slice(0, 7) },
-    { label: 'This Week', days: days.slice(7, 14) },
-    { label: 'Next Week', days: days.slice(14, 21) },
-  ]
+  // Build week groups dynamically
+  const weeks = useMemo(() => {
+    const result: { label: string; days: Date[] }[] = []
+    const todayWeekStart = new Date()
+    todayWeekStart.setDate(todayWeekStart.getDate() - todayWeekStart.getDay())
+    const todayWeekKey = fmtDateKey(todayWeekStart)
+
+    for (let w = 0; w < weekCount; w++) {
+      const weekDays = days.slice(w * 7, (w + 1) * 7)
+      const weekStart = weekDays[0]
+      const weekStartSunday = new Date(weekStart)
+      weekStartSunday.setDate(weekStart.getDate() - weekStart.getDay())
+      const key = fmtDateKey(weekStartSunday)
+
+      let label: string
+      if (key === todayWeekKey) label = 'This Week'
+      else if (weekStart < todayWeekStart) {
+        const diff = Math.round((todayWeekStart.getTime() - weekStart.getTime()) / (7 * 86400000))
+        label = diff === 1 ? 'Last Week' : `${diff} Weeks Ago`
+      } else {
+        const diff = Math.round((weekStart.getTime() - todayWeekStart.getTime()) / (7 * 86400000))
+        label = diff === 1 ? 'Next Week' : `In ${diff} Weeks`
+      }
+      result.push({ label, days: weekDays })
+    }
+    return result
+  }, [days, weekCount])
 
   return (
     <div>
@@ -131,9 +154,20 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-[#1C1C1E]">{currentMonth}</h1>
-          <p className="text-xs text-[#8E8E93] mt-0.5">{rangeLabel} · 3 weeks</p>
+          <p className="text-xs text-[#8E8E93] mt-0.5">{rangeLabel}</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Week count toggle */}
+          <div className="flex bg-[#F2F2F7] rounded-xl p-0.5">
+            {[1, 2, 3, 4].map(w => (
+              <button key={w} onClick={() => setWeekCount(w)}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                  weekCount === w ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93]'
+                }`}>
+                {w}W
+              </button>
+            ))}
+          </div>
           <button onClick={() => setSelectedDate(todayKey)}
             className="px-3 py-1.5 bg-[#007AFF] text-white rounded-xl text-xs font-semibold hover:bg-[#0066DD] transition-colors">
             Today
@@ -207,10 +241,30 @@ export default function CalendarPage() {
                             className={`text-xl font-bold mt-0.5 leading-none ${
                               count >= 6 ? 'text-[#FF3B30]' : count >= 3 ? 'text-[#FF9F0A]' : 'text-[#34C759]'
                             }`}>{count}</motion.span>
-                          <div className="flex gap-0.5 mt-1">
-                            {dayJobs.slice(0, 3).map(j => (
-                              <span key={j.id} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getColor(j.service_name).bg }} />
-                            ))}
+                          {/* Job mini-cards inside the cell */}
+                          <div className="w-full px-1 mt-1 space-y-0.5">
+                            {dayJobs.slice(0, 2).map(j => {
+                              const c = getColor(j.service_name)
+                              return (
+                                <div key={j.id} className="flex items-center gap-1 rounded-lg px-1 py-0.5"
+                                  style={{ backgroundColor: c.light }}>
+                                  {j.worker_name ? (
+                                    <span className="w-3 h-3 rounded-full text-white text-[6px] font-bold flex items-center justify-center shrink-0"
+                                      style={{ backgroundColor: c.bg }}>
+                                      {j.worker_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                                    </span>
+                                  ) : (
+                                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: c.bg }} />
+                                  )}
+                                  <span className="text-[7px] font-semibold truncate" style={{ color: c.text }}>
+                                    {j.client_name?.split(' ')[0] ?? j.service_name.split(' ')[0]}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                            {count > 2 && (
+                              <p className="text-[7px] text-[#8E8E93] text-center font-medium">+{count - 2}</p>
+                            )}
                           </div>
                         </>
                       )}
