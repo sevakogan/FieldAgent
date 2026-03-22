@@ -124,8 +124,17 @@ function TasksList({ job, onUpdate }: { job: JobDetail; onUpdate: () => void }) 
     ? Object.entries(job.checklist_results).map(([k, v]) => [k, Boolean(v)])
     : ((job.service_checklist_items as string[]) ?? []).map((item) => [item, false])
 
-  if (checklistItems.length === 0) {
-    return <p className="text-sm text-[#8E8E93] italic">No tasks defined. Add checklist items in Services.</p>
+  const [showAddTask, setShowAddTask] = useState(false)
+  const [newTaskName, setNewTaskName] = useState('')
+
+  async function addCustomTask() {
+    if (!newTaskName.trim()) return
+    const current = (job.checklist_results ?? {}) as Record<string, boolean>
+    const updated = { ...current, [newTaskName.trim()]: false }
+    await updateJob(job.id, { checklist_results: updated } as Parameters<typeof updateJob>[1])
+    setNewTaskName('')
+    setShowAddTask(false)
+    onUpdate()
   }
 
   async function toggleTask(taskName: string, currentDone: boolean) {
@@ -138,40 +147,73 @@ function TasksList({ job, onUpdate }: { job: JobDetail; onUpdate: () => void }) 
   }
 
   return (
-    <div className="space-y-1">
-      {checklistItems.map(([name, done]) => (
-        <button
-          key={name}
-          onClick={() => toggleTask(name, done)}
-          disabled={completing === name}
-          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
-            done ? 'bg-[#34C759]/8' : 'hover:bg-[#F2F2F7] active:bg-[#E5E5EA]'
-          } ${completing === name ? 'opacity-50' : ''}`}
-        >
-          <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors ${
-            done ? 'bg-[#34C759] border-[#34C759]' : 'border-[#D1D1D6]'
-          }`}>
-            {done && <span className="text-white text-xs font-bold">✓</span>}
-          </div>
-          <span className={`text-sm font-medium ${done ? 'text-[#8E8E93] line-through' : 'text-[#1C1C1E]'}`}>
-            {name}
-          </span>
-        </button>
-      ))}
+    <div>
+      <div className="space-y-1">
+        {checklistItems.map(([name, done]) => (
+          <button
+            key={name}
+            onClick={() => toggleTask(name, done)}
+            disabled={completing === name}
+            className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left ${
+              done ? 'bg-[#34C759]/8' : 'hover:bg-[#F2F2F7] active:bg-[#E5E5EA]'
+            } ${completing === name ? 'opacity-50' : ''}`}
+          >
+            <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors ${
+              done ? 'bg-[#34C759] border-[#34C759]' : 'border-[#D1D1D6]'
+            }`}>
+              {done && <span className="text-white text-[10px] font-bold">✓</span>}
+            </div>
+            <span className={`text-xs font-medium ${done ? 'text-[#8E8E93] line-through' : 'text-[#1C1C1E]'}`}>
+              {name}
+            </span>
+          </button>
+        ))}
+      </div>
+      {showAddTask ? (
+        <div className="flex items-center gap-1.5 mt-2">
+          <input
+            type="text"
+            value={newTaskName}
+            onChange={(e) => setNewTaskName(e.target.value)}
+            placeholder="Task name"
+            className="flex-1 px-2.5 py-1.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#007AFF]/30"
+            onKeyDown={(e) => { if (e.key === 'Enter') addCustomTask() }}
+            autoFocus
+          />
+          <button onClick={addCustomTask} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#007AFF] text-white">Add</button>
+          <button onClick={() => { setShowAddTask(false); setNewTaskName('') }} className="w-6 h-6 rounded-full flex items-center justify-center text-[#8E8E93] text-xs">✕</button>
+        </div>
+      ) : (
+        <button onClick={() => setShowAddTask(true)} className="mt-2 text-xs text-[#007AFF] font-medium hover:underline">+ Task</button>
+      )}
     </div>
   )
 }
 
 // ── Water Chemistry Form (pool services) ────────────────────────────────
 const POOL_FIELDS = [
-  { key: 'ph', label: 'pH Level', placeholder: '7.2-7.8', unit: '' },
-  { key: 'chlorine_free', label: 'Free Chlorine', placeholder: '1-3', unit: 'ppm' },
-  { key: 'chlorine_total', label: 'Total Chlorine', placeholder: '1-5', unit: 'ppm' },
-  { key: 'alkalinity', label: 'Alkalinity', placeholder: '80-120', unit: 'ppm' },
-  { key: 'calcium', label: 'Calcium Hardness', placeholder: '200-400', unit: 'ppm' },
-  { key: 'cya', label: 'CYA (Stabilizer)', placeholder: '30-50', unit: 'ppm' },
-  { key: 'water_temp', label: 'Water Temp', placeholder: '78', unit: '°F' },
+  { key: 'ph', label: 'pH', placeholder: '7.2-7.8', min: 7.2, max: 7.8 },
+  { key: 'chlorine_free', label: 'Free Cl', placeholder: '1-3', min: 1, max: 3 },
+  { key: 'chlorine_total', label: 'Total Cl', placeholder: '1-5', min: 1, max: 5 },
+  { key: 'alkalinity', label: 'Alk', placeholder: '80-120', min: 80, max: 120 },
+  { key: 'calcium', label: 'Ca', placeholder: '200-400', min: 200, max: 400 },
+  { key: 'cya', label: 'CYA', placeholder: '30-50', min: 30, max: 50 },
+  { key: 'water_temp', label: 'Temp °F', placeholder: '78', min: 75, max: 85 },
 ]
+
+function getChemStatus(key: string, val: string): 'good' | 'warn' | 'bad' | null {
+  if (!val) return null
+  const num = parseFloat(val)
+  if (isNaN(num)) return null
+  const field = POOL_FIELDS.find(f => f.key === key)
+  if (!field) return null
+  if (num >= field.min && num <= field.max) return 'good'
+  const range = field.max - field.min
+  if (num >= field.min - range * 0.2 && num <= field.max + range * 0.2) return 'warn'
+  return 'bad'
+}
+
+const CHEM_COLORS = { good: '#34C759', warn: '#FF9F0A', bad: '#FF3B30' }
 
 function WaterChemistryForm({ jobId, existingData, allCustomFields, onCollapse }: { jobId: string; existingData: Record<string, string> | null; allCustomFields?: Record<string, unknown>; onSave: () => void; onCollapse?: () => void }) {
   const [values, setValues] = useState<Record<string, string>>(existingData ?? {})
@@ -180,7 +222,6 @@ function WaterChemistryForm({ jobId, existingData, allCustomFields, onCollapse }
 
   async function handleSave() {
     setSaving(true)
-    // Merge with existing custom_field_values to preserve _expenses
     const merged = { ...(allCustomFields ?? {}), ...values }
     await updateJob(jobId, { custom_field_values: merged } as Parameters<typeof updateJob>[1])
     setSaving(false)
@@ -188,29 +229,51 @@ function WaterChemistryForm({ jobId, existingData, allCustomFields, onCollapse }
     setTimeout(() => { setSaved(false); onCollapse?.() }, 800)
   }
 
+  // Overall status
+  const filledFields = POOL_FIELDS.filter(f => values[f.key])
+  const statuses = filledFields.map(f => getChemStatus(f.key, values[f.key]))
+  const hasBad = statuses.includes('bad')
+  const hasWarn = statuses.includes('warn')
+  const allGood = filledFields.length > 0 && !hasBad && !hasWarn
+
   return (
     <div>
-      <div className="grid grid-cols-3 gap-2">
-        {POOL_FIELDS.map(f => (
-          <div key={f.key}>
-            <label className="text-[9px] text-[#8E8E93] mb-0.5 block">{f.label}{f.unit ? ` (${f.unit})` : ''}</label>
-            <input
-              type="text"
-              value={values[f.key] ?? ''}
-              onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-              placeholder={f.placeholder}
-              className="w-full px-2 py-1.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#5AC8FA]/40"
-            />
-          </div>
-        ))}
+      {filledFields.length > 0 && (
+        <div className={`flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg text-[10px] font-bold ${
+          hasBad ? 'bg-[#FF3B30]/10 text-[#FF3B30]' : hasWarn ? 'bg-[#FF9F0A]/10 text-[#CC7F08]' : 'bg-[#34C759]/10 text-[#248A3D]'
+        }`}>
+          {hasBad ? '⚠️ Out of range' : hasWarn ? '⚡ Borderline' : '✅ All readings normal'}
+        </div>
+      )}
+      <div className="grid grid-cols-4 gap-1.5">
+        {POOL_FIELDS.map(f => {
+          const status = getChemStatus(f.key, values[f.key])
+          return (
+            <div key={f.key}>
+              <label className="text-[8px] text-[#8E8E93] block truncate">{f.label}</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={values[f.key] ?? ''}
+                onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                placeholder={f.placeholder}
+                className="w-full px-1.5 py-1 bg-[#F2F2F7] rounded-lg text-[11px] text-center font-medium focus:outline-none focus:ring-1 focus:ring-[#5AC8FA]/40"
+                style={status ? { borderBottom: `2px solid ${CHEM_COLORS[status]}` } : { border: '1px solid #E5E5EA' }}
+              />
+            </div>
+          )
+        })}
+        {/* Save button in the 4th column of 2nd row */}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className={`self-end px-2 py-1 rounded-lg text-[10px] font-bold text-white transition-colors disabled:opacity-50 ${
+            saved ? 'bg-[#34C759]' : allGood ? 'bg-[#34C759]' : 'bg-[#5AC8FA] hover:bg-[#4AB8EA]'
+          }`}
+        >
+          {saving ? '...' : saved ? '✓' : 'Save'}
+        </button>
       </div>
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="mt-2 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#5AC8FA] text-white hover:bg-[#4AB8EA] transition-colors disabled:opacity-50"
-      >
-        {saving ? '...' : saved ? '✓' : 'Save'}
-      </button>
     </div>
   )
 }
@@ -260,7 +323,7 @@ function ExpenseSection({ jobId, existingTotal, existingExpenses, allCustomField
           onClick={() => setShowAdd(!showAdd)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#FF9F0A]/15 text-[#CC7F08] hover:bg-[#FF9F0A]/25 transition-all"
         >
-          + Add Expense
+          + Expense
         </button>
       </div>
 
@@ -319,6 +382,65 @@ function ExpenseSection({ jobId, existingTotal, existingExpenses, allCustomField
             </button>
           </div>
         </motion.div>
+      )}
+    </div>
+  )
+}
+
+// ── Photo Section ───────────────────────────────────────────────────────
+function PhotoSection({ jobId }: { jobId: string }) {
+  const [photos, setPhotos] = useState<Array<{ name: string; url: string; size: number; time: string }>>([])
+  const [uploading, setUploading] = useState(false)
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `jobs/${jobId}/${Date.now()}.${ext}`
+
+      const { error } = await supabase.storage.from('job-media').upload(path, file, { upsert: true })
+      if (error) throw error
+
+      const { data: urlData } = supabase.storage.from('job-media').getPublicUrl(path)
+      const now = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })
+
+      setPhotos(prev => [...prev, { name: file.name, url: urlData.publicUrl, size: file.size, time: now }])
+    } catch (err) {
+      console.error('Upload failed:', err)
+      alert('Upload failed. Check storage bucket permissions.')
+    }
+    setUploading(false)
+    // Reset input
+    e.target.value = ''
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] text-[#8E8E93]">Date, time & GPS auto-captured</p>
+        <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          uploading ? 'bg-[#8E8E93] text-white' : 'bg-[#007AFF] text-white hover:bg-[#0066DD]'
+        }`}>
+          {uploading ? 'Uploading...' : '+ Photo'}
+          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleUpload} disabled={uploading} />
+        </label>
+      </div>
+      {photos.length > 0 && (
+        <div className="grid grid-cols-3 gap-1.5 mt-2">
+          {photos.map((p, i) => (
+            <div key={i} className="relative rounded-xl overflow-hidden bg-[#F2F2F7] aspect-square">
+              <img src={p.url} alt={p.name} className="w-full h-full object-cover" />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1.5 py-0.5">
+                <span className="text-[8px] text-white">{p.time}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -736,19 +858,7 @@ export default function JobDetailPage() {
 
           {/* Photos */}
           <CollapsibleCard title="Photos" icon="📸" delay={0.2}>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-[#8E8E93]">Date, time & GPS auto-captured</p>
-              <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#007AFF] text-white hover:bg-[#0066DD] transition-all cursor-pointer">
-                + Add Photo
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    // TODO: Upload to Supabase storage
-                    alert(`Photo "${file.name}" selected (${(file.size / 1024).toFixed(0)}KB). Upload coming soon.`)
-                  }
-                }} />
-              </label>
-            </div>
+            <PhotoSection jobId={jobId} />
           </CollapsibleCard>
 
           {/* Expenses */}
