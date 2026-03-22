@@ -237,9 +237,7 @@ export default function AddressDetailPage() {
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 mb-4 text-sm">{error}</div>
       )}
 
-      <div className="grid md:grid-cols-[1fr_200px] gap-4">
-        {/* Left column */}
-        <div className="space-y-4">
+      <div className="max-w-3xl space-y-4">
           {/* Top card: Address details + map side by side */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -390,6 +388,28 @@ export default function AddressDetailPage() {
                     </p>
                   </div>
                 </div>
+              {/* Inline actions */}
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#E5E5EA]/30">
+                <button onClick={startEditing}
+                  className="text-[11px] text-[#007AFF] font-medium hover:underline">Edit</button>
+                <span className="text-[#E5E5EA]">·</span>
+                <Link href={`/dashboard/clients/${address.client_id}`}
+                  className="text-[11px] text-[#007AFF] font-medium hover:underline">View Client</Link>
+                <span className="text-[#E5E5EA]">·</span>
+                {!confirmDelete ? (
+                  <button onClick={() => setConfirmDelete(true)}
+                    className="text-[11px] text-[#FF3B30] font-medium hover:underline">Delete</button>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <button onClick={handleDelete} disabled={deleting}
+                      className="text-[11px] text-[#FF3B30] font-bold hover:underline disabled:opacity-50">
+                      {deleting ? 'Deleting...' : 'Confirm Delete'}
+                    </button>
+                    <button onClick={() => setConfirmDelete(false)}
+                      className="text-[11px] text-[#8E8E93] font-medium hover:underline">Cancel</button>
+                  </span>
+                )}
+              </div>
               </div>
             )}
           </motion.div>
@@ -588,69 +608,6 @@ export default function AddressDetailPage() {
               </div>
             )}
           </motion.div>
-        </div>
-
-        {/* Right column: Quick Actions */}
-        <div>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass rounded-2xl p-3.5"
-          >
-            <h2 className="font-semibold text-[#1C1C1E] text-sm mb-3">Quick Actions</h2>
-            <div className="space-y-2">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={startEditing}
-                className="w-full"
-              >
-                Edit Address
-              </Button>
-              <Link
-                href={`/dashboard/clients/${address.client_id}`}
-                className="block w-full py-2 bg-white/60 text-[#007AFF] border border-[#007AFF]/30 rounded-xl text-xs font-medium text-center hover:bg-[#007AFF]/5 transition-colors"
-              >
-                View Client
-              </Link>
-              {!confirmDelete ? (
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => setConfirmDelete(true)}
-                  className="w-full"
-                >
-                  Delete Address
-                </Button>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-[10px] text-[#FF3B30] text-center">
-                    This will permanently delete this address.
-                  </p>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    loading={deleting}
-                    className="w-full"
-                  >
-                    Confirm Delete
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setConfirmDelete(false)}
-                    className="w-full"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </div>
       </div>
     </div>
   )
