@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { getJob, updateJobStatus, updateJob, deleteJob, type JobDetail } from '@/lib/actions/jobs'
+import { getJob, updateJobStatus, updateJob, deleteJob, getTeamMembers, type JobDetail, type TeamMember } from '@/lib/actions/jobs'
+import { getServices, type ServiceRow } from '@/lib/actions/services'
 import type { JobStatus } from '@/types/database'
 import { StatusBadge } from '@/components/platform/Badge'
 import { Button } from '@/components/platform/Button'
@@ -37,6 +38,33 @@ const STATUS_FLOW: Record<string, string[]> = {
   cancelled: [],
 }
 
+/** Maps each status to a primary workflow action with label and color */
+const WORKFLOW_ACTIONS: Record<string, { label: string; targetStatus: string; variant: 'primary' | 'success' | 'warning' | 'purple' | 'danger' }> = {
+  scheduled: { label: 'Start Job', targetStatus: 'driving', variant: 'success' },
+  driving: { label: 'Arrived', targetStatus: 'arrived', variant: 'warning' },
+  arrived: { label: 'Begin Work', targetStatus: 'in_progress', variant: 'primary' },
+  in_progress: { label: 'Complete', targetStatus: 'completed', variant: 'success' },
+  pending_review: { label: 'Approve', targetStatus: 'completed', variant: 'success' },
+}
+
+const WORKFLOW_SECONDARY: Record<string, { label: string; targetStatus: string; variant: 'primary' | 'success' | 'warning' | 'purple' | 'danger' }> = {
+  pending_review: { label: 'Request Revision', targetStatus: 'revision_needed', variant: 'warning' },
+}
+
+const STATUS_PILL_COLORS: Record<string, { active: string; inactive: string }> = {
+  scheduled: { active: 'bg-[#007AFF] text-white', inactive: 'bg-[#007AFF]/10 text-[#007AFF]' },
+  driving: { active: 'bg-[#5AC8FA] text-white', inactive: 'bg-[#5AC8FA]/10 text-[#2E8EB8]' },
+  arrived: { active: 'bg-[#FF9F0A] text-white', inactive: 'bg-[#FF9F0A]/12 text-[#CC7F08]' },
+  in_progress: { active: 'bg-[#007AFF] text-white', inactive: 'bg-[#007AFF]/10 text-[#007AFF]' },
+  pending_review: { active: 'bg-[#AF52DE] text-white', inactive: 'bg-[#AF52DE]/10 text-[#AF52DE]' },
+  revision_needed: { active: 'bg-[#FF3B30] text-white', inactive: 'bg-[#FF3B30]/10 text-[#FF3B30]' },
+  completed: { active: 'bg-[#34C759] text-white', inactive: 'bg-[#34C759]/10 text-[#248A3D]' },
+  charged: { active: 'bg-[#34C759] text-white', inactive: 'bg-[#34C759]/10 text-[#248A3D]' },
+  cancelled: { active: 'bg-[#8E8E93] text-white', inactive: 'bg-[#8E8E93]/10 text-[#636366]' },
+  requested: { active: 'bg-[#8E8E93] text-white', inactive: 'bg-[#8E8E93]/10 text-[#636366]' },
+  approved: { active: 'bg-[#5AC8FA] text-white', inactive: 'bg-[#5AC8FA]/10 text-[#2E8EB8]' },
+}
+
 export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -48,9 +76,19 @@ export default function JobDetailPage() {
   const [updating, setUpdating] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [editing, setEditing] = useState(false)
+
+  // Edit state
   const [editPrice, setEditPrice] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editTime, setEditTime] = useState('')
+  const [editServiceTypeId, setEditServiceTypeId] = useState('')
+  const [editWorkerId, setEditWorkerId] = useState('')
+  const [editStatus, setEditStatus] = useState('')
+
+  // Dropdown data for edit mode
+  const [services, setServices] = useState<ServiceRow[]>([])
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [loadingDropdowns, setLoadingDropdowns] = useState(false)
 
   const fetchJob = useCallback(async () => {
     setLoading(true)
@@ -61,6 +99,9 @@ export default function JobDetailPage() {
       setEditPrice(String(result.data.price))
       setEditDate(result.data.scheduled_date)
       setEditTime(result.data.scheduled_time ?? '')
+      setEditServiceTypeId(result.data.service_type_id)
+      setEditWorkerId(result.data.assigned_worker_id ?? '')
+      setEditStatus(result.data.status)
     } else {
       setError(result.error ?? 'Failed to load job')
     }
@@ -71,12 +112,31 @@ export default function JobDetailPage() {
     fetchJob()
   }, [fetchJob])
 
+  async function loadDropdowns() {
+    setLoadingDropdowns(true)
+    const [svcResult, memberResult] = await Promise.all([
+      getServices(),
+      getTeamMembers(),
+    ])
+    if (svcResult.success && svcResult.data) setServices(svcResult.data)
+    if (memberResult.success && memberResult.data) setMembers(memberResult.data)
+    setLoadingDropdowns(false)
+  }
+
+  function handleStartEditing() {
+    setEditing(true)
+    if (services.length === 0) {
+      loadDropdowns()
+    }
+  }
+
   async function handleStatusChange(newStatus: string) {
     if (!job) return
     setUpdating(true)
     const result = await updateJobStatus(jobId, newStatus)
     if (result.success) {
       setJob({ ...job, status: newStatus as JobStatus })
+      setEditStatus(newStatus)
     } else {
       setError(result.error ?? 'Failed to update status')
     }
@@ -97,15 +157,14 @@ export default function JobDetailPage() {
       price,
       scheduled_date: editDate,
       scheduled_time: editTime || null,
+      service_type_id: editServiceTypeId,
+      assigned_worker_id: editWorkerId || null,
+      status: editStatus,
     })
 
     if (result.success) {
-      setJob({
-        ...job,
-        price,
-        scheduled_date: editDate,
-        scheduled_time: editTime || null,
-      })
+      // Re-fetch to get updated relations (service name, worker name, etc.)
+      await fetchJob()
       setEditing(false)
     } else {
       setError(result.error ?? 'Failed to update job')
@@ -148,13 +207,29 @@ export default function JobDetailPage() {
     .filter(Boolean)
     .join(', ')
 
+  const primaryAction = WORKFLOW_ACTIONS[job.status]
+  const secondaryAction = WORKFLOW_SECONDARY[job.status]
+  const isTerminal = job.status === 'completed' || job.status === 'charged' || job.status === 'cancelled'
+
   return (
     <div>
       <Link href="/dashboard/jobs" className="text-[#007AFF] text-sm mb-2 inline-block">&larr; Jobs</Link>
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1C1C1E]">Job Details</h1>
-        <StatusBadge status={job.status} />
+        <div className="flex items-center gap-3">
+          {primaryAction && !isTerminal && (
+            <Button
+              variant={primaryAction.variant}
+              onClick={() => handleStatusChange(primaryAction.targetStatus)}
+              disabled={updating}
+              loading={updating}
+            >
+              {primaryAction.label}
+            </Button>
+          )}
+          <StatusBadge status={job.status} />
+        </div>
       </div>
 
       {error && (
@@ -168,13 +243,13 @@ export default function JobDetailPage() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl border border-[#E5E5EA] p-5"
+            className="glass rounded-2xl p-5"
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-[#1C1C1E]">Details</h2>
-              {!editing && job.status !== 'completed' && job.status !== 'charged' && job.status !== 'cancelled' && (
+              {!editing && !isTerminal && (
                 <button
-                  onClick={() => setEditing(true)}
+                  onClick={handleStartEditing}
                   className="text-[#007AFF] text-sm font-medium hover:underline"
                 >
                   Edit
@@ -183,64 +258,165 @@ export default function JobDetailPage() {
             </div>
 
             {editing ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-[#8E8E93] mb-1">Scheduled Date</label>
-                    <input
-                      type="date"
-                      value={editDate}
-                      onChange={(e) => setEditDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                    />
+              <div className="space-y-5">
+                {loadingDropdowns ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="h-6 w-6 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
                   </div>
-                  <div>
-                    <label className="block text-xs text-[#8E8E93] mb-1">Time</label>
-                    <input
-                      type="time"
-                      value={editTime}
-                      onChange={(e) => setEditTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-[#8E8E93] mb-1">Price</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#8E8E93]">$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={editPrice}
-                      onChange={(e) => setEditPrice(e.target.value)}
-                      className="w-full pl-7 pr-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleSaveEdit}
-                    disabled={updating}
-                    loading={updating}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setEditing(false)
-                      setEditPrice(String(job.price))
-                      setEditDate(job.scheduled_date)
-                      setEditTime(job.scheduled_time ?? '')
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
+                ) : (
+                  <>
+                    {/* Service Type — pill buttons */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">Service Type</label>
+                      {services.length === 0 ? (
+                        <p className="text-xs text-[#8E8E93]">No services available</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {services.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => setEditServiceTypeId(s.id)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all ${
+                                editServiceTypeId === s.id
+                                  ? 'bg-[#007AFF]/10 text-[#007AFF] font-semibold ring-1 ring-[#007AFF]/20'
+                                  : 'bg-[#F2F2F7]/60 text-[#3C3C43] hover:bg-[#E5E5EA]/60'
+                              }`}
+                            >
+                              {s.name}
+                              <span className="text-[10px] opacity-60">${Number(s.default_price).toFixed(0)}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Worker — avatar pill buttons */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
+                        Assign Worker <span className="text-[#8E8E93] font-normal">(optional)</span>
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditWorkerId('')}
+                          className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
+                            editWorkerId === ''
+                              ? 'bg-[#8E8E93]/15 text-[#1C1C1E] font-medium'
+                              : 'bg-[#F2F2F7]/60 text-[#8E8E93] hover:bg-[#E5E5EA]/60'
+                          }`}
+                        >
+                          Unassigned
+                        </button>
+                        {members.map((m) => (
+                          <button
+                            key={m.member_id}
+                            type="button"
+                            onClick={() => setEditWorkerId(m.member_id)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all ${
+                              editWorkerId === m.member_id
+                                ? 'bg-[#007AFF]/10 text-[#007AFF] font-semibold ring-1 ring-[#007AFF]/20'
+                                : 'bg-[#F2F2F7]/60 text-[#3C3C43] hover:bg-[#E5E5EA]/60'
+                            }`}
+                          >
+                            <span className="w-5 h-5 rounded-full bg-[#34C759] flex items-center justify-center text-white text-[8px] font-bold shrink-0">
+                              {m.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                            </span>
+                            {m.full_name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Status — pill buttons with colors */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">Status</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(STATUS_LABELS).map(([key, label]) => {
+                          const colors = STATUS_PILL_COLORS[key] ?? { active: 'bg-[#8E8E93] text-white', inactive: 'bg-[#8E8E93]/10 text-[#636366]' }
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setEditStatus(key)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                                editStatus === key ? colors.active : colors.inactive + ' hover:opacity-80'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Date & Time */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-[#8E8E93] mb-1">Scheduled Date</label>
+                        <input
+                          type="date"
+                          value={editDate}
+                          onChange={(e) => setEditDate(e.target.value)}
+                          className="w-full px-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[#8E8E93] mb-1">Time</label>
+                        <input
+                          type="time"
+                          value={editTime}
+                          onChange={(e) => setEditTime(e.target.value)}
+                          className="w-full px-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Price */}
+                    <div>
+                      <label className="block text-xs text-[#8E8E93] mb-1">Price</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#8E8E93]">$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(e.target.value)}
+                          className="w-full pl-7 pr-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Save / Cancel */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleSaveEdit}
+                        disabled={updating}
+                        loading={updating}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setEditing(false)
+                          setEditPrice(String(job.price))
+                          setEditDate(job.scheduled_date)
+                          setEditTime(job.scheduled_time ?? '')
+                          setEditServiceTypeId(job.service_type_id)
+                          setEditWorkerId(job.assigned_worker_id ?? '')
+                          setEditStatus(job.status)
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -283,7 +459,7 @@ export default function JobDetailPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl border border-[#E5E5EA] p-5"
+              className="glass rounded-2xl p-5"
             >
               <h2 className="font-semibold text-[#1C1C1E] mb-4">Checklist</h2>
               <div className="space-y-2">
@@ -316,7 +492,7 @@ export default function JobDetailPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-2xl border border-[#E5E5EA] p-5"
+            className="glass rounded-2xl p-5"
           >
             <h2 className="font-semibold text-[#1C1C1E] mb-4">Pricing</h2>
             <div className="space-y-2 text-sm">
@@ -345,7 +521,7 @@ export default function JobDetailPage() {
             </div>
           </motion.div>
 
-          {/* Status actions */}
+          {/* Status workflow actions */}
           {nextStatuses.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -353,21 +529,50 @@ export default function JobDetailPage() {
               transition={{ delay: 0.2 }}
               className="space-y-2"
             >
-              {nextStatuses.map((s) => {
-                const isCancel = s === 'cancelled'
-                const variant = isCancel ? 'danger' : s === 'completed' || s === 'charged' ? 'success' : 'primary'
-                return (
-                  <Button
-                    key={s}
-                    variant={variant}
-                    onClick={() => handleStatusChange(s)}
-                    disabled={updating}
-                    className="w-full"
-                  >
-                    {isCancel ? 'Cancel Job' : `Mark as ${STATUS_LABELS[s] ?? s}`}
-                  </Button>
-                )
-              })}
+              <p className="text-xs font-medium text-[#8E8E93] uppercase tracking-wider mb-1">Actions</p>
+
+              {/* Primary workflow action */}
+              {primaryAction && (
+                <Button
+                  variant={primaryAction.variant}
+                  onClick={() => handleStatusChange(primaryAction.targetStatus)}
+                  disabled={updating}
+                  className="w-full"
+                >
+                  {primaryAction.label}
+                </Button>
+              )}
+
+              {/* Secondary workflow action */}
+              {secondaryAction && (
+                <Button
+                  variant={secondaryAction.variant}
+                  onClick={() => handleStatusChange(secondaryAction.targetStatus)}
+                  disabled={updating}
+                  className="w-full"
+                >
+                  {secondaryAction.label}
+                </Button>
+              )}
+
+              {/* Remaining transitions not covered by primary/secondary */}
+              {nextStatuses
+                .filter(s => s !== primaryAction?.targetStatus && s !== secondaryAction?.targetStatus)
+                .map((s) => {
+                  const isCancel = s === 'cancelled'
+                  const variant = isCancel ? 'danger' : s === 'completed' || s === 'charged' ? 'success' : 'primary'
+                  return (
+                    <Button
+                      key={s}
+                      variant={variant}
+                      onClick={() => handleStatusChange(s)}
+                      disabled={updating}
+                      className="w-full"
+                    >
+                      {isCancel ? 'Cancel Job' : `Mark as ${STATUS_LABELS[s] ?? s}`}
+                    </Button>
+                  )
+                })}
             </motion.div>
           )}
 

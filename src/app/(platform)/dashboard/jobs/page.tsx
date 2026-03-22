@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { getJobs, type JobRow } from '@/lib/actions/jobs'
+import { getJobs, updateJobStatus, type JobRow } from '@/lib/actions/jobs'
 import { StatusBadge } from '@/components/platform/Badge'
 
 const STATUSES = ['all', 'scheduled', 'in_progress', 'pending_review', 'completed', 'cancelled'] as const
@@ -17,11 +18,13 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export default function JobsPage() {
+  const router = useRouter()
   const [jobs, setJobs] = useState<JobRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
+  const [startingJobId, setStartingJobId] = useState<string | null>(null)
 
   const fetchJobs = useCallback(async () => {
     setLoading(true)
@@ -48,6 +51,22 @@ export default function JobsPage() {
       (j.worker_name ?? '').toLowerCase().includes(q)
     )
   })
+
+  async function handleStartJob(e: React.MouseEvent, jobId: string) {
+    e.stopPropagation()
+    setStartingJobId(jobId)
+    const result = await updateJobStatus(jobId, 'driving')
+    if (result.success) {
+      await fetchJobs()
+    } else {
+      setError(result.error ?? 'Failed to start job')
+    }
+    setStartingJobId(null)
+  }
+
+  function handleRowClick(jobId: string) {
+    router.push(`/dashboard/jobs/${jobId}`)
+  }
 
   return (
     <div>
@@ -136,12 +155,13 @@ export default function JobsPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
-                  className="hover:bg-[#F2F2F7] cursor-pointer transition-colors"
+                  onClick={() => handleRowClick(job.id)}
+                  className="group cursor-pointer transition-all duration-150 hover:bg-[#F2F2F7] border-l-2 border-l-transparent hover:border-l-[#007AFF]"
                 >
                   <td className="p-3">
-                    <Link href={`/dashboard/jobs/${job.id}`} className="text-sm font-medium text-[#1C1C1E] hover:text-[#007AFF]">
+                    <p className="text-sm font-medium text-[#1C1C1E] group-hover:text-[#007AFF] transition-colors">
                       {job.address_street}
-                    </Link>
+                    </p>
                     <p className="text-xs text-[#8E8E93]">{job.address_city}</p>
                   </td>
                   <td className="p-3 text-sm text-[#1C1C1E]">{job.service_name}</td>
@@ -155,8 +175,19 @@ export default function JobsPage() {
                   <td className="p-3 text-sm text-right font-medium text-[#1C1C1E]">
                     ${Number(job.price).toFixed(2)}
                   </td>
-                  <td className="p-3 text-center">
-                    <StatusBadge status={job.status} />
+                  <td className="p-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <StatusBadge status={job.status} />
+                      {job.status === 'scheduled' && (
+                        <button
+                          onClick={(e) => handleStartJob(e, job.id)}
+                          disabled={startingJobId === job.id}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] px-2 py-0.5 rounded-lg bg-[#34C759] text-white font-semibold hover:bg-[#2DB84E] active:bg-[#28A745] disabled:opacity-50"
+                        >
+                          {startingJobId === job.id ? '...' : 'Start'}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </motion.tr>
               ))}
