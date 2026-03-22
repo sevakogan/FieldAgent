@@ -23,7 +23,9 @@ export type RecentJob = {
   service_name: string
   worker_name: string | null
   status: string
+  scheduled_date: string
   scheduled_time: string | null
+  price: number | null
 }
 
 export type ActivityEntry = {
@@ -102,7 +104,7 @@ export async function getRecentJobs(): Promise<ActionResult<RecentJob[]>> {
 
     const { data: jobs, error: jobsError } = await supabase
       .from('jobs')
-      .select('id, address_id, service_type_id, assigned_worker_id, status, scheduled_time')
+      .select('id, address_id, service_type_id, assigned_worker_id, status, scheduled_date, scheduled_time, price')
       .eq('company_id', companyId)
       .eq('scheduled_date', today)
       .order('scheduled_time', { ascending: true })
@@ -161,7 +163,9 @@ export async function getRecentJobs(): Promise<ActionResult<RecentJob[]>> {
         service_name: serviceMap.get(job.service_type_id) ?? 'Unknown',
         worker_name: job.assigned_worker_id ? (memberNameMap.get(job.assigned_worker_id) ?? null) : null,
         status: job.status,
+        scheduled_date: job.scheduled_date,
         scheduled_time: job.scheduled_time,
+        price: job.price ?? null,
       }
     })
 
