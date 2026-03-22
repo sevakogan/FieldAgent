@@ -41,8 +41,12 @@ const STATUS_FLOW: Record<string, string[]> = {
 /** Maps each status to a primary workflow action with label and color */
 const WORKFLOW_ACTIONS: Record<string, { label: string; targetStatus: string; variant: 'primary' | 'success' | 'warning' | 'purple' | 'danger' }> = {
   scheduled: { label: '▶ Start Job', targetStatus: 'in_progress', variant: 'success' },
+  approved: { label: '▶ Start Job', targetStatus: 'in_progress', variant: 'success' },
+  driving: { label: '✓ Complete Job', targetStatus: 'completed', variant: 'success' },
+  arrived: { label: '✓ Complete Job', targetStatus: 'completed', variant: 'success' },
   in_progress: { label: '✓ Complete Job', targetStatus: 'completed', variant: 'success' },
   pending_review: { label: '✓ Approve', targetStatus: 'completed', variant: 'success' },
+  revision_needed: { label: '▶ Restart', targetStatus: 'in_progress', variant: 'primary' },
 }
 
 const WORKFLOW_SECONDARY: Record<string, { label: string; targetStatus: string; variant: 'primary' | 'success' | 'warning' | 'purple' | 'danger' }> = {
@@ -934,7 +938,7 @@ export default function JobDetailPage() {
 
       {/* ── Sticky Bottom Action Bar (mobile) ── */}
       {!isTerminal && (
-        <div className="fixed bottom-20 md:bottom-4 left-0 right-0 z-40 px-4 md:hidden">
+        <div className="fixed bottom-[84px] md:bottom-4 left-0 right-0 z-40 px-4 md:hidden">
           <div className="flex flex-col gap-2 p-3 rounded-2xl"
             style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(24px)', boxShadow: '0 -4px 24px rgba(0,0,0,0.1)' }}>
             {primaryAction && (
