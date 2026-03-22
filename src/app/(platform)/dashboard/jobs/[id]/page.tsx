@@ -169,14 +169,16 @@ const POOL_FIELDS = [
   { key: 'water_temp', label: 'Water Temp', placeholder: '78', unit: '°F' },
 ]
 
-function WaterChemistryForm({ jobId, existingData, onCollapse }: { jobId: string; existingData: Record<string, string> | null; onSave: () => void; onCollapse?: () => void }) {
+function WaterChemistryForm({ jobId, existingData, allCustomFields, onCollapse }: { jobId: string; existingData: Record<string, string> | null; allCustomFields?: Record<string, unknown>; onSave: () => void; onCollapse?: () => void }) {
   const [values, setValues] = useState<Record<string, string>>(existingData ?? {})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   async function handleSave() {
     setSaving(true)
-    await updateJob(jobId, { custom_field_values: values } as Parameters<typeof updateJob>[1])
+    // Merge with existing custom_field_values to preserve _expenses
+    const merged = { ...(allCustomFields ?? {}), ...values }
+    await updateJob(jobId, { custom_field_values: merged } as Parameters<typeof updateJob>[1])
     setSaving(false)
     setSaved(true)
     setTimeout(() => { setSaved(false); onCollapse?.() }, 800)
@@ -184,36 +186,34 @@ function WaterChemistryForm({ jobId, existingData, onCollapse }: { jobId: string
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="space-y-1.5">
         {POOL_FIELDS.map(f => (
-          <div key={f.key}>
-            <label className="text-[10px] text-[#8E8E93] font-medium">{f.label}</label>
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                value={values[f.key] ?? ''}
-                onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-                placeholder={f.placeholder}
-                className="w-full px-2.5 py-1.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-              />
-              {f.unit && <span className="text-[10px] text-[#8E8E93] shrink-0">{f.unit}</span>}
-            </div>
+          <div key={f.key} className="flex items-center gap-2">
+            <span className="text-[10px] text-[#8E8E93] w-20 shrink-0 text-right">{f.label}</span>
+            <input
+              type="text"
+              value={values[f.key] ?? ''}
+              onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+              placeholder={f.placeholder}
+              className="flex-1 px-2 py-1 bg-[#F2F2F7] border border-[#E5E5EA] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#5AC8FA]/40 max-w-[100px]"
+            />
+            {f.unit && <span className="text-[9px] text-[#C7C7CC] w-6">{f.unit}</span>}
           </div>
         ))}
       </div>
       <button
         onClick={handleSave}
         disabled={saving}
-        className="mt-3 px-4 py-2 rounded-xl text-xs font-bold bg-[#5AC8FA] text-white hover:bg-[#4AB8EA] transition-colors disabled:opacity-50 w-full"
+        className="mt-2 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[#5AC8FA] text-white hover:bg-[#4AB8EA] transition-colors disabled:opacity-50"
       >
-        {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Readings'}
+        {saving ? '...' : saved ? '✓' : 'Save'}
       </button>
     </div>
   )
 }
 
 // ── Expense Section ─────────────────────────────────────────────────────
-function ExpenseSection({ jobId, existingTotal, existingExpenses }: { jobId: string; existingTotal: number; existingExpenses?: Array<{ description: string; amount: number }>; onUpdate: () => void }) {
+function ExpenseSection({ jobId, existingTotal, existingExpenses, allCustomFields }: { jobId: string; existingTotal: number; existingExpenses?: Array<{ description: string; amount: number }>; allCustomFields?: Record<string, unknown>; onUpdate: () => void }) {
   const [showAdd, setShowAdd] = useState(false)
   const [desc, setDesc] = useState('')
   const [amount, setAmount] = useState('')
@@ -233,10 +233,11 @@ function ExpenseSection({ jobId, existingTotal, existingExpenses }: { jobId: str
     const newTotal = runningTotal + amt
     setRunningTotal(newTotal)
 
-    // Save both total and expense list to DB — no page refresh
+    // Merge expenses into existing custom_field_values — no page refresh
+    const merged = { ...(allCustomFields ?? {}), _expenses: newExpenses }
     await updateJob(jobId, {
       expenses_total: newTotal,
-      custom_field_values: { _expenses: newExpenses },
+      custom_field_values: merged,
     } as Parameters<typeof updateJob>[1])
 
     setDesc('')
@@ -700,16 +701,20 @@ export default function JobDetailPage() {
                   <span className="text-[#636366]">{new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                   {job.scheduled_time && <span className="text-[#636366]">{job.scheduled_time}</span>}
                 </div>
-                {/* Worker + Client phone */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[#8E8E93]">Worker: <span className="text-[#1C1C1E] font-medium">{job.worker_name ?? 'You'}</span></span>
-                  {job.client_phone && (
-                    <a href={`tel:${job.client_phone}`}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#34C759]/10 text-[#34C759] font-bold text-xs hover:bg-[#34C759]/20 transition-all">
-                      📞 {job.client_phone}
-                    </a>
-                  )}
-                </div>
+                {/* Client + phone */}
+                {(job.client_name || job.client_phone) && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#1C1C1E] font-medium">{job.client_name ?? 'Client'}</span>
+                    {job.client_phone && (
+                      <a href={`tel:${job.client_phone}`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#34C759]/10 text-[#34C759] font-bold text-xs hover:bg-[#34C759]/20 transition-all">
+                        📞 {job.client_phone}
+                      </a>
+                    )}
+                  </div>
+                )}
+                {/* Worker */}
+                <div className="text-[#8E8E93]">Worker: <span className="text-[#1C1C1E] font-medium">{job.worker_name ?? 'You'}</span></div>
               </div>
             )}
           </motion.div>
@@ -722,7 +727,7 @@ export default function JobDetailPage() {
           {/* Water Chemistry — for pool services */}
           {job.service_name?.toLowerCase().includes('pool') && (
             <CollapsibleCard title="Water Chemistry" icon="💧" delay={0.15} externalOpen={waterChemOpen}>
-              <WaterChemistryForm jobId={jobId} existingData={job.custom_field_values as Record<string, string> | null} onSave={fetchJob} onCollapse={() => setWaterChemOpen(false)} />
+              <WaterChemistryForm jobId={jobId} existingData={job.custom_field_values as Record<string, string> | null} allCustomFields={job.custom_field_values as Record<string, unknown> | undefined} onSave={fetchJob} onCollapse={() => setWaterChemOpen(false)} />
             </CollapsibleCard>
           )}
 
@@ -738,7 +743,7 @@ export default function JobDetailPage() {
 
           {/* Expenses */}
           <CollapsibleCard title="Expenses" icon="💰" delay={0.25}>
-            <ExpenseSection jobId={jobId} existingTotal={Number(job.expenses_total)} existingExpenses={((job.custom_field_values as Record<string, unknown>)?._expenses as Array<{ description: string; amount: number }>) ?? []} onUpdate={fetchJob} />
+            <ExpenseSection jobId={jobId} existingTotal={Number(job.expenses_total)} existingExpenses={((job.custom_field_values as Record<string, unknown>)?._expenses as Array<{ description: string; amount: number }>) ?? []} allCustomFields={job.custom_field_values as Record<string, unknown> | undefined} onUpdate={fetchJob} />
           </CollapsibleCard>
         </div>
 
