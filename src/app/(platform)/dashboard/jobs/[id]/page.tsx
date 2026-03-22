@@ -935,8 +935,8 @@ export default function JobDetailPage() {
       {/* ── Sticky Bottom Action Bar (mobile) ── */}
       {!isTerminal && (
         <div className="fixed bottom-20 md:bottom-4 left-0 right-0 z-40 px-4 md:hidden">
-          <div className="flex gap-2 p-2 rounded-2xl"
-            style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(24px)', boxShadow: '0 -4px 24px rgba(0,0,0,0.08)' }}>
+          <div className="flex flex-col gap-2 p-3 rounded-2xl"
+            style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(24px)', boxShadow: '0 -4px 24px rgba(0,0,0,0.1)' }}>
             {primaryAction && (
               <button
                 onClick={() => {
@@ -944,7 +944,7 @@ export default function JobDetailPage() {
                   else handleStatusChange(primaryAction.targetStatus)
                 }}
                 disabled={updating}
-                className="flex-1 py-3 rounded-xl text-sm font-bold bg-[#34C759] text-white hover:bg-[#2DB84E] disabled:opacity-50 transition-all"
+                className="w-full py-3.5 rounded-xl text-sm font-bold bg-[#34C759] text-white hover:bg-[#2DB84E] disabled:opacity-50 transition-all"
               >
                 {updating ? '...' : primaryAction.label}
               </button>
@@ -952,9 +952,9 @@ export default function JobDetailPage() {
             {nextStatuses.includes('cancelled') && (
               <button
                 onClick={() => setShowCancelPopup(true)}
-                className="px-4 py-3 rounded-xl text-sm font-bold bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-all"
+                className="w-full py-3 rounded-xl text-sm font-bold bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-all"
               >
-                Cancel
+                Cancel Job
               </button>
             )}
           </div>
