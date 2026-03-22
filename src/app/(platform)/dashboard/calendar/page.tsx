@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getCalendarJobs } from '@/lib/actions/company'
-import { updateJob } from '@/lib/actions/jobs'
+import { updateJob, duplicateJob } from '@/lib/actions/jobs'
 import { StatusBadge } from '@/components/platform/Badge'
 
 const PACIFIC_TZ = 'America/Los_Angeles'
@@ -184,10 +184,13 @@ export default function CalendarPage() {
           <div className="h-8 w-8 border-3 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* 3-Week Grid */}
+        <div className="space-y-5">
+          {/* Calendar Grid with outline */}
+          <div className="rounded-3xl border border-[#E5E5EA]/40 p-3" style={{
+            background: 'rgba(255,255,255,0.5)', boxShadow: '0 4px 24px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.4)',
+          }}>
           {weeks.map((week, wi) => (
-            <div key={wi}>
+            <div key={wi} className={wi > 0 ? 'mt-4' : ''}>
               <p className="text-[10px] font-bold text-[#AEAEB2] uppercase tracking-widest mb-2 px-1">{week.label}</p>
               <div className="grid grid-cols-7 gap-1.5">
                 {wi === 0 && (
@@ -215,8 +218,9 @@ export default function CalendarPage() {
                       onDragOver={(e) => { e.preventDefault(); setDropTarget(key) }}
                       onDragLeave={() => setDropTarget(null)}
                       onDrop={() => handleDrop(key)}
-                      whileHover={{ scale: 1.04, y: -2 }}
+                      whileHover={{ scale: 1.05, y: -3, rotateX: 2, rotateY: -1 }}
                       whileTap={{ scale: 0.96 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                       className={`min-h-[80px] rounded-2xl flex flex-col items-center pt-2 pb-1.5 cursor-pointer transition-all relative ${
                         isToday ? 'ring-2 ring-[#007AFF] bg-white shadow-lg shadow-[#007AFF]/10'
                         : isDrop ? 'ring-2 ring-[#34C759] bg-[#34C759]/5'
@@ -274,6 +278,7 @@ export default function CalendarPage() {
               </div>
             </div>
           ))}
+          </div>{/* close outline container */}
 
           {/* Selected Day — Job Cards */}
           <AnimatePresence>
@@ -338,9 +343,24 @@ export default function CalendarPage() {
                                 {job.client_name ? ` · ${job.client_name}` : ''}
                               </p>
                             </div>
-                            {job.price != null && (
-                              <span className="text-base font-bold text-[#1C1C1E] shrink-0">${Number(job.price).toFixed(0)}</span>
-                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {job.price != null && (
+                                <span className="text-base font-bold text-[#1C1C1E]">${Number(job.price).toFixed(0)}</span>
+                              )}
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation()
+                                  await duplicateJob(job.id)
+                                  await fetchJobs()
+                                }}
+                                title="Duplicate job"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#007AFF]/10 text-[#8E8E93] hover:text-[#007AFF] transition-colors"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              </button>
+                            </div>
                           </motion.div>
                         )
                       })}

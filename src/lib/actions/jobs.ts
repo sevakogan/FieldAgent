@@ -638,3 +638,36 @@ export async function getWorkerJobs(): Promise<ActionResult<WorkerJob[]>> {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to fetch worker jobs' }
   }
 }
+
+export async function duplicateJob(jobId: string, newDate?: string): Promise<ActionResult<{ id: string }>> {
+  try {
+    const companyId = await getCompanyId()
+    const supabase = createAdminClient()
+
+    const { data: original, error: fetchErr } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', jobId)
+      .eq('company_id', companyId)
+      .single()
+
+    if (fetchErr || !original) return { success: false, error: 'Job not found' }
+
+    const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = original
+    const { data: newJob, error: insertErr } = await supabase
+      .from('jobs')
+      .insert({
+        ...rest,
+        scheduled_date: newDate ?? original.scheduled_date,
+        status: 'scheduled',
+        drive_started_at: null, arrived_at: null, started_at: null, ended_at: null,
+      })
+      .select('id')
+      .single()
+
+    if (insertErr) return { success: false, error: insertErr.message }
+    return { success: true, data: { id: newJob.id } }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to duplicate' }
+  }
+}
