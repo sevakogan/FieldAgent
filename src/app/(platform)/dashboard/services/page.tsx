@@ -31,6 +31,20 @@ const EMPTY_FORM: FormData = {
   checklist_items: '',
 }
 
+function getServiceIcon(name: string): string {
+  const lower = name.toLowerCase()
+  if (lower.includes('deep')) return '\u2728'
+  if (lower.includes('clean')) return '\uD83E\uDDF9'
+  if (lower.includes('pool')) return '\uD83C\uDFCA'
+  if (lower.includes('lawn') || lower.includes('grass') || lower.includes('mow')) return '\uD83C\uDF3F'
+  if (lower.includes('plumb')) return '\uD83D\uDD27'
+  if (lower.includes('repair') || lower.includes('handyman')) return '\uD83D\uDEE0\uFE0F'
+  if (lower.includes('laundry') || lower.includes('linen')) return '\uD83E\uDDFA'
+  if (lower.includes('inspect') || lower.includes('damage')) return '\uD83D\uDD0D'
+  if (lower.includes('pressure') || lower.includes('wash')) return '\uD83D\uDCA7'
+  return '\u2699\uFE0F'
+}
+
 export default function ServicesPage() {
   const [services, setServices] = useState<ServiceRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -206,60 +220,51 @@ export default function ServicesPage() {
       )}
 
       {!loading && !error && services.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-2xl overflow-hidden"
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {services.map((service, i) => (
             <motion.div
               key={service.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
-              className={`flex items-center px-3.5 py-2.5 hover:bg-white/40 transition-colors ${
-                i < services.length - 1 ? 'border-b border-[#E5E5EA]/50' : ''
-              }`}
+              className="glass rounded-2xl p-3 hover:shadow-md transition-all cursor-pointer group relative"
             >
-              {/* Left: name + duration */}
-              <div className="flex items-center gap-2 min-w-0 shrink-0">
-                <span className="text-sm font-semibold text-[#1C1C1E] truncate">
+              {/* Top row: icon + name + price */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-xl bg-[#007AFF]/8 flex items-center justify-center text-base shrink-0">
+                  {getServiceIcon(service.name)}
+                </div>
+                <span className="text-sm font-semibold text-[#1C1C1E] truncate flex-1">
                   {service.name}
                 </span>
+                <span className="text-sm font-bold text-[#34C759] bg-[#34C759]/8 px-2 py-0.5 rounded-xl shrink-0">
+                  ${Number(service.default_price).toFixed(2)}
+                </span>
+              </div>
+
+              {/* Bottom row: duration + description + tags */}
+              <div className="flex items-center gap-2 min-w-0">
                 {service.estimated_duration_minutes && (
-                  <span className="text-[10px] bg-[#F2F2F7] text-[#8E8E93] px-1.5 py-0.5 rounded-lg whitespace-nowrap">
+                  <span className="text-[10px] bg-[#F2F2F7] text-[#8E8E93] px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0">
                     {service.estimated_duration_minutes} min
                   </span>
                 )}
-              </div>
-
-              {/* Center: description */}
-              <p className="flex-1 text-xs text-[#8E8E93] truncate mx-3 hidden sm:block">
-                {service.description ?? ''}
-              </p>
-
-              {/* Right: price + tags + actions */}
-              <div className="flex items-center gap-2 shrink-0 ml-auto">
-                <span className="text-sm font-bold text-[#34C759]">
-                  ${Number(service.default_price).toFixed(2)}
-                </span>
-
+                <p className="text-xs text-[#8E8E93] truncate flex-1">
+                  {service.description ?? ''}
+                </p>
                 {service.photo_required && (
-                  <span className="hidden md:flex items-center gap-0.5 text-[10px] text-[#AF52DE]">
-                    <span className="w-1 h-1 rounded-full bg-[#AF52DE]" />
-                    Photo
-                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#AF52DE] shrink-0" title="Photo required" />
                 )}
                 {service.is_outdoor && (
-                  <span className="hidden md:flex items-center gap-0.5 text-[10px] text-[#34C759]">
-                    <span className="w-1 h-1 rounded-full bg-[#34C759]" />
-                    Outdoor
-                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#34C759] shrink-0" title="Outdoor" />
                 )}
+              </div>
 
+              {/* Hover actions */}
+              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
-                  onClick={() => openEdit(service)}
-                  className="w-7 h-7 rounded-xl flex items-center justify-center hover:bg-white/60 transition-colors text-[#8E8E93]"
+                  onClick={(e) => { e.stopPropagation(); openEdit(service) }}
+                  className="w-7 h-7 rounded-xl flex items-center justify-center bg-white/80 hover:bg-white shadow-sm transition-colors text-[#8E8E93] hover:text-[#007AFF]"
                   aria-label="Edit"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -270,7 +275,7 @@ export default function ServicesPage() {
                 {deleteConfirmId === service.id ? (
                   <div className="flex gap-1">
                     <button
-                      onClick={() => handleDelete(service.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(service.id) }}
                       disabled={submitting}
                       className="w-7 h-7 rounded-xl flex items-center justify-center bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-colors text-xs font-medium"
                       aria-label="Confirm archive"
@@ -278,7 +283,7 @@ export default function ServicesPage() {
                       &#10003;
                     </button>
                     <button
-                      onClick={() => setDeleteConfirmId(null)}
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null) }}
                       className="w-7 h-7 rounded-xl flex items-center justify-center bg-[#F2F2F7] text-[#8E8E93] hover:bg-[#E5E5EA] transition-colors text-xs"
                       aria-label="Cancel"
                     >
@@ -287,8 +292,8 @@ export default function ServicesPage() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => setDeleteConfirmId(service.id)}
-                    className="w-7 h-7 rounded-xl flex items-center justify-center hover:bg-[#FF3B30]/10 transition-colors text-[#8E8E93] hover:text-[#FF3B30]"
+                    onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(service.id) }}
+                    className="w-7 h-7 rounded-xl flex items-center justify-center bg-white/80 hover:bg-[#FF3B30]/10 shadow-sm transition-colors text-[#8E8E93] hover:text-[#FF3B30]"
                     aria-label="Archive"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -299,7 +304,7 @@ export default function ServicesPage() {
               </div>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
       )}
 
       {/* Create/Edit Modal */}
@@ -318,14 +323,7 @@ export default function ServicesPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
-              style={{
-                background: 'rgba(255, 255, 255, 0.72)',
-                backdropFilter: 'blur(40px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-                border: '1px solid rgba(255, 255, 255, 0.45)',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)',
-              }}
+              className="glass-elevated rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
             >
               <h2 className="text-lg font-bold text-[#1C1C1E] mb-5">
                 {editingId ? 'Edit Service' : 'New Service'}

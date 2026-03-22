@@ -329,3 +329,82 @@ export async function deleteAddress(id: string): Promise<ActionResult> {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to delete address' }
   }
 }
+
+export async function addServiceToAddress(data: {
+  address_id: string
+  service_type_id: string
+  price: number
+  recurrence?: string
+  assigned_worker_id?: string
+}): Promise<ActionResult<{ id: string }>> {
+  try {
+    if (!data.address_id) {
+      return { success: false, error: 'Address is required' }
+    }
+    if (!data.service_type_id) {
+      return { success: false, error: 'Service type is required' }
+    }
+    if (data.price < 0) {
+      return { success: false, error: 'Price must be a positive number' }
+    }
+
+    const companyId = await getCompanyId()
+    const supabase = createAdminClient()
+
+    // Verify the address belongs to this company
+    const { data: address, error: addrError } = await supabase
+      .from('addresses')
+      .select('id')
+      .eq('id', data.address_id)
+      .eq('company_id', companyId)
+      .single()
+
+    if (addrError || !address) {
+      return { success: false, error: 'Address not found' }
+    }
+
+    const { data: record, error } = await supabase
+      .from('address_services')
+      .insert({
+        address_id: data.address_id,
+        service_type_id: data.service_type_id,
+        price: data.price,
+        recurrence: data.recurrence ?? 'one_time',
+        assigned_worker_id: data.assigned_worker_id || null,
+        status: 'active',
+      })
+      .select('id')
+      .single()
+
+    if (error || !record) {
+      return { success: false, error: `Failed to add service: ${error?.message}` }
+    }
+
+    return { success: true, data: { id: record.id } }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to add service to address' }
+  }
+}
+
+export async function removeServiceFromAddress(addressServiceId: string): Promise<ActionResult> {
+  try {
+    if (!addressServiceId) {
+      return { success: false, error: 'Address service ID is required' }
+    }
+
+    const supabase = createAdminClient()
+
+    const { error } = await supabase
+      .from('address_services')
+      .delete()
+      .eq('id', addressServiceId)
+
+    if (error) {
+      return { success: false, error: `Failed to remove service: ${error.message}` }
+    }
+
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to remove service' }
+  }
+}
