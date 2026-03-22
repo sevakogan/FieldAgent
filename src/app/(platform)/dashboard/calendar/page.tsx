@@ -401,6 +401,7 @@ function MonthView({ jobs, month, year, onDayClick, selectedDate }: {
   selectedDate: string | null
 }) {
   const todayKey = getTodayKey()
+  const [weeksToShow, setWeeksToShow] = useState(0) // 0 = all, 1/2/3 = limited
   const firstDay = new Date(year, month, 1)
   const startPad = firstDay.getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -411,7 +412,8 @@ function MonthView({ jobs, month, year, onDayClick, selectedDate }: {
     return map
   }, [jobs])
 
-  const cells = useMemo(() => {
+  // Build full month cells
+  const allCells = useMemo(() => {
     const arr: (number | null)[] = []
     for (let i = 0; i < startPad; i++) arr.push(null)
     for (let d = 1; d <= daysInMonth; d++) arr.push(d)
@@ -419,78 +421,131 @@ function MonthView({ jobs, month, year, onDayClick, selectedDate }: {
     return arr
   }, [startPad, daysInMonth])
 
+  // Limit weeks if filter is active
+  const cells = useMemo(() => {
+    if (weeksToShow === 0) return allCells
+    return allCells.slice(0, weeksToShow * 7)
+  }, [allCells, weeksToShow])
+
+  // Date range label
+  const firstDate = cells.find(d => d !== null)
+  const lastDate = [...cells].reverse().find(d => d !== null)
+  const rangeLabel = firstDate && lastDate
+    ? `${new Date(year, month, firstDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(year, month, lastDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    : ''
+
+  // Get client abbreviations for a day's jobs (first 3 chars of client name)
+  function getClientTags(dayJobs: CalendarJob[]): string[] {
+    const names = dayJobs
+      .map(j => j.client_name?.split(' ')[0]?.slice(0, 3)?.toUpperCase())
+      .filter(Boolean) as string[]
+    return [...new Set(names)].slice(0, 3)
+  }
+
   return (
-    <div className="rounded-3xl overflow-hidden" style={{
-      background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(24px)',
-      border: '1px solid rgba(255,255,255,0.5)',
-      boxShadow: '0 12px 40px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.6)',
-    }}>
-      {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-[#E5E5EA]/20 px-2 pt-3 pb-2">
-        {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
-          <div key={d} className="text-center text-[10px] font-bold text-[#C7C7CC] tracking-widest">{d}</div>
-        ))}
+    <div>
+      {/* Sub-header with date range and week filter */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-[#8E8E93] font-medium">{rangeLabel}</p>
+        <div className="flex bg-[#F2F2F7] rounded-xl p-0.5">
+          {[
+            { val: 1, label: '1W' },
+            { val: 2, label: '2W' },
+            { val: 3, label: '3W' },
+            { val: 0, label: 'All' },
+          ].map(opt => (
+            <button key={opt.val} onClick={() => setWeeksToShow(opt.val)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                weeksToShow === opt.val ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93]'
+              }`}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Day cells */}
-      <div className="grid grid-cols-7 gap-[1px] p-2">
-        {cells.map((day, i) => {
-          if (day === null) return <div key={i} className="min-h-[88px]" />
+      <div className="rounded-3xl overflow-hidden" style={{
+        background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(24px)',
+        border: '1px solid rgba(255,255,255,0.5)',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.6)',
+      }}>
+        {/* Day headers */}
+        <div className="grid grid-cols-7 px-2 pt-3 pb-2">
+          {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
+            <div key={d} className="text-center text-[10px] font-bold text-[#C7C7CC] tracking-widest">{d}</div>
+          ))}
+        </div>
 
-          const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-          const isToday = dateKey === todayKey
-          const isSelected = dateKey === selectedDate
-          const dayJobs = jobsByDate.get(dateKey) ?? []
-          const jobCount = dayJobs.length
-          const isPast = new Date(dateKey + 'T23:59:59') < new Date(getTodayKey() + 'T00:00:00')
+        {/* Day cells */}
+        <div className="grid grid-cols-7 gap-1.5 px-2 pb-2">
+          {cells.map((day, i) => {
+            if (day === null) return <div key={i} className="min-h-[96px]" />
 
-          return (
-            <motion.button
-              key={i}
-              onClick={() => onDayClick(dateKey)}
-              whileHover={{ scale: 1.02, y: -1 }}
-              whileTap={{ scale: 0.97 }}
-              className={`min-h-[88px] rounded-2xl flex flex-col items-center justify-start pt-2 pb-1.5 transition-all relative ${
-                isSelected
-                  ? 'bg-[#007AFF]/8 ring-1 ring-[#007AFF]/20'
-                  : isToday
-                    ? 'bg-white'
-                    : isPast && jobCount === 0
-                      ? 'bg-[#F9F9FB]/40'
-                      : 'bg-white/50 hover:bg-white/80'
-              }`}
-              style={isToday ? {
-                boxShadow: '0 4px 16px rgba(0,122,255,0.10), 0 1px 4px rgba(0,0,0,0.04)',
-              } : jobCount > 0 ? {
-                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-              } : undefined}
-            >
-              {/* Date number */}
-              <span className={`text-sm font-semibold ${
-                isPast && jobCount === 0 ? 'text-[#D1D1D6]' : 'text-[#1C1C1E]'
-              }`}>{day}</span>
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            const isToday = dateKey === todayKey
+            const isSelected = dateKey === selectedDate
+            const dayJobs = jobsByDate.get(dateKey) ?? []
+            const jobCount = dayJobs.length
+            const isPast = dateKey < todayKey
+            const clientTags = getClientTags(dayJobs)
 
-              {/* Job count — big colored number */}
-              {jobCount > 0 && (
-                <span className={`text-2xl font-bold mt-0.5 leading-none ${
-                  jobCount >= 6 ? 'text-[#FF3B30]' : jobCount >= 3 ? 'text-[#FF9F0A]' : 'text-[#34C759]'
-                }`}>{jobCount}</span>
-              )}
+            return (
+              <motion.button
+                key={i}
+                onClick={() => onDayClick(dateKey)}
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                className={`min-h-[96px] rounded-2xl flex flex-col items-center justify-start pt-2.5 pb-2 transition-all relative ${
+                  isToday
+                    ? 'bg-white ring-2 ring-[#007AFF] shadow-lg shadow-[#007AFF]/10'
+                    : isSelected
+                      ? 'bg-[#007AFF]/6 ring-1 ring-[#007AFF]/25'
+                      : isPast && jobCount === 0
+                        ? 'bg-[#F2F2F7]/50'
+                        : jobCount > 0
+                          ? 'bg-white shadow-sm'
+                          : 'bg-white/40'
+                }`}
+              >
+                {/* Date number */}
+                <span className={`text-sm font-semibold leading-none ${
+                  isToday ? 'text-[#007AFF]'
+                    : isPast && jobCount === 0 ? 'text-[#D1D1D6]'
+                    : 'text-[#1C1C1E]'
+                }`}>{day}</span>
 
-              {/* Today indicator */}
-              {isToday && (
-                <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#007AFF] shadow-sm shadow-[#007AFF]/30" />
-              )}
-            </motion.button>
-          )
-        })}
-      </div>
+                {/* Job count — big colored number */}
+                {jobCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className={`text-[22px] font-bold mt-1 leading-none ${
+                      jobCount >= 6 ? 'text-[#FF3B30]' : jobCount >= 3 ? 'text-[#FF9F0A]' : 'text-[#34C759]'
+                    }`}
+                  >{jobCount}</motion.span>
+                )}
 
-      {/* Legend */}
-      <div className="flex items-center justify-end gap-4 px-4 pb-3">
-        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#34C759]" /><span className="text-[9px] text-[#8E8E93]">1–2</span></div>
-        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF9F0A]" /><span className="text-[9px] text-[#8E8E93]">3–5</span></div>
-        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF3B30]" /><span className="text-[9px] text-[#8E8E93]">6+</span></div>
+                {/* Client abbreviation tags */}
+                {clientTags.length > 0 && (
+                  <div className="flex items-center gap-0.5 mt-1 flex-wrap justify-center">
+                    {clientTags.map(tag => (
+                      <span key={tag} className={`text-[7px] font-bold tracking-wide ${
+                        jobCount >= 6 ? 'text-[#FF3B30]/70' : jobCount >= 3 ? 'text-[#FF9F0A]/70' : 'text-[#34C759]/70'
+                      }`}>{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </motion.button>
+            )
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-end gap-4 px-4 pb-3">
+          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#34C759]" /><span className="text-[9px] text-[#8E8E93]">1–2</span></div>
+          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF9F0A]" /><span className="text-[9px] text-[#8E8E93]">3–5</span></div>
+          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF3B30]" /><span className="text-[9px] text-[#8E8E93]">6+</span></div>
+        </div>
       </div>
     </div>
   )
