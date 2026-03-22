@@ -710,6 +710,64 @@ export default function JobsPage() {
                 </div>
               </div>
             ))}
+
+          {/* Selected day jobs — unfolds inside the calendar */}
+          <AnimatePresence>
+            {selectedDate && (() => {
+              const dayJobs = (jobsByDate.get(selectedDate) ?? [])
+                .filter(j => filter === 'all' || j.status === filter)
+                .sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))
+              return (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="overflow-hidden border-t border-[#E5E5EA]/20 mt-2 pt-3"
+                >
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <h3 className="text-xs font-bold text-[#1C1C1E]">
+                      {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      <span className="text-[#8E8E93] font-normal ml-2">{dayJobs.length} job{dayJobs.length !== 1 ? 's' : ''}</span>
+                    </h3>
+                    <button onClick={() => setSelectedDate(null)} className="w-6 h-6 rounded-full bg-[#F2F2F7] flex items-center justify-center">
+                      <svg className="w-3 h-3 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                  {dayJobs.length === 0 ? (
+                    <p className="text-xs text-[#8E8E93] text-center py-4">No jobs this day</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {dayJobs.map(job => {
+                        const c = getColor(job.service_name)
+                        return (
+                          <motion.div key={job.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+                            draggable onDragStart={() => setDragJob(job)}
+                            onClick={() => handleCardClick(job.id)}
+                            className="flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer hover:shadow-md transition-all border-l-[3px]"
+                            style={{ backgroundColor: c.light, borderLeftColor: c.bg }}>
+                            <span className="text-base">{getServiceIcon(job.service_name)}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-[#1C1C1E] truncate">{job.service_name}</span>
+                                <StatusBadge status={job.status} />
+                              </div>
+                              <p className="text-[10px] text-[#636366] truncate">
+                                {job.scheduled_time ? fmtTime(job.scheduled_time) + ' · ' : ''}{job.address_street}
+                                {job.client_name ? ` · ${job.client_name}` : ''}
+                              </p>
+                            </div>
+                            <span className="text-sm font-bold text-[#1C1C1E] shrink-0">${Number(job.price).toFixed(0)}</span>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </motion.div>
+              )
+            })()}
+          </AnimatePresence>
+
           </div>{/* close calendar grid container */}
 
           {/* Legend */}
@@ -721,8 +779,8 @@ export default function JobsPage() {
 
           {/* ── Job List Below Calendar ── */}
 
-          {/* No matches after filtering */}
-          {filtered.length === 0 && (
+          {/* No matches after filtering — only when viewing all */}
+          {filtered.length === 0 && !selectedDate && (
             <div className="glass rounded-2xl p-10 text-center">
               <p className="text-sm text-[#8E8E93]">No jobs match your filters.</p>
               {selectedDate && (
@@ -736,8 +794,8 @@ export default function JobsPage() {
             </div>
           )}
 
-          {/* Job cards grouped by day */}
-          {filtered.length > 0 && (
+          {/* Job cards grouped by day — only when no specific day selected */}
+          {filtered.length > 0 && !selectedDate && (
             <div className="space-y-6">
               {[...groupedByDate.entries()].map(([dateStr, dayJobs]) => (
                 <div
