@@ -241,8 +241,7 @@ function ExpenseSection({ jobId, existingTotal, onUpdate }: { jobId: string; exi
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-[#1C1C1E]">💰 Expenses</h2>
+      <div className="flex items-center justify-end mb-2">
         <button
           onClick={() => setShowAdd(!showAdd)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#FF9F0A]/15 text-[#CC7F08] hover:bg-[#FF9F0A]/25 transition-all"
@@ -252,21 +251,18 @@ function ExpenseSection({ jobId, existingTotal, onUpdate }: { jobId: string; exi
       </div>
 
       {expenses.length > 0 && (
-        <div className="space-y-1 mb-3">
+        <div className="space-y-1 mb-2">
           {expenses.map((exp, i) => (
-            <div key={i} className="flex items-center justify-between p-2 bg-[#F2F2F7] rounded-lg text-xs">
-              <span className="text-[#1C1C1E]">{exp.description}</span>
-              <div className="flex items-center gap-2">
-                <span className="font-bold">${exp.amount.toFixed(2)}</span>
-                {exp.amount < 30 && <span className="text-[8px] text-[#34C759] font-bold">AUTO ✓</span>}
-              </div>
+            <div key={i} className="flex items-center justify-between py-1.5 text-xs">
+              <span className="text-[#1C1C1E]">{exp.description} — <span className="font-bold">${exp.amount.toFixed(2)}</span></span>
+              {exp.amount < 30 && <span className="text-[8px] text-[#34C759] font-bold">AUTO ✓</span>}
             </div>
           ))}
         </div>
       )}
 
       {existingTotal > 0 && expenses.length === 0 && (
-        <p className="text-xs text-[#8E8E93] mb-2">Total expenses: ${existingTotal.toFixed(2)}</p>
+        <p className="text-xs text-[#8E8E93]">Total: ${existingTotal.toFixed(2)}</p>
       )}
 
       {showAdd && (
@@ -328,6 +324,7 @@ export default function JobDetailPage() {
   const [showCancelPopup, setShowCancelPopup] = useState(false)
   const [cancelNote, setCancelNote] = useState('')
   const [cancelRescheduleDate, setCancelRescheduleDate] = useState('')
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
 
   // Edit state
   const [editPrice, setEditPrice] = useState('')
@@ -765,7 +762,13 @@ export default function JobDetailPage() {
               {primaryAction && (
                 <Button
                   variant={primaryAction.variant}
-                  onClick={() => handleStatusChange(primaryAction.targetStatus)}
+                  onClick={() => {
+                    if (primaryAction.targetStatus === 'completed') {
+                      setShowCompleteConfirm(true)
+                    } else {
+                      handleStatusChange(primaryAction.targetStatus)
+                    }
+                  }}
                   disabled={updating}
                   loading={updating}
                   className="w-full"
@@ -856,6 +859,44 @@ export default function JobDetailPage() {
                       className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-xs font-semibold hover:bg-[#E5E5EA] transition-colors"
                     >
                       Keep Job
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Complete Job Confirmation */}
+          <AnimatePresence>
+            {showCompleteConfirm && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4"
+                onClick={() => setShowCompleteConfirm(false)}>
+                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-xs rounded-3xl p-5 text-center"
+                  style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(40px)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
+                  <div className="w-12 h-12 rounded-full bg-[#34C759]/10 flex items-center justify-center mx-auto mb-3">
+                    <span className="text-2xl">✓</span>
+                  </div>
+                  <h3 className="text-base font-bold text-[#1C1C1E] mb-1">Complete this job?</h3>
+                  <p className="text-xs text-[#8E8E93] mb-4">This will mark the job as completed and notify the client.</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        setShowCompleteConfirm(false)
+                        await handleStatusChange('completed')
+                      }}
+                      disabled={updating}
+                      className="flex-1 py-2.5 bg-[#34C759] text-white rounded-xl text-xs font-bold hover:bg-[#2DB84E] transition-colors disabled:opacity-50"
+                    >
+                      {updating ? 'Completing...' : 'Complete'}
+                    </button>
+                    <button
+                      onClick={() => setShowCompleteConfirm(false)}
+                      className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-xs font-semibold hover:bg-[#E5E5EA] transition-colors"
+                    >
+                      Cancel
                     </button>
                   </div>
                 </motion.div>
