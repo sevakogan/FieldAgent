@@ -411,14 +411,14 @@ export default function AddressDetailPage() {
             </div>
 
             {address.services.length === 0 && !showAddService && (
-              <div className="text-center py-6">
-                <p className="text-sm text-[#8E8E93] mb-3">
-                  No services yet. Add a service to start scheduling jobs.
+              <button
+                onClick={openAddService}
+                className="w-full py-4 text-center rounded-xl border-2 border-dashed border-[#E5E5EA] hover:border-[#007AFF]/30 hover:bg-[#007AFF]/3 transition-colors group"
+              >
+                <p className="text-xs text-[#8E8E93] group-hover:text-[#007AFF] transition-colors">
+                  + Add a service to start scheduling jobs
                 </p>
-                <Button variant="primary" size="sm" onClick={openAddService}>
-                  + Add Service
-                </Button>
-              </div>
+              </button>
             )}
 
             {address.services.length > 0 && (
