@@ -220,9 +220,6 @@ export default function SettingsPage() {
   }
 
   const settingsLinks = [
-    { label: 'Billing', href: '/dashboard/settings/billing', description: 'Manage your subscription and billing', icon: '💳' },
-    { label: 'Stripe', href: '/dashboard/settings/stripe', description: 'Connect and configure Stripe payments', icon: '🔗' },
-    { label: 'Automation', href: '/dashboard/settings/automation', description: 'Auto-assign, reviews, and scheduling', icon: '⚡' },
     { label: 'Notifications', href: '/dashboard/settings/notifications', description: 'Email, SMS, and push preferences', icon: '🔔' },
   ]
 

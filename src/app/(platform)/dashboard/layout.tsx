@@ -147,13 +147,7 @@ function TabIcon({ name, active }: { name: string; active: boolean }) {
 const MORE_SHEET_ITEMS: { label: string; href: string; icon: ReactNode }[] = [
   { label: 'Team', href: '/dashboard/team', icon: <IconTeam /> },
   { label: 'Services', href: '/dashboard/services', icon: <IconServices /> },
-  { label: 'Quotes', href: '/dashboard/quotes', icon: <IconQuotes /> },
   { label: 'Invoices', href: '/dashboard/invoices', icon: <IconInvoices /> },
-  { label: 'Revenue', href: '/dashboard/revenue', icon: <IconRevenue /> },
-  { label: 'Reports', href: '/dashboard/reports', icon: <IconReports /> },
-  { label: 'Messages', href: '/dashboard/messages', icon: <IconMessages /> },
-  { label: 'Reviews', href: '/dashboard/reviews', icon: <IconReviews /> },
-  { label: 'Integrations', href: '/dashboard/integrations', icon: <IconIntegrations /> },
   { label: 'Referrals', href: '/dashboard/referrals', icon: <IconReferrals /> },
   { label: 'Settings', href: '/dashboard/settings', icon: <IconSettings /> },
 ]
@@ -164,7 +158,7 @@ type NavGroup = { title: string; items: NavItem[] }
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    title: 'Main',
+    title: 'Home',
     items: [
       { label: 'Overview', href: '/dashboard', icon: <IconOverview /> },
       { label: 'Calendar', href: '/dashboard/calendar', icon: <IconCalendar /> },
@@ -182,28 +176,22 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'Operations',
     items: [
       { label: 'Services', href: '/dashboard/services', icon: <IconServices /> },
-      { label: 'Quotes', href: '/dashboard/quotes', icon: <IconQuotes /> },
-      { label: 'Messages', href: '/dashboard/messages', icon: <IconMessages /> },
     ],
   },
   {
     title: 'Finance',
     items: [
       { label: 'Invoices', href: '/dashboard/invoices', icon: <IconInvoices /> },
-      { label: 'Revenue', href: '/dashboard/revenue', icon: <IconRevenue /> },
-      { label: 'Reports', href: '/dashboard/reports', icon: <IconReports /> },
     ],
   },
   {
     title: 'Growth',
     items: [
-      { label: 'Reviews', href: '/dashboard/reviews', icon: <IconReviews /> },
       { label: 'Referrals', href: '/dashboard/referrals', icon: <IconReferrals /> },
-      { label: 'Integrations', href: '/dashboard/integrations', icon: <IconIntegrations /> },
     ],
   },
   {
-    title: 'Config',
+    title: 'Settings',
     items: [
       { label: 'Settings', href: '/dashboard/settings', icon: <IconSettings /> },
     ],
@@ -440,7 +428,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex flex-col ${collapsed ? 'w-16' : 'w-60'} glass-sidebar transition-all duration-300`}>
         <div className="p-4 border-b border-[#E5E5EA] flex items-center justify-between">
-          {!collapsed && <h1 className="text-lg font-bold text-[#1C1C1E]">KleanHQ</h1>}
+          {!collapsed && (
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-[#1C1C1E]">KleanHQ</h1>
+              <span className="text-[8px] bg-[#FF9F0A] text-white px-1.5 py-0.5 rounded-lg font-bold uppercase tracking-wider">Beta</span>
+            </div>
+          )}
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="p-2 rounded-lg hover:bg-[#F2F2F7] text-[#8E8E93] transition-colors"

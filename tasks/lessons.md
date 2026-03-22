@@ -79,3 +79,7 @@
 - Number of jobs/services/properties
 - Worker assignments and schedules
 The bot queries Supabase and uses AI to understand natural language questions.
+
+## 2026-03-22 — Beta V1 vs V2 Feature Split
+**V1 Beta (NOW):** Overview, Calendar, Jobs, Clients & Properties, Team, Services, Invoices, Settings
+**V2 (LATER):** Quotes, Messages, Revenue, Reports, Reviews, Referrals, Integrations, Automation, Stripe settings, Billing settings, Notifications settings, Resellers, Promo Codes, Webhooks, Analytics, Feedback, Changelog, Help Articles
