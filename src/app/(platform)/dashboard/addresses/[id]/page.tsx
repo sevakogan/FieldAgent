@@ -348,68 +348,52 @@ export default function AddressDetailPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex gap-4">
-                {/* Left half: address info */}
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-[#1C1C1E] text-sm mb-2">Address Details</h2>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <p className="text-[10px] text-[#8E8E93] uppercase tracking-wide">Full Address</p>
-                      <p className="text-[#1C1C1E] font-medium text-xs">{fullAddress}</p>
-                    </div>
-                    <div className="flex gap-4">
-                      <div>
-                        <p className="text-[10px] text-[#8E8E93] uppercase tracking-wide">Client</p>
-                        <Link
-                          href={`/dashboard/clients/${address.client_id}`}
-                          className="text-[#007AFF] font-medium text-xs hover:underline"
-                        >
-                          {address.client_name}
-                        </Link>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-[#8E8E93] uppercase tracking-wide">Type</p>
-                        <StatusBadge status={address.is_str ? 'str' : 'residential'} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-[#8E8E93] uppercase tracking-wide">Status</p>
-                        <StatusBadge status={address.status} />
-                      </div>
+              <div>
+                {/* Header with actions */}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="text-xs text-[#8E8E93]">{fullAddress}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Link href={`/dashboard/clients/${address.client_id}`}
+                        className="text-xs text-[#007AFF] font-medium hover:underline flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        {address.client_name}
+                      </Link>
+                      {address.is_str && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-lg bg-[#FF9F0A]/10 text-[#FF9F0A] font-semibold">STR</span>
+                      )}
+                      <StatusBadge status={address.status} />
                     </div>
                   </div>
-                </div>
-                {/* Right half: map placeholder */}
-                <div className="shrink-0">
-                  <div className="h-32 w-32 bg-[#F2F2F7] rounded-xl flex items-center justify-center">
-                    <p className="text-[10px] text-[#8E8E93] text-center px-2">
-                      {address.lat && address.lng
-                        ? `${address.lat.toFixed(4)}, ${address.lng.toFixed(4)}`
-                        : 'Map coming soon'}
-                    </p>
-                  </div>
-                </div>
-              {/* Inline actions */}
-              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#E5E5EA]/30">
-                <button onClick={startEditing}
-                  className="text-[11px] text-[#007AFF] font-medium hover:underline">Edit</button>
-                <span className="text-[#E5E5EA]">·</span>
-                <Link href={`/dashboard/clients/${address.client_id}`}
-                  className="text-[11px] text-[#007AFF] font-medium hover:underline">View Client</Link>
-                <span className="text-[#E5E5EA]">·</span>
-                {!confirmDelete ? (
-                  <button onClick={() => setConfirmDelete(true)}
-                    className="text-[11px] text-[#FF3B30] font-medium hover:underline">Delete</button>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <button onClick={handleDelete} disabled={deleting}
-                      className="text-[11px] text-[#FF3B30] font-bold hover:underline disabled:opacity-50">
-                      {deleting ? 'Deleting...' : 'Confirm Delete'}
+                  {/* Icon action buttons */}
+                  <div className="flex items-center gap-1">
+                    <button onClick={startEditing} title="Edit"
+                      className="w-7 h-7 rounded-lg hover:bg-[#007AFF]/8 flex items-center justify-center transition-colors">
+                      <svg className="w-3.5 h-3.5 text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
                     </button>
-                    <button onClick={() => setConfirmDelete(false)}
-                      className="text-[11px] text-[#8E8E93] font-medium hover:underline">Cancel</button>
-                  </span>
-                )}
-              </div>
+                    {!confirmDelete ? (
+                      <button onClick={() => setConfirmDelete(true)} title="Delete"
+                        className="w-7 h-7 rounded-lg hover:bg-[#FF3B30]/8 flex items-center justify-center transition-colors">
+                        <svg className="w-3.5 h-3.5 text-[#FF3B30]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1 bg-[#FF3B30]/5 rounded-lg px-2 py-1">
+                        <button onClick={handleDelete} disabled={deleting}
+                          className="text-[10px] text-[#FF3B30] font-bold hover:underline disabled:opacity-50">
+                          {deleting ? '...' : 'Confirm'}
+                        </button>
+                        <button onClick={() => setConfirmDelete(false)}
+                          className="text-[10px] text-[#8E8E93] hover:underline ml-1">Cancel</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </motion.div>
