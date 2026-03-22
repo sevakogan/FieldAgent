@@ -386,6 +386,25 @@ export async function addServiceToAddress(data: {
   }
 }
 
+export async function updateAddressService(
+  addressServiceId: string,
+  data: { price?: number; recurrence?: string; assigned_worker_id?: string | null }
+): Promise<ActionResult> {
+  try {
+    if (!addressServiceId) return { success: false, error: 'ID required' }
+    const supabase = createAdminClient()
+    const update: Record<string, unknown> = {}
+    if (data.price !== undefined) update.price = data.price
+    if (data.recurrence !== undefined) update.recurrence = data.recurrence
+    if (data.assigned_worker_id !== undefined) update.assigned_worker_id = data.assigned_worker_id || null
+    const { error } = await supabase.from('address_services').update(update).eq('id', addressServiceId)
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to update' }
+  }
+}
+
 export async function removeServiceFromAddress(addressServiceId: string): Promise<ActionResult> {
   try {
     if (!addressServiceId) {

@@ -9,6 +9,7 @@ import {
   updateAddress,
   deleteAddress,
   addServiceToAddress,
+  updateAddressService,
   removeServiceFromAddress,
   type AddressDetail,
 } from '@/lib/actions/addresses'
@@ -17,6 +18,100 @@ import { getTeamMembers, type TeamMemberRow } from '@/lib/actions/team'
 import { StatusBadge } from '@/components/platform/Badge'
 import { Button } from '@/components/platform/Button'
 import { showUndoToast } from '@/components/platform/UndoToast'
+
+// ── Inline Editable Service Row ──────────────────────────────────────
+type SvcData = { id: string; service_name: string; recurrence: string; price: number; status: string }
+
+function ServiceRow({ svc, isStr, onRemove, onUpdate }: {
+  svc: SvcData
+  isStr: boolean
+  onRemove: () => void
+  onUpdate: (data: { price?: number; recurrence?: string }) => Promise<void>
+}) {
+  const [editingPrice, setEditingPrice] = useState(false)
+  const [priceValue, setPriceValue] = useState(String(svc.price))
+  const [saving, setSaving] = useState(false)
+
+  const LABELS: Record<string, string> = {
+    one_time: 'One Time', weekly: 'Weekly', biweekly: 'Biweekly', monthly: 'Monthly', per_turn: 'Per Turn',
+  }
+  const recurrenceOptions = isStr ? ['per_turn', 'one_time'] : ['one_time', 'weekly', 'biweekly', 'monthly']
+
+  const handlePriceSave = async () => {
+    const newPrice = parseFloat(priceValue)
+    if (isNaN(newPrice) || newPrice === svc.price) { setEditingPrice(false); return }
+    setSaving(true)
+    await onUpdate({ price: newPrice })
+    setEditingPrice(false)
+    setSaving(false)
+  }
+
+  const handleRecurrenceChange = async (r: string) => {
+    if (r === svc.recurrence) return
+    await onUpdate({ recurrence: r })
+  }
+
+  return (
+    <div className="py-2.5 group">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm text-[#1C1C1E] font-medium truncate">{svc.service_name}</span>
+          {/* Recurrence — tap to cycle */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                const idx = recurrenceOptions.indexOf(svc.recurrence)
+                const next = recurrenceOptions[(idx + 1) % recurrenceOptions.length]
+                handleRecurrenceChange(next)
+              }}
+              className="text-[10px] bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#8E8E93] px-1.5 py-0.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer"
+              title="Tap to change"
+            >
+              {LABELS[svc.recurrence] ?? svc.recurrence}
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Price — inline edit */}
+          {editingPrice ? (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-[#8E8E93]">$</span>
+              <input
+                type="number"
+                step="0.01"
+                value={priceValue}
+                onChange={(e) => setPriceValue(e.target.value)}
+                onBlur={handlePriceSave}
+                onKeyDown={(e) => { if (e.key === 'Enter') handlePriceSave(); if (e.key === 'Escape') setEditingPrice(false) }}
+                autoFocus
+                disabled={saving}
+                className="w-20 px-2 py-0.5 text-sm text-right bg-[#F2F2F7] border border-[#007AFF] rounded-lg focus:outline-none"
+              />
+            </div>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); setPriceValue(String(svc.price)); setEditingPrice(true) }}
+              className="text-sm font-medium text-[#1C1C1E] hover:text-[#007AFF] transition-colors cursor-text"
+              title="Click to edit price"
+            >
+              ${svc.price.toFixed(2)}
+            </button>
+          )}
+          <StatusBadge status={svc.status} />
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove() }}
+            className="w-6 h-6 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FF3B30]/10 text-[#8E8E93] hover:text-[#FF3B30]"
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const RECURRENCE_LABELS: Record<string, string> = {
   one_time: 'One Time',
@@ -444,34 +539,16 @@ export default function AddressDetailPage() {
             {address.services.length > 0 && (
               <div className="divide-y divide-[#E5E5EA]/50">
                 {address.services.map(svc => (
-                  <div key={svc.id} className="flex items-center justify-between py-2.5 group">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm text-[#1C1C1E] font-medium truncate">{svc.service_name}</span>
-                      <span className="text-[10px] bg-[#F2F2F7] text-[#8E8E93] px-1.5 py-0.5 rounded-lg whitespace-nowrap">
-                        {RECURRENCE_LABELS[svc.recurrence] ?? svc.recurrence}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm font-medium text-[#1C1C1E]">
-                        ${svc.price.toFixed(2)}
-                      </span>
-                      <StatusBadge status={svc.status} />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRemoveService(svc.id, svc.service_name) }}
-                        disabled={removingSvcId === svc.id}
-                        className="w-6 h-6 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FF3B30]/10 text-[#8E8E93] hover:text-[#FF3B30]"
-                        aria-label="Remove service"
-                      >
-                        {removingSvcId === svc.id ? (
-                          <div className="h-3 w-3 border-2 border-[#FF3B30] border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
+                  <ServiceRow
+                    key={svc.id}
+                    svc={svc}
+                    isStr={address.is_str}
+                    onRemove={() => handleRemoveService(svc.id, svc.service_name)}
+                    onUpdate={async (data) => {
+                      await updateAddressService(svc.id, data)
+                      await fetchAddress()
+                    }}
+                  />
                 ))}
               </div>
             )}
