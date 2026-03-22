@@ -208,12 +208,13 @@ function WaterChemistryForm({ jobId, existingData }: { jobId: string; existingDa
 }
 
 // ── Expense Section ─────────────────────────────────────────────────────
-function ExpenseSection({ jobId, existingTotal, onUpdate }: { jobId: string; existingTotal: number; onUpdate: () => void }) {
+function ExpenseSection({ jobId, existingTotal }: { jobId: string; existingTotal: number; onUpdate: () => void }) {
   const [showAdd, setShowAdd] = useState(false)
   const [desc, setDesc] = useState('')
   const [amount, setAmount] = useState('')
   const [adding, setAdding] = useState(false)
   const [expenses, setExpenses] = useState<Array<{ description: string; amount: number }>>([])
+  const [runningTotal, setRunningTotal] = useState(existingTotal)
 
   async function handleAdd() {
     const amt = parseFloat(amount)
@@ -224,15 +225,17 @@ function ExpenseSection({ jobId, existingTotal, onUpdate }: { jobId: string; exi
     const newExpenses = [...expenses, { description: desc, amount: amt }]
     setExpenses(newExpenses)
 
-    // Update job expenses_total
-    const newTotal = existingTotal + amt
+    // Update running total locally — no page refresh
+    const newTotal = runningTotal + amt
+    setRunningTotal(newTotal)
+
+    // Save to DB in background
     await updateJob(jobId, { expenses_total: newTotal } as Parameters<typeof updateJob>[1])
 
     setDesc('')
     setAmount('')
     setShowAdd(false)
     setAdding(false)
-    onUpdate()
 
     if (!autoApproved) {
       alert(`Expense of $${amt.toFixed(2)} requires owner approval (over $30).`)
@@ -258,11 +261,15 @@ function ExpenseSection({ jobId, existingTotal, onUpdate }: { jobId: string; exi
               {exp.amount < 30 && <span className="text-[8px] text-[#34C759] font-bold">AUTO ✓</span>}
             </div>
           ))}
+          <div className="border-t border-[#E5E5EA] pt-1 mt-1 flex justify-between text-xs">
+            <span className="text-[#8E8E93]">Total</span>
+            <span className="font-bold text-[#1C1C1E]">${runningTotal.toFixed(2)}</span>
+          </div>
         </div>
       )}
 
-      {existingTotal > 0 && expenses.length === 0 && (
-        <p className="text-xs text-[#8E8E93]">Total: ${existingTotal.toFixed(2)}</p>
+      {runningTotal > 0 && expenses.length === 0 && (
+        <p className="text-xs text-[#8E8E93]">Total: ${runningTotal.toFixed(2)}</p>
       )}
 
       {showAdd && (
@@ -455,17 +462,28 @@ export default function JobDetailPage() {
     <div>
       <Link href="/dashboard/jobs" className="text-[#007AFF] text-sm mb-2 inline-block">&larr; Jobs</Link>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-[#1C1C1E]">Job Details</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {primaryAction && !isTerminal && (
             <Button
               variant={primaryAction.variant}
-              onClick={() => handleStatusChange(primaryAction.targetStatus)}
+              onClick={() => {
+                if (primaryAction.targetStatus === 'completed') {
+                  setShowCompleteConfirm(true)
+                } else {
+                  handleStatusChange(primaryAction.targetStatus)
+                }
+              }}
               disabled={updating}
               loading={updating}
             >
               {primaryAction.label}
+            </Button>
+          )}
+          {!isTerminal && nextStatuses.includes('cancelled') && (
+            <Button variant="danger" size="sm" onClick={() => setShowCancelPopup(true)} disabled={updating}>
+              Cancel
             </Button>
           )}
           <StatusBadge status={job.status} />
