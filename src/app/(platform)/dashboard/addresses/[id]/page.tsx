@@ -467,18 +467,36 @@ export default function AddressDetailPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs text-[#8E8E93] mb-1">Service Type</label>
-                    <select
-                      value={addSvcTypeId}
-                      onChange={(e) => handleServiceTypeChange(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/60 border border-[#E5E5EA]/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                    >
-                      <option value="">Select a service...</option>
-                      {availableServices.map(svc => (
-                        <option key={svc.id} value={svc.id}>
-                          {svc.name} (${Number(svc.default_price).toFixed(2)})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="space-y-1.5">
+                      {availableServices.length === 0 ? (
+                        <p className="text-xs text-[#8E8E93] py-2">All services already assigned</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {availableServices.map(svc => (
+                            <button
+                              key={svc.id}
+                              type="button"
+                              onClick={() => handleServiceTypeChange(svc.id)}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all ${
+                                addSvcTypeId === svc.id
+                                  ? 'bg-[#007AFF]/10 border-[#007AFF] border ring-1 ring-[#007AFF]/20'
+                                  : 'bg-[#F2F2F7]/60 border border-transparent hover:bg-[#E5E5EA]/60'
+                              }`}
+                            >
+                              <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                addSvcTypeId === svc.id ? 'border-[#007AFF]' : 'border-[#C7C7CC]'
+                              }`}>
+                                {addSvcTypeId === svc.id && <span className="w-2 h-2 rounded-full bg-[#007AFF]" />}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-[#1C1C1E] truncate">{svc.name}</p>
+                                <p className="text-[10px] text-[#8E8E93]">${Number(svc.default_price).toFixed(2)}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -519,18 +537,36 @@ export default function AddressDetailPage() {
 
                   <div>
                     <label className="block text-xs text-[#8E8E93] mb-1">Assign Worker (optional)</label>
-                    <select
-                      value={addSvcWorkerId}
-                      onChange={(e) => setAddSvcWorkerId(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/60 border border-[#E5E5EA]/60 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                    >
-                      <option value="">Unassigned</option>
+                    <div className="flex gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setAddSvcWorkerId('')}
+                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-all ${
+                          addSvcWorkerId === ''
+                            ? 'bg-[#8E8E93]/15 text-[#1C1C1E] font-medium'
+                            : 'bg-[#F2F2F7]/60 text-[#8E8E93] hover:bg-[#E5E5EA]/60'
+                        }`}
+                      >
+                        Unassigned
+                      </button>
                       {teamMembers.map(m => (
-                        <option key={m.id} value={m.id}>
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setAddSvcWorkerId(m.id)}
+                          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-all ${
+                            addSvcWorkerId === m.id
+                              ? 'bg-[#007AFF]/10 text-[#007AFF] font-medium ring-1 ring-[#007AFF]/20'
+                              : 'bg-[#F2F2F7]/60 text-[#3C3C43] hover:bg-[#E5E5EA]/60'
+                          }`}
+                        >
+                          <span className="w-5 h-5 rounded-full bg-[#34C759] flex items-center justify-center text-white text-[9px] font-bold shrink-0">
+                            {m.full_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()}
+                          </span>
                           {m.full_name}
-                        </option>
+                        </button>
                       ))}
-                    </select>
+                    </div>
                   </div>
 
                   <div className="flex gap-2 pt-1">

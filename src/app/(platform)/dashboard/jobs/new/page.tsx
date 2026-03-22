@@ -230,29 +230,33 @@ export default function NewJobPage() {
           <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
             Client <span className="text-red-500">*</span>
           </label>
-          <div className="flex gap-2">
-            <select
-              value={form.client_id}
-              onChange={(e) => handleChange('client_id', e.target.value)}
-              className="flex-1 px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-            >
-              <option value="">Select client...</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.full_name} — {c.email}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => setShowNewClient(!showNewClient)}
-              className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                showNewClient
-                  ? 'bg-[#FF3B30] text-white hover:bg-[#FF2D20]'
-                  : 'bg-[#34C759] text-white hover:bg-[#2DB84D]'
-              }`}
-            >
-              {showNewClient ? 'Cancel' : '+ New'}
+          <div className="flex gap-2 mb-2">
+            <div className="flex-1">
+              {clients.length === 0 ? (
+                <p className="text-xs text-[#8E8E93] py-2">No clients yet</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {clients.map((c) => (
+                    <button key={c.id} type="button" onClick={() => handleChange('client_id', c.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all ${
+                        form.client_id === c.id
+                          ? 'bg-[#007AFF]/10 text-[#007AFF] font-semibold ring-1 ring-[#007AFF]/20'
+                          : 'bg-[#F2F2F7]/60 text-[#3C3C43] hover:bg-[#E5E5EA]/60'
+                      }`}>
+                      <span className="w-5 h-5 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-[8px] font-bold shrink-0">
+                        {c.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                      </span>
+                      {c.full_name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button type="button" onClick={() => setShowNewClient(!showNewClient)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors shrink-0 h-fit ${
+                showNewClient ? 'bg-[#FF3B30] text-white' : 'bg-[#34C759] text-white'
+              }`}>
+              {showNewClient ? '✕' : '+ New'}
             </button>
           </div>
 
@@ -320,19 +324,25 @@ export default function NewJobPage() {
               }
             </div>
           ) : (
-            <select
-              value={form.address_id}
-              onChange={(e) => handleChange('address_id', e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-            >
-              <option value="">Select address...</option>
+            <div className="space-y-1.5">
               {filteredAddresses.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.street}{a.unit ? `, ${a.unit}` : ''}, {a.city}, {a.state} {a.zip}
-                  {!form.client_id && ` (${a.client_name})`}
-                </option>
+                <button key={a.id} type="button" onClick={() => handleChange('address_id', a.id)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all ${
+                    form.address_id === a.id
+                      ? 'bg-[#007AFF]/10 ring-1 ring-[#007AFF]/20'
+                      : 'bg-[#F2F2F7]/60 hover:bg-[#E5E5EA]/60'
+                  }`}>
+                  <svg className="w-4 h-4 text-[#8E8E93] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+                  </svg>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-[#1C1C1E] truncate">{a.street}{a.unit ? `, ${a.unit}` : ''}</p>
+                    <p className="text-[10px] text-[#8E8E93]">{a.city}, {a.state} {a.zip}</p>
+                  </div>
+                  {form.address_id === a.id && <span className="text-[#007AFF] text-xs">✓</span>}
+                </button>
               ))}
-            </select>
+            </div>
           )}
         </div>
 
@@ -347,18 +357,19 @@ export default function NewJobPage() {
               <Link href="/dashboard/services" className="text-[#007AFF] hover:underline">Create a service first</Link>
             </div>
           ) : (
-            <select
-              value={form.service_type_id}
-              onChange={(e) => handleChange('service_type_id', e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-            >
-              <option value="">Select service...</option>
+            <div className="flex flex-wrap gap-1.5">
               {services.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} — ${Number(s.default_price).toFixed(2)}
-                </option>
+                <button key={s.id} type="button" onClick={() => handleChange('service_type_id', s.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all ${
+                    form.service_type_id === s.id
+                      ? 'bg-[#007AFF]/10 text-[#007AFF] font-semibold ring-1 ring-[#007AFF]/20'
+                      : 'bg-[#F2F2F7]/60 text-[#3C3C43] hover:bg-[#E5E5EA]/60'
+                  }`}>
+                  {s.name}
+                  <span className="text-[10px] opacity-60">${Number(s.default_price).toFixed(0)}</span>
+                </button>
               ))}
-            </select>
+            </div>
           )}
         </div>
 
@@ -367,18 +378,29 @@ export default function NewJobPage() {
           <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
             Assign Worker <span className="text-[#8E8E93] font-normal">(optional)</span>
           </label>
-          <select
-            value={form.assigned_worker_id}
-            onChange={(e) => handleChange('assigned_worker_id', e.target.value)}
-            className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-          >
-            <option value="">Unassigned</option>
+          <div className="flex flex-wrap gap-1.5">
+            <button type="button" onClick={() => handleChange('assigned_worker_id', '')}
+              className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
+                form.assigned_worker_id === ''
+                  ? 'bg-[#8E8E93]/15 text-[#1C1C1E] font-medium'
+                  : 'bg-[#F2F2F7]/60 text-[#8E8E93] hover:bg-[#E5E5EA]/60'
+              }`}>
+              Unassigned
+            </button>
             {members.map((m) => (
-              <option key={m.member_id} value={m.member_id}>
-                {m.full_name} ({m.role})
-              </option>
+              <button key={m.member_id} type="button" onClick={() => handleChange('assigned_worker_id', m.member_id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all ${
+                  form.assigned_worker_id === m.member_id
+                    ? 'bg-[#007AFF]/10 text-[#007AFF] font-semibold ring-1 ring-[#007AFF]/20'
+                    : 'bg-[#F2F2F7]/60 text-[#3C3C43] hover:bg-[#E5E5EA]/60'
+                }`}>
+                <span className="w-5 h-5 rounded-full bg-[#34C759] flex items-center justify-center text-white text-[8px] font-bold shrink-0">
+                  {m.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                </span>
+                {m.full_name}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
 
         {/* Date & Time */}
