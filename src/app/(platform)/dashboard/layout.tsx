@@ -102,6 +102,62 @@ const IconChevron = ({ open }: { open: boolean }) => (
   </motion.svg>
 )
 
+// ─── Smaller icons for mobile tab bar ────────────────────────────────
+function TabIcon({ name, active }: { name: string; active: boolean }) {
+  const color = active ? '#007AFF' : '#8E8E93'
+  const sw = 1.8
+
+  switch (name) {
+    case 'overview':
+      return (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="10" width="4" height="10" rx="1" /><rect x="10" y="4" width="4" height="16" rx="1" /><rect x="16" y="8" width="4" height="12" rx="1" />
+        </svg>
+      )
+    case 'calendar':
+      return (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
+      )
+    case 'jobs':
+      return (
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+        </svg>
+      )
+    case 'clients':
+      return (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+        </svg>
+      )
+    case 'more':
+      return (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />
+        </svg>
+      )
+    default:
+      return null
+  }
+}
+
+// ─── More Sheet Nav Items ────────────────────────────────────────────
+const MORE_SHEET_ITEMS: { label: string; href: string; icon: ReactNode }[] = [
+  { label: 'Team', href: '/dashboard/team', icon: <IconTeam /> },
+  { label: 'Services', href: '/dashboard/services', icon: <IconServices /> },
+  { label: 'Quotes', href: '/dashboard/quotes', icon: <IconQuotes /> },
+  { label: 'Invoices', href: '/dashboard/invoices', icon: <IconInvoices /> },
+  { label: 'Revenue', href: '/dashboard/revenue', icon: <IconRevenue /> },
+  { label: 'Reports', href: '/dashboard/reports', icon: <IconReports /> },
+  { label: 'Messages', href: '/dashboard/messages', icon: <IconMessages /> },
+  { label: 'Reviews', href: '/dashboard/reviews', icon: <IconReviews /> },
+  { label: 'Integrations', href: '/dashboard/integrations', icon: <IconIntegrations /> },
+  { label: 'Referrals', href: '/dashboard/referrals', icon: <IconReferrals /> },
+  { label: 'Settings', href: '/dashboard/settings', icon: <IconSettings /> },
+]
+
 // ─── Nav Groups ──────────────────────────────────────────────────────
 type NavItem = { label: string; href: string; icon: ReactNode }
 type NavGroup = { title: string; items: NavItem[] }
@@ -215,6 +271,162 @@ function NavSection({
   )
 }
 
+// ─── Mobile Bottom Tab Bar ───────────────────────────────────────────
+function MobileBottomNav({ pathname }: { pathname: string }) {
+  const [moreOpen, setMoreOpen] = useState(false)
+
+  const tabs = [
+    { name: 'overview', label: 'Overview', href: '/dashboard' },
+    { name: 'calendar', label: 'Calendar', href: '/dashboard/calendar' },
+    { name: 'jobs', label: 'Jobs', href: '/dashboard/jobs' },
+    { name: 'clients', label: 'Clients', href: '/dashboard/clients' },
+    { name: 'more', label: 'More', href: '' },
+  ]
+
+  const isTabActive = (href: string) => {
+    if (href === '/dashboard') return pathname === '/dashboard'
+    return href !== '' && pathname.startsWith(href)
+  }
+
+  // Check if "More" should appear active (any deeper nav item is active)
+  const moreHrefs = MORE_SHEET_ITEMS.map(i => i.href)
+  const isMoreActive = moreHrefs.some(h => pathname === h || pathname.startsWith(h))
+
+  return (
+    <>
+      {/* Bottom Tab Bar */}
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50"
+        style={{
+          background: 'rgba(255,255,255,0.8)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderTop: '1px solid rgba(0,0,0,0.06)',
+        }}
+      >
+        <div className="flex items-center justify-around px-2" style={{ height: '60px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          {tabs.map(tab => {
+            const active = tab.name === 'more' ? isMoreActive || moreOpen : isTabActive(tab.href)
+
+            if (tab.name === 'more') {
+              return (
+                <button
+                  key={tab.name}
+                  onClick={() => setMoreOpen(!moreOpen)}
+                  className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1"
+                >
+                  <TabIcon name={tab.name} active={active} />
+                  <span className={`text-[9px] font-semibold ${active ? 'text-[#007AFF]' : 'text-[#8E8E93]'}`}>
+                    {tab.label}
+                  </span>
+                </button>
+              )
+            }
+
+            return (
+              <Link
+                key={tab.name}
+                href={tab.href}
+                onClick={() => setMoreOpen(false)}
+                className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1"
+              >
+                <TabIcon name={tab.name} active={active} />
+                <span className={`text-[9px] font-semibold ${active ? 'text-[#007AFF]' : 'text-[#8E8E93]'}`}>
+                  {tab.label}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* More Bottom Sheet */}
+      <AnimatePresence>
+        {moreOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMoreOpen(false)}
+              className="md:hidden fixed inset-0 z-[55] bg-black/30"
+            />
+            {/* Sheet */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="md:hidden fixed bottom-0 left-0 right-0 z-[56] rounded-t-3xl max-h-[70vh] overflow-y-auto"
+              style={{
+                background: 'rgba(255,255,255,0.92)',
+                backdropFilter: 'blur(40px)',
+                WebkitBackdropFilter: 'blur(40px)',
+                boxShadow: '0 -8px 32px rgba(0,0,0,0.1)',
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              }}
+            >
+              {/* Handle bar */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-[#D1D1D6]" />
+              </div>
+
+              {/* Close button + title */}
+              <div className="flex items-center justify-between px-5 py-2">
+                <h3 className="text-base font-bold text-[#1C1C1E]">More</h3>
+                <button
+                  onClick={() => setMoreOpen(false)}
+                  className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center"
+                >
+                  <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Nav items */}
+              <div className="px-4 pb-4 space-y-0.5">
+                {MORE_SHEET_ITEMS.map(item => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href)
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMoreOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+                        isActive
+                          ? 'bg-[#007AFF]/10 text-[#007AFF] font-medium'
+                          : 'text-[#1C1C1E] active:bg-[#F2F2F7]'
+                      }`}
+                    >
+                      <span className={isActive ? 'text-[#007AFF]' : 'text-[#8E8E93]'}>{item.icon}</span>
+                      <span className="text-sm">{item.label}</span>
+                    </Link>
+                  )
+                })}
+
+                {/* God Mode link in More sheet */}
+                <Link
+                  href="/admin"
+                  onClick={() => setMoreOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-2xl text-[#AF52DE] active:bg-[#AF52DE]/10 transition-all"
+                >
+                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span className="text-sm font-medium">God Mode</span>
+                </Link>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  )
+}
+
 // ─── Layout ──────────────────────────────────────────────────────────
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -267,21 +479,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 md:p-5 max-w-7xl mx-auto pb-20">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 md:p-5 max-w-7xl mx-auto pb-24 md:pb-20">
           {children}
         </motion.div>
         {/* Build version — bottom center */}
-        <div className="py-3 text-center">
+        <div className="py-3 text-center pb-20 md:pb-3">
           <p className="text-[10px] text-[#C7C7CC] font-mono">
             KleanHQ v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'} · Build {process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'} · {process.env.NEXT_PUBLIC_BUILD_DATE ?? 'dev'} {process.env.NEXT_PUBLIC_BUILD_TIME ?? ''}
           </p>
         </div>
       </main>
 
-      {/* Floating God Mode — mobile + always visible */}
+      {/* Floating God Mode — mobile, positioned above bottom nav */}
       <Link
         href="/admin"
-        className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#AF52DE] text-white text-xs font-bold shadow-lg shadow-[#AF52DE]/30 hover:bg-[#9B3DC8] transition-colors md:hidden"
+        className="fixed bottom-20 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#AF52DE] text-white text-xs font-bold shadow-lg shadow-[#AF52DE]/30 hover:bg-[#9B3DC8] transition-colors md:hidden"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -289,6 +501,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </svg>
         God Mode
       </Link>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav pathname={pathname} />
+
       </div>{/* close flex wrapper */}
       <UndoToastProvider />
     </div>
