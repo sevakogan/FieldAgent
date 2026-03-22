@@ -94,20 +94,20 @@ export default function DashboardOverview() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {statCards.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1, type: 'spring', stiffness: 500, damping: 30 }}
-            className="bg-white rounded-2xl p-4 border border-[#E5E5EA]"
+            className="glass rounded-2xl p-3"
           >
             <p className="text-sm text-[#8E8E93] mb-1">{stat.label}</p>
             {loading ? (
               <div className="h-8 w-20 bg-[#F2F2F7] rounded animate-pulse" />
             ) : (
-              <p className="text-2xl font-bold" style={{ color: stat.color }}>
+              <p className="text-xl font-bold" style={{ color: stat.color }}>
                 {stat.format(stat.value)}
               </p>
             )}
@@ -115,10 +115,10 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-3 gap-5">
         {/* Today's Jobs */}
-        <div className="md:col-span-2 bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-          <div className="p-4 border-b border-[#E5E5EA] flex justify-between items-center">
+        <div className="md:col-span-2 glass rounded-2xl overflow-hidden">
+          <div className="p-3 border-b border-[#E5E5EA] flex justify-between items-center">
             <h2 className="font-semibold text-[#1C1C1E]">Today&apos;s Jobs</h2>
             <Link href="/dashboard/jobs" className="text-sm text-[#007AFF]">
               View All
@@ -127,7 +127,7 @@ export default function DashboardOverview() {
           <div className="divide-y divide-[#E5E5EA]">
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="p-4 flex items-center gap-4">
+                <div key={i} className="p-3 flex items-center gap-4">
                   <div className="flex-1 space-y-2">
                     <div className="h-4 w-48 bg-[#F2F2F7] rounded animate-pulse" />
                     <div className="h-3 w-32 bg-[#F2F2F7] rounded animate-pulse" />
@@ -150,7 +150,7 @@ export default function DashboardOverview() {
                 <Link
                   key={job.id}
                   href={`/dashboard/jobs/${job.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-[#F2F2F7] transition-colors"
+                  className="flex items-center justify-between p-3 hover:bg-[#F2F2F7] transition-colors"
                 >
                   <div className="flex-1">
                     <p className="text-sm font-medium text-[#1C1C1E]">{job.address_street}</p>
@@ -168,11 +168,11 @@ export default function DashboardOverview() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-2xl border border-[#E5E5EA]">
-          <div className="p-4 border-b border-[#E5E5EA]">
+        <div className="glass rounded-2xl">
+          <div className="p-3 border-b border-[#E5E5EA]">
             <h2 className="font-semibold text-[#1C1C1E]">Recent Activity</h2>
           </div>
-          <div className="p-4 space-y-4">
+          <div className="p-3 space-y-4">
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex gap-3">

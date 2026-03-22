@@ -1,61 +1,62 @@
 'use client'
 
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const INTEGRATIONS = [
   {
     name: 'Airbnb',
-    description: 'Sync property bookings and auto-schedule cleanings for your Airbnb listings.',
     icon: '🏠',
     category: 'Property Management',
+    iconBg: 'bg-[#FF5A5F]/10',
   },
   {
     name: 'VRBO',
-    description: 'Connect VRBO properties to automatically schedule turnovers.',
     icon: '🏡',
     category: 'Property Management',
+    iconBg: 'bg-[#3B5998]/10',
   },
   {
     name: 'Hospitable',
-    description: 'Import properties and booking calendars from Hospitable.',
     icon: '🔄',
     category: 'Property Management',
+    iconBg: 'bg-[#007AFF]/10',
   },
   {
     name: 'Hostaway',
-    description: 'Sync Hostaway channel manager data for automated scheduling.',
     icon: '📋',
     category: 'Property Management',
+    iconBg: 'bg-[#FF9F0A]/10',
   },
   {
     name: 'Guesty',
-    description: 'Pull property and reservation data from Guesty for seamless operations.',
     icon: '🗂️',
     category: 'Property Management',
+    iconBg: 'bg-[#AF52DE]/10',
   },
   {
     name: 'QuickBooks',
-    description: 'Sync invoices and payments to QuickBooks for automated bookkeeping.',
     icon: '📊',
     category: 'Accounting',
+    iconBg: 'bg-[#2CA01C]/10',
   },
   {
     name: 'Xero',
-    description: 'Export financial data to Xero for streamlined accounting.',
     icon: '💰',
     category: 'Accounting',
+    iconBg: 'bg-[#13B5EA]/10',
   },
   {
     name: 'Google Calendar',
-    description: 'Sync job schedules to Google Calendar for your team.',
     icon: '📅',
     category: 'Productivity',
+    iconBg: 'bg-[#4285F4]/10',
   },
   {
     name: 'Twilio',
-    description: 'Send SMS notifications and reminders to clients and workers.',
     icon: '📱',
     category: 'Communication',
+    iconBg: 'bg-[#F22F46]/10',
   },
 ]
 
@@ -63,85 +64,141 @@ export default function IntegrationsPage() {
   const categories = [...new Set(INTEGRATIONS.map(i => i.category))]
   const [activeModal, setActiveModal] = useState<string | null>(null)
   const [apiKey, setApiKey] = useState('')
+  const [connected, setConnected] = useState<Set<string>>(new Set())
+
+  function toggleConnection(name: string) {
+    setConnected(prev => {
+      const next = new Set(prev)
+      if (next.has(name)) {
+        next.delete(name)
+      } else {
+        next.add(name)
+      }
+      return next
+    })
+  }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">Integrations</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-bold text-[#1C1C1E]">Integrations</h1>
       </div>
 
       {categories.map((category) => (
-        <div key={category} className="mb-8">
-          <h2 className="text-sm font-semibold text-[#8E8E93] uppercase tracking-wider mb-3">{category}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {INTEGRATIONS.filter(i => i.category === category).map((integration) => (
-              <div key={integration.name} className="bg-white rounded-2xl border border-[#E5E5EA] p-5 flex flex-col">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-3xl">{integration.icon}</span>
-                  <h3 className="font-semibold text-[#1C1C1E]">{integration.name}</h3>
-                </div>
-                <p className="text-sm text-[#8E8E93] flex-1 mb-4">{integration.description}</p>
-                <button
+        <div key={category}>
+          <h2 className="text-[10px] font-semibold uppercase tracking-wider text-[#AEAEB2] mt-4 mb-2">
+            {category}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {INTEGRATIONS.filter(i => i.category === category).map((integration, idx) => {
+              const isConnected = connected.has(integration.name)
+              return (
+                <motion.div
+                  key={integration.name}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.03 }}
                   onClick={() => setActiveModal(integration.name)}
-                  className="w-full py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
+                  className="flex items-center px-3 py-2.5 rounded-xl glass hover:bg-white/50 transition-colors cursor-pointer"
                 >
-                  Connect
-                </button>
-              </div>
-            ))}
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0 ${integration.iconBg}`}>
+                    {integration.icon}
+                  </div>
+                  <div className="ml-2.5 min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[#1C1C1E] truncate">{integration.name}</p>
+                    <p className="text-[10px] text-[#8E8E93]">{integration.category}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-[#34C759]' : 'bg-[#C7C7CC]'}`} />
+                    <span className="text-xs text-[#007AFF]">
+                      {isConnected ? 'Connected' : 'Connect'}
+                    </span>
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
         </div>
       ))}
 
       {/* Connect Modal */}
-      {activeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-[#1C1C1E]">Connect {activeModal}</h2>
-              <button
-                onClick={() => { setActiveModal(null); setApiKey('') }}
-                className="text-[#8E8E93] hover:text-[#1C1C1E] transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+      <AnimatePresence>
+        {activeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setActiveModal(null)
+                setApiKey('')
+              }
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="rounded-2xl w-full max-w-md p-5"
+              style={{
+                background: 'rgba(255, 255, 255, 0.72)',
+                backdropFilter: 'blur(40px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+                border: '1px solid rgba(255, 255, 255, 0.45)',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-[#1C1C1E]">Connect {activeModal}</h2>
+                <button
+                  onClick={() => { setActiveModal(null); setApiKey('') }}
+                  className="w-7 h-7 rounded-xl flex items-center justify-center hover:bg-white/60 transition-colors text-[#8E8E93]"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-            <div className="bg-[#FF9F0A]/10 text-[#FF9F0A] rounded-xl p-4 mb-4">
-              <p className="text-sm font-medium">Coming Soon</p>
-              <p className="text-xs mt-1">This integration is not yet available. You can enter your API key below and we will notify you when it goes live.</p>
-            </div>
+              <div className="bg-[#FF9F0A]/10 text-[#FF9F0A] rounded-xl p-3 mb-4">
+                <p className="text-xs font-medium">Coming Soon</p>
+                <p className="text-[10px] mt-0.5">This integration is not yet available. Enter your API key and we&#39;ll notify you when it goes live.</p>
+              </div>
 
-            <div className="mb-4">
-              <label className="text-xs font-medium text-[#8E8E93] uppercase mb-1 block">API Key (optional)</label>
-              <input
-                type="text"
-                placeholder="Enter your API key..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full h-10 px-4 rounded-xl border border-[#E5E5EA] bg-white text-sm text-[#1C1C1E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-              />
-            </div>
+              <div className="mb-4">
+                <label className="text-[10px] font-medium text-[#8E8E93] uppercase mb-1 block">API Key (optional)</label>
+                <input
+                  type="text"
+                  placeholder="Enter your API key..."
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="w-full h-9 px-3 rounded-xl border border-[#E5E5EA]/60 bg-white/60 text-sm text-[#1C1C1E] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                />
+              </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => { setActiveModal(null); setApiKey('') }}
-                className="flex-1 py-2.5 bg-[#F2F2F7] text-[#8E8E93] rounded-xl text-sm font-medium hover:bg-[#E5E5EA] transition-colors"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => { setActiveModal(null); setApiKey('') }}
-                className="flex-1 py-2.5 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-[#0066DD] transition-colors"
-              >
-                Save & Notify Me
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setActiveModal(null); setApiKey('') }}
+                  className="flex-1 py-2 bg-white/50 text-[#8E8E93] rounded-xl text-xs font-medium hover:bg-white/70 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    if (activeModal) toggleConnection(activeModal)
+                    setActiveModal(null)
+                    setApiKey('')
+                  }}
+                  className="flex-1 py-2 bg-[#007AFF] text-white rounded-xl text-xs font-medium hover:bg-[#0066DD] transition-colors"
+                >
+                  {activeModal && connected.has(activeModal) ? 'Disconnect' : 'Save & Notify Me'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

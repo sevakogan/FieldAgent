@@ -3,14 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getReferrals, createReferral, type ReferralRow } from '@/lib/actions/referrals'
-
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  pending: { bg: '#FF9F0A20', text: '#FF9F0A' },
-  signed_up: { bg: '#007AFF20', text: '#007AFF' },
-  qualified: { bg: '#AF52DE20', text: '#AF52DE' },
-  rewarded: { bg: '#34C75920', text: '#34C759' },
-  expired: { bg: '#8E8E9320', text: '#8E8E93' },
-}
+import { StatusBadge } from '@/components/platform/Badge'
 
 const REFERRAL_TYPES = [
   { key: 'company_company', icon: '🏢', label: 'Company → Company', desc: 'Refer a service business', reward: 'Recurring credit off platform billing', active: true },
@@ -278,7 +271,7 @@ export default function ReferralsPage() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden mb-6"
           >
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5 text-center">
+            <div className="glass rounded-2xl p-3.5 text-center">
               <p className="text-sm text-[#8E8E93]">Create your first referral to get your unique code</p>
               <div className="flex gap-2 mt-3 max-w-md mx-auto">
                 <input
@@ -319,7 +312,7 @@ export default function ReferralsPage() {
             exit={{ opacity: 0, y: -10 }}
             className="mb-6"
           >
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
+            <div className="glass rounded-2xl p-3.5">
               <h2 className="font-semibold text-[#1C1C1E] mb-3">How do you want to invite?</h2>
               <div className="grid grid-cols-4 gap-3">
                 {SHARE_CHANNELS.map(ch => (
@@ -416,7 +409,7 @@ export default function ReferralsPage() {
           { label: 'Qualified', value: stats.qualified, color: '#AF52DE' },
           { label: 'Earned', value: `$${stats.earned.toFixed(0)}`, color: '#34C759' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-[#E5E5EA] p-4">
+          <div key={s.label} className="glass rounded-2xl p-3">
             <p className="text-xs text-[#8E8E93] mb-1">{s.label}</p>
             <p className="text-xl font-bold" style={{ color: s.color }}>{s.value}</p>
           </div>
@@ -458,7 +451,7 @@ export default function ReferralsPage() {
           <div className="h-6 w-6 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : referrals.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-10 text-center">
+        <div className="glass rounded-2xl p-10 text-center">
           <div className="text-3xl mb-2">🔗</div>
           <h3 className="text-lg font-semibold text-[#1C1C1E] mb-1">No referrals yet</h3>
           <p className="text-sm text-[#8E8E93] mb-4">Share your code to start earning rewards</p>
@@ -470,45 +463,38 @@ export default function ReferralsPage() {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-          <div className="p-4 border-b border-[#E5E5EA]">
+        <div className="glass rounded-2xl overflow-hidden">
+          <div className="p-3 border-b border-[#E5E5EA]">
             <h2 className="font-semibold text-[#1C1C1E]">Referral History</h2>
           </div>
           <table className="w-full">
             <thead>
               <tr className="border-b border-[#E5E5EA]">
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Referred</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Type</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
-                <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Earned</th>
-                <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Date</th>
-                <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Share</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Referred</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Type</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
+                <th className="text-right p-3 text-xs font-medium text-[#8E8E93] uppercase">Earned</th>
+                <th className="text-right p-3 text-xs font-medium text-[#8E8E93] uppercase">Date</th>
+                <th className="text-right p-3 text-xs font-medium text-[#8E8E93] uppercase">Share</th>
               </tr>
             </thead>
             <tbody>
-              {referrals.map(r => {
-                const statusStyle = STATUS_COLORS[r.status] ?? STATUS_COLORS.pending
-                return (
+              {referrals.map(r => (
                   <tr key={r.id} className="border-b border-[#E5E5EA] last:border-0 hover:bg-[#F9F9FB] transition-colors">
-                    <td className="p-4 text-sm text-[#1C1C1E]">
+                    <td className="p-3 text-sm text-[#1C1C1E]">
                       {r.referred_user_email ?? <span className="text-[#C7C7CC] italic">Awaiting signup</span>}
                     </td>
-                    <td className="p-4 text-xs text-[#8E8E93] capitalize">{r.referred_type}</td>
-                    <td className="p-4">
-                      <span
-                        className="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize"
-                        style={{ backgroundColor: statusStyle.bg, color: statusStyle.text }}
-                      >
-                        {r.status.replace('_', ' ')}
-                      </span>
+                    <td className="p-3 text-xs text-[#8E8E93] capitalize">{r.referred_type}</td>
+                    <td className="p-3">
+                      <StatusBadge status={r.status} />
                     </td>
-                    <td className="p-4 text-sm text-right font-medium text-[#34C759]">
+                    <td className="p-3 text-sm text-right font-medium text-[#34C759]">
                       {r.total_earned > 0 ? `$${r.total_earned.toFixed(2)}` : '—'}
                     </td>
-                    <td className="p-4 text-xs text-right text-[#8E8E93]">
+                    <td className="p-3 text-xs text-right text-[#8E8E93]">
                       {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' })}
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-3 text-right">
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(r.referral_link)
@@ -520,8 +506,7 @@ export default function ReferralsPage() {
                       </button>
                     </td>
                   </tr>
-                )
-              })}
+              ))}
             </tbody>
           </table>
         </div>

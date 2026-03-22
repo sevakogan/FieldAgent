@@ -66,7 +66,7 @@ export default function MessagesPage() {
       )}
 
       {!loading && !error && filtered.length === 0 && (
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center">
+        <div className="glass rounded-2xl p-12 text-center">
           <div className="text-4xl mb-3">💬</div>
           <h3 className="text-lg font-semibold text-[#1C1C1E] mb-1">No messages yet</h3>
           <p className="text-sm text-[#8E8E93]">Conversations with clients will appear here</p>
@@ -74,14 +74,14 @@ export default function MessagesPage() {
       )}
 
       {!loading && !error && filtered.length > 0 && (
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] divide-y divide-[#E5E5EA]">
+        <div className="glass rounded-2xl divide-y divide-[#E5E5EA]">
           {filtered.map((conv) => (
             <Link
               key={conv.client_id}
               href={`/dashboard/messages/${conv.client_id}`}
-              className="flex items-center gap-4 p-4 hover:bg-[#F2F2F7] transition-colors"
+              className="flex items-center gap-4 p-3 hover:bg-[#F2F2F7] transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-[#007AFF]/10 flex items-center justify-center text-[#007AFF] font-semibold text-sm shrink-0">
+              <div className="w-9 h-9 rounded-full bg-[#007AFF]/10 flex items-center justify-center text-[#007AFF] font-semibold text-sm shrink-0">
                 {conv.client_name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">

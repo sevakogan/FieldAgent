@@ -316,7 +316,7 @@ export default function ClientsPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center"
+          className="glass rounded-2xl p-12 text-center"
         >
           <div className="text-4xl mb-3">👤</div>
           <h2 className="text-lg font-semibold text-[#1C1C1E] mb-1">No clients yet</h2>
@@ -331,17 +331,17 @@ export default function ClientsPage() {
       )}
 
       {!loading && !error && clients.length > 0 && (
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-visible">
+        <div className="glass rounded-2xl overflow-visible">
           <table className="w-full">
             <thead>
               <tr className="border-b border-[#E5E5EA]">
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Name</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Email</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden lg:table-cell">Phone</th>
-                <th className="text-center p-4 text-xs font-medium text-[#8E8E93] uppercase">Properties</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Payment</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden lg:table-cell">Created</th>
-                <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase w-16"></th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Name</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Email</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden lg:table-cell">Phone</th>
+                <th className="text-center p-3 text-xs font-medium text-[#8E8E93] uppercase">Properties</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Payment</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden lg:table-cell">Created</th>
+                <th className="text-right p-3 text-xs font-medium text-[#8E8E93] uppercase w-16"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5E5EA]">
@@ -355,7 +355,7 @@ export default function ClientsPage() {
                   transition={{ delay: i * 0.03 }}
                   className={`transition-colors group ${hasNoAddress ? 'bg-[#FF3B30]/[0.03]' : 'hover:bg-[#F9F9FB]'}`}
                 >
-                  <td className="p-4">
+                  <td className="p-3">
                     <div className="flex items-center gap-2">
                       <EditableCell
                         value={client.full_name}
@@ -373,7 +373,7 @@ export default function ClientsPage() {
                       )}
                     </div>
                   </td>
-                  <td className="p-4 hidden md:table-cell">
+                  <td className="p-3 hidden md:table-cell">
                     <EditableCell
                       value={client.email}
                       field="email"
@@ -382,13 +382,13 @@ export default function ClientsPage() {
                       onSaved={fetchClients}
                     />
                   </td>
-                  <td className="p-4 hidden lg:table-cell">
+                  <td className="p-3 hidden lg:table-cell">
                     <PhoneButton phone={client.phone} />
                   </td>
-                  <td className="p-4 text-center">
+                  <td className="p-3 text-center">
                     <AddressPopup addresses={client.addresses} clientId={client.id} />
                   </td>
-                  <td className="p-4 hidden md:table-cell">
+                  <td className="p-3 hidden md:table-cell">
                     <EditableCell
                       value={client.payment_schedule}
                       field="payment_schedule"
@@ -397,10 +397,10 @@ export default function ClientsPage() {
                       onSaved={fetchClients}
                     />
                   </td>
-                  <td className="p-4 text-sm text-[#8E8E93] hidden lg:table-cell">
+                  <td className="p-3 text-sm text-[#8E8E93] hidden lg:table-cell">
                     {new Date(client.created_at).toLocaleDateString()}
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="p-3 text-right">
                     <Link
                       href={`/dashboard/clients/${client.id}`}
                       className="text-xs text-[#007AFF] opacity-0 group-hover:opacity-100 transition-opacity font-medium hover:underline"

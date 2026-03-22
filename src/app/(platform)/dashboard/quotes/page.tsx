@@ -4,15 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getQuotes, type QuoteRow } from '@/lib/actions/quotes'
-import type { QuoteStatus } from '@/types/database'
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: '#8E8E93',
-  sent: '#007AFF',
-  accepted: '#34C759',
-  declined: '#FF6B6B',
-  expired: '#FF9F0A',
-}
+import { StatusBadge } from '@/components/platform/Badge'
 
 const STATUS_TABS: { label: string; value: string }[] = [
   { label: 'All', value: 'all' },
@@ -82,7 +74,7 @@ export default function QuotesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
+      <div className="glass rounded-2xl overflow-hidden">
         {loading ? (
           <div className="p-8 text-center">
             <div className="h-4 w-32 bg-[#F2F2F7] rounded animate-pulse mx-auto" />
@@ -101,12 +93,12 @@ export default function QuotesPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[#E5E5EA]">
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Title</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Client</th>
-                <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Total</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Valid Until</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Created</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Title</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Client</th>
+                <th className="text-right p-3 text-xs font-medium text-[#8E8E93] uppercase">Total</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Valid Until</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase hidden md:table-cell">Created</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5E5EA]">
@@ -117,7 +109,7 @@ export default function QuotesPage() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
                 >
-                  <td className="p-4">
+                  <td className="p-3">
                     <Link
                       href={`/dashboard/quotes/${quote.id}`}
                       className="text-sm font-medium text-[#1C1C1E] hover:text-[#007AFF] transition-colors"
@@ -125,25 +117,17 @@ export default function QuotesPage() {
                       {quote.title || 'Untitled Quote'}
                     </Link>
                   </td>
-                  <td className="p-4 text-sm text-[#3C3C43]">{quote.client_name}</td>
-                  <td className="p-4 text-sm text-right font-medium text-[#1C1C1E]">
+                  <td className="p-3 text-sm text-[#3C3C43]">{quote.client_name}</td>
+                  <td className="p-3 text-sm text-right font-medium text-[#1C1C1E]">
                     {formatCurrency(quote.total)}
                   </td>
-                  <td className="p-4">
-                    <span
-                      className="text-xs px-2.5 py-1 rounded-2xl font-medium capitalize"
-                      style={{
-                        backgroundColor: (STATUS_COLORS[quote.status] ?? '#8E8E93') + '20',
-                        color: STATUS_COLORS[quote.status] ?? '#8E8E93',
-                      }}
-                    >
-                      {quote.status}
-                    </span>
+                  <td className="p-3">
+                    <StatusBadge status={quote.status} />
                   </td>
-                  <td className="p-4 text-sm text-[#8E8E93] hidden md:table-cell">
+                  <td className="p-3 text-sm text-[#8E8E93] hidden md:table-cell">
                     {formatDate(quote.valid_until)}
                   </td>
-                  <td className="p-4 text-sm text-[#8E8E93] hidden md:table-cell">
+                  <td className="p-3 text-sm text-[#8E8E93] hidden md:table-cell">
                     {formatDate(quote.created_at)}
                   </td>
                 </motion.tr>

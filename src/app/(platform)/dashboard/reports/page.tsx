@@ -108,29 +108,29 @@ export default function ReportsPage() {
 
       {!loading && !error && data && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             {[
               { label: 'Total Jobs', value: data.total_jobs.toString(), color: '#007AFF' },
               { label: 'Total Revenue', value: fmt(data.total_revenue), color: '#34C759' },
               { label: 'Total Clients', value: data.total_clients.toString(), color: '#AF52DE' },
               { label: 'Avg Rating', value: data.avg_rating > 0 ? `${data.avg_rating.toFixed(1)} ★` : 'N/A', color: '#FFD60A' },
             ].map(({ label, value, color }) => (
-              <div key={label} className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
+              <div key={label} className="glass rounded-2xl p-3">
                 <p className="text-xs text-[#8E8E93] uppercase font-medium mb-1">{label}</p>
-                <p className="text-2xl font-bold" style={{ color }}>{value}</p>
+                <p className="text-xl font-bold" style={{ color }}>{value}</p>
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-              <div className="p-4 border-b border-[#E5E5EA]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="p-3 border-b border-[#E5E5EA]">
                 <h2 className="font-semibold text-[#1C1C1E]">Jobs by Status</h2>
               </div>
               {data.jobs_by_status.length === 0 ? (
                 <div className="p-8 text-center text-sm text-[#8E8E93]">No jobs yet</div>
               ) : (
-                <div className="p-4 space-y-3">
+                <div className="p-3 space-y-3">
                   {data.jobs_by_status.map(({ status, count }) => {
                     const color = STATUS_COLORS[status] ?? '#8E8E93'
                     const label = STATUS_LABELS[status] ?? status
@@ -154,8 +154,8 @@ export default function ReportsPage() {
               )}
             </div>
 
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
-              <div className="p-4 border-b border-[#E5E5EA]">
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="p-3 border-b border-[#E5E5EA]">
                 <h2 className="font-semibold text-[#1C1C1E]">Top Services</h2>
               </div>
               {data.top_services.length === 0 ? (

@@ -74,19 +74,19 @@ export default function ReviewsPage() {
       {!loading && !error && (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+            <div className="glass rounded-2xl p-3">
               <p className="text-xs text-[#8E8E93] uppercase font-medium mb-1">Average Rating</p>
               <div className="flex items-center gap-2">
-                <span className="text-3xl font-bold text-[#1C1C1E]">{stats.average.toFixed(1)}</span>
+                <span className="text-xl font-bold text-[#1C1C1E]">{stats.average.toFixed(1)}</span>
                 <Stars rating={Math.round(stats.average)} size="lg" />
               </div>
             </div>
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
+            <div className="glass rounded-2xl p-3">
               <p className="text-xs text-[#8E8E93] uppercase font-medium mb-1">Total Reviews</p>
-              <span className="text-3xl font-bold text-[#1C1C1E]">{stats.total}</span>
+              <span className="text-xl font-bold text-[#1C1C1E]">{stats.total}</span>
             </div>
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
+            <div className="glass rounded-2xl p-3">
               <p className="text-xs text-[#8E8E93] uppercase font-medium mb-1">Rating Distribution</p>
               <div className="space-y-1 mt-1">
                 {[5, 4, 3, 2, 1].map(star => {
@@ -108,7 +108,7 @@ export default function ReviewsPage() {
 
           {/* Reviews list */}
           {reviews.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center">
+            <div className="glass rounded-2xl p-12 text-center">
               <div className="text-4xl mb-3">&#11088;</div>
               <h3 className="text-lg font-semibold text-[#1C1C1E] mb-1">No reviews yet</h3>
               <p className="text-sm text-[#8E8E93]">Client reviews will appear here after jobs are completed</p>
@@ -116,7 +116,7 @@ export default function ReviewsPage() {
           ) : (
             <div className="space-y-3">
               {reviews.map((review) => (
-                <div key={review.id} className="bg-white rounded-2xl border border-[#E5E5EA] p-5">
+                <div key={review.id} className="glass rounded-2xl p-3.5">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-[#007AFF]/10 flex items-center justify-center text-[#007AFF] font-semibold text-sm">

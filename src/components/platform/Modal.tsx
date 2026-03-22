@@ -48,11 +48,18 @@ export function Modal({
             exit={{ y: '100%', opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             className={`
-              relative z-10 w-full md:max-w-lg bg-white
+              relative z-10 w-full md:max-w-lg
               rounded-t-[20px] md:rounded-[20px]
               max-h-[90vh] overflow-y-auto
               ${className}
             `}
+            style={{
+              background: 'rgba(255, 255, 255, 0.72)',
+              backdropFilter: 'blur(40px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.45)',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)',
+            }}
           >
             <div className="flex items-center justify-between p-5 border-b border-[#E5E5EA]">
               {title && (

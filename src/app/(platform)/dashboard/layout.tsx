@@ -225,7 +225,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex flex-1">
 
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex flex-col ${collapsed ? 'w-16' : 'w-60'} bg-white border-r border-[#E5E5EA] transition-all duration-300`}>
+      <aside className={`hidden md:flex flex-col ${collapsed ? 'w-16' : 'w-60'} glass-sidebar transition-all duration-300`}>
         <div className="p-4 border-b border-[#E5E5EA] flex items-center justify-between">
           {!collapsed && <h1 className="text-lg font-bold text-[#1C1C1E]">KleanHQ</h1>}
           <button
@@ -273,7 +273,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 max-w-7xl mx-auto pb-20">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 md:p-5 max-w-7xl mx-auto pb-20">
           {children}
         </motion.div>
       </main>

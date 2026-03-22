@@ -101,7 +101,7 @@ export default function JobsPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center"
+          className="glass rounded-2xl p-12 text-center"
         >
           <div className="text-4xl mb-3">📋</div>
           <h2 className="text-lg font-semibold text-[#1C1C1E] mb-1">No jobs yet</h2>
@@ -116,17 +116,17 @@ export default function JobsPage() {
       )}
 
       {!loading && !error && jobs.length > 0 && (
-        <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden">
+        <div className="glass rounded-2xl overflow-hidden">
           {/* Desktop table */}
           <table className="w-full hidden md:table">
             <thead>
               <tr className="border-b border-[#E5E5EA]">
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Address</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Service</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Worker</th>
-                <th className="text-left p-4 text-xs font-medium text-[#8E8E93] uppercase">Date / Time</th>
-                <th className="text-right p-4 text-xs font-medium text-[#8E8E93] uppercase">Price</th>
-                <th className="text-center p-4 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Address</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Service</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Worker</th>
+                <th className="text-left p-3 text-xs font-medium text-[#8E8E93] uppercase">Date / Time</th>
+                <th className="text-right p-3 text-xs font-medium text-[#8E8E93] uppercase">Price</th>
+                <th className="text-center p-3 text-xs font-medium text-[#8E8E93] uppercase">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5E5EA]">
@@ -138,24 +138,24 @@ export default function JobsPage() {
                   transition={{ delay: i * 0.03 }}
                   className="hover:bg-[#F2F2F7] cursor-pointer transition-colors"
                 >
-                  <td className="p-4">
+                  <td className="p-3">
                     <Link href={`/dashboard/jobs/${job.id}`} className="text-sm font-medium text-[#1C1C1E] hover:text-[#007AFF]">
                       {job.address_street}
                     </Link>
                     <p className="text-xs text-[#8E8E93]">{job.address_city}</p>
                   </td>
-                  <td className="p-4 text-sm text-[#1C1C1E]">{job.service_name}</td>
-                  <td className="p-4 text-sm text-[#8E8E93]">{job.worker_name ?? 'Unassigned'}</td>
-                  <td className="p-4">
+                  <td className="p-3 text-sm text-[#1C1C1E]">{job.service_name}</td>
+                  <td className="p-3 text-sm text-[#8E8E93]">{job.worker_name ?? 'Unassigned'}</td>
+                  <td className="p-3">
                     <p className="text-sm text-[#1C1C1E]">{new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString()}</p>
                     {job.scheduled_time && (
                       <p className="text-xs text-[#8E8E93]">{job.scheduled_time}</p>
                     )}
                   </td>
-                  <td className="p-4 text-sm text-right font-medium text-[#1C1C1E]">
+                  <td className="p-3 text-sm text-right font-medium text-[#1C1C1E]">
                     ${Number(job.price).toFixed(2)}
                   </td>
-                  <td className="p-4 text-center">
+                  <td className="p-3 text-center">
                     <StatusBadge status={job.status} />
                   </td>
                 </motion.tr>
@@ -181,7 +181,7 @@ export default function JobsPage() {
               >
                 <Link
                   href={`/dashboard/jobs/${job.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-[#F2F2F7] transition-colors"
+                  className="flex items-center justify-between p-3 hover:bg-[#F2F2F7] transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[#1C1C1E] truncate">{job.address_street}</p>

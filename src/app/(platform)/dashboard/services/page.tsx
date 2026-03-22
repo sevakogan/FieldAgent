@@ -171,9 +171,9 @@ export default function ServicesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">Services</h1>
-        <Button variant="primary" onClick={openCreate}>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-bold text-[#1C1C1E]">Services</h1>
+        <Button variant="primary" size="sm" onClick={openCreate}>
           + Add Service
         </Button>
       </div>
@@ -185,7 +185,7 @@ export default function ServicesPage() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-4 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 mb-3 text-sm">
           {error}
         </div>
       )}
@@ -194,7 +194,7 @@ export default function ServicesPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center"
+          className="glass rounded-2xl p-12 text-center"
         >
           <div className="text-4xl mb-3">&#128736;</div>
           <h2 className="text-lg font-semibold text-[#1C1C1E] mb-1">No services yet</h2>
@@ -206,97 +206,100 @@ export default function ServicesPage() {
       )}
 
       {!loading && !error && services.length > 0 && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-2xl overflow-hidden"
+        >
           {services.map((service, i) => (
             <motion.div
               key={service.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="bg-white rounded-2xl border border-[#E5E5EA] p-5 flex flex-col"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.03 }}
+              className={`flex items-center px-3.5 py-2.5 hover:bg-white/40 transition-colors ${
+                i < services.length - 1 ? 'border-b border-[#E5E5EA]/50' : ''
+              }`}
             >
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-base font-semibold text-[#1C1C1E]">{service.name}</h3>
-                <div className="flex gap-1">
-                  {service.photo_required && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#AF52DE20] text-[#AF52DE] font-medium">
-                      Photo
-                    </span>
-                  )}
-                  {service.is_outdoor && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#34C75920] text-[#34C759] font-medium">
-                      Outdoor
-                    </span>
-                  )}
-                </div>
+              {/* Left: name + duration */}
+              <div className="flex items-center gap-2 min-w-0 shrink-0">
+                <span className="text-sm font-semibold text-[#1C1C1E] truncate">
+                  {service.name}
+                </span>
+                {service.estimated_duration_minutes && (
+                  <span className="text-[10px] bg-[#F2F2F7] text-[#8E8E93] px-1.5 py-0.5 rounded-lg whitespace-nowrap">
+                    {service.estimated_duration_minutes} min
+                  </span>
+                )}
               </div>
 
-              {service.description && (
-                <p className="text-sm text-[#8E8E93] mb-3 line-clamp-2">{service.description}</p>
-              )}
+              {/* Center: description */}
+              <p className="flex-1 text-xs text-[#8E8E93] truncate mx-3 hidden sm:block">
+                {service.description ?? ''}
+              </p>
 
-              <div className="mt-auto space-y-2">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-2xl font-bold text-[#1C1C1E]">
-                    ${Number(service.default_price).toFixed(2)}
+              {/* Right: price + tags + actions */}
+              <div className="flex items-center gap-2 shrink-0 ml-auto">
+                <span className="text-sm font-bold text-[#34C759]">
+                  ${Number(service.default_price).toFixed(2)}
+                </span>
+
+                {service.photo_required && (
+                  <span className="hidden md:flex items-center gap-0.5 text-[10px] text-[#AF52DE]">
+                    <span className="w-1 h-1 rounded-full bg-[#AF52DE]" />
+                    Photo
                   </span>
-                  {service.estimated_duration_minutes && (
-                    <span className="text-xs text-[#8E8E93]">
-                      {service.estimated_duration_minutes} min
-                    </span>
-                  )}
-                </div>
-
-                {Array.isArray(service.checklist_items) && service.checklist_items.length > 0 && (
-                  <p className="text-xs text-[#8E8E93]">
-                    {service.checklist_items.length} checklist item{service.checklist_items.length !== 1 ? 's' : ''}
-                  </p>
+                )}
+                {service.is_outdoor && (
+                  <span className="hidden md:flex items-center gap-0.5 text-[10px] text-[#34C759]">
+                    <span className="w-1 h-1 rounded-full bg-[#34C759]" />
+                    Outdoor
+                  </span>
                 )}
 
-                <div className="flex gap-2 pt-2 border-t border-[#E5E5EA]">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openEdit(service)}
-                    className="flex-1"
-                  >
-                    Edit
-                  </Button>
-                  {deleteConfirmId === service.id ? (
-                    <div className="flex-1 flex gap-1">
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDelete(service.id)}
-                        disabled={submitting}
-                        className="flex-1"
-                      >
-                        Confirm
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setDeleteConfirmId(null)}
-                        className="flex-1"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setDeleteConfirmId(service.id)}
-                      className="flex-1"
+                <button
+                  onClick={() => openEdit(service)}
+                  className="w-7 h-7 rounded-xl flex items-center justify-center hover:bg-white/60 transition-colors text-[#8E8E93]"
+                  aria-label="Edit"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+
+                {deleteConfirmId === service.id ? (
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleDelete(service.id)}
+                      disabled={submitting}
+                      className="w-7 h-7 rounded-xl flex items-center justify-center bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-colors text-xs font-medium"
+                      aria-label="Confirm archive"
                     >
-                      Archive
-                    </Button>
-                  )}
-                </div>
+                      &#10003;
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(null)}
+                      className="w-7 h-7 rounded-xl flex items-center justify-center bg-[#F2F2F7] text-[#8E8E93] hover:bg-[#E5E5EA] transition-colors text-xs"
+                      aria-label="Cancel"
+                    >
+                      &#10005;
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirmId(service.id)}
+                    className="w-7 h-7 rounded-xl flex items-center justify-center hover:bg-[#FF3B30]/10 transition-colors text-[#8E8E93] hover:text-[#FF3B30]"
+                    aria-label="Archive"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* Create/Edit Modal */}
@@ -315,7 +318,14 @@ export default function ServicesPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl border border-[#E5E5EA] p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+              className="rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+              style={{
+                background: 'rgba(255, 255, 255, 0.72)',
+                backdropFilter: 'blur(40px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+                border: '1px solid rgba(255, 255, 255, 0.45)',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)',
+              }}
             >
               <h2 className="text-lg font-bold text-[#1C1C1E] mb-5">
                 {editingId ? 'Edit Service' : 'New Service'}
@@ -337,7 +347,7 @@ export default function ServicesPage() {
                     value={form.name}
                     onChange={(e) => handleFormChange('name', e.target.value)}
                     placeholder="e.g., Deep Clean, Pool Cleaning"
-                    className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                    className="w-full px-4 py-2.5 bg-white/60 border border-[#E5E5EA]/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
                   />
                 </div>
 
@@ -348,7 +358,7 @@ export default function ServicesPage() {
                     onChange={(e) => handleFormChange('description', e.target.value)}
                     placeholder="Brief description of the service..."
                     rows={2}
-                    className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 resize-none"
+                    className="w-full px-4 py-2.5 bg-white/60 border border-[#E5E5EA]/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 resize-none"
                   />
                 </div>
 
@@ -366,7 +376,7 @@ export default function ServicesPage() {
                         value={form.default_price}
                         onChange={(e) => handleFormChange('default_price', e.target.value)}
                         placeholder="0.00"
-                        className="w-full pl-8 pr-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                        className="w-full pl-8 pr-4 py-2.5 bg-white/60 border border-[#E5E5EA]/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
                       />
                     </div>
                   </div>
@@ -378,7 +388,7 @@ export default function ServicesPage() {
                       value={form.estimated_duration_minutes}
                       onChange={(e) => handleFormChange('estimated_duration_minutes', e.target.value)}
                       placeholder="60"
-                      className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                      className="w-full px-4 py-2.5 bg-white/60 border border-[#E5E5EA]/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
                     />
                   </div>
                 </div>
@@ -392,7 +402,7 @@ export default function ServicesPage() {
                     onChange={(e) => handleFormChange('checklist_items', e.target.value)}
                     placeholder={"Skim surface\nTest pH levels\nClean filter"}
                     rows={3}
-                    className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 resize-none"
+                    className="w-full px-4 py-2.5 bg-white/60 border border-[#E5E5EA]/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 resize-none"
                   />
                 </div>
 

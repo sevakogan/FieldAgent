@@ -216,7 +216,7 @@ export default function TeamPage() {
 
       {!loading && !error && members.length === 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border border-[#E5E5EA] p-12 text-center">
+          className="glass rounded-2xl p-12 text-center">
           <div className="w-16 h-16 bg-[#F2F2F7] rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -231,14 +231,14 @@ export default function TeamPage() {
       )}
 
       {!loading && !error && members.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((member, i) => (
             <motion.div key={member.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}>
               <Link href={`/dashboard/team/${member.id}`}
-                className="block bg-white rounded-2xl border border-[#E5E5EA] p-5 hover:shadow-md hover:border-[#007AFF]/30 transition-all">
+                className="block glass rounded-2xl p-3.5 hover:shadow-md hover:border-[#007AFF]/30 transition-all">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-xs shrink-0"
                     style={{ backgroundColor: ROLE_COLORS[member.role] ?? '#8E8E93' }}>
                     {getInitials(member.full_name)}
                   </div>
