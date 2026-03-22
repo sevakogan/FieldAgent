@@ -250,13 +250,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
 
-        {/* Version footer */}
-        <div className="px-3 py-1.5 border-t border-[#E5E5EA]">
-          {!collapsed && (
-            <p className="text-[10px] text-[#C7C7CC] font-mono">v1.0.0 · Mar 2026</p>
-          )}
-        </div>
-
         {/* God Mode */}
         <div className="p-3 border-t border-[#E5E5EA]">
           <Link
@@ -277,6 +270,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 md:p-5 max-w-7xl mx-auto pb-20">
           {children}
         </motion.div>
+        {/* Build version — bottom center */}
+        <div className="py-3 text-center">
+          <p className="text-[10px] text-[#C7C7CC] font-mono">
+            KleanHQ v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'} · Build {process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'} · {process.env.NEXT_PUBLIC_BUILD_DATE ?? 'dev'} {process.env.NEXT_PUBLIC_BUILD_TIME ?? ''}
+          </p>
+        </div>
       </main>
 
       {/* Floating God Mode — mobile + always visible */}
