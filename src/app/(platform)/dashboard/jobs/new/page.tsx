@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createJob } from '@/lib/actions/jobs'
 import { Button } from '@/components/platform/Button'
 import { getTeamMembers, type TeamMember } from '@/lib/actions/jobs'
-import { getAddresses, type AddressRow } from '@/lib/actions/addresses'
+import { getAddresses, getAddressServicePrice, type AddressRow } from '@/lib/actions/addresses'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
 import { getClients, createClient, type ClientRow } from '@/lib/actions/clients'
 
@@ -94,7 +94,7 @@ export default function NewJobPage() {
     return addresses.filter(a => a.client_id === form.client_id)
   }, [addresses, form.client_id])
 
-  function handleChange(field: keyof FormData, value: string) {
+  async function handleChange(field: keyof FormData, value: string) {
     const updated = { ...form, [field]: value }
 
     // When client changes, auto-select address if they only have one, otherwise reset
@@ -115,11 +115,34 @@ export default function NewJobPage() {
       }
     }
 
-    // Auto-fill price when service is selected
+    // Auto-fill price: check address_services first, then fall back to default_price
     if (field === 'service_type_id' && value) {
-      const selected = services.find(s => s.id === value)
-      if (selected) {
-        updated.price = String(selected.default_price)
+      const addrId = updated.address_id
+      let foundPrice = false
+
+      // Try address-specific price first
+      if (addrId) {
+        const result = await getAddressServicePrice(addrId, value)
+        if (result.success && result.data) {
+          updated.price = String(result.data.price)
+          foundPrice = true
+        }
+      }
+
+      // Fall back to service default
+      if (!foundPrice) {
+        const selected = services.find(s => s.id === value)
+        if (selected) {
+          updated.price = String(selected.default_price)
+        }
+      }
+    }
+
+    // Also re-check price when address changes and service is already selected
+    if (field === 'address_id' && value && updated.service_type_id) {
+      const result = await getAddressServicePrice(value, updated.service_type_id)
+      if (result.success && result.data) {
+        updated.price = String(result.data.price)
       }
     }
 

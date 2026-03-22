@@ -427,3 +427,25 @@ export async function removeServiceFromAddress(addressServiceId: string): Promis
     return { success: false, error: err instanceof Error ? err.message : 'Failed to remove service' }
   }
 }
+
+export async function getAddressServicePrice(
+  addressId: string,
+  serviceTypeId: string
+): Promise<ActionResult<{ price: number } | null>> {
+  try {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from('address_services')
+      .select('price')
+      .eq('address_id', addressId)
+      .eq('service_type_id', serviceTypeId)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
+
+    if (error) return { success: false, error: error.message }
+    return { success: true, data: data ? { price: data.price } : null }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed' }
+  }
+}
