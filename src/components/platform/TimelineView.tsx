@@ -23,8 +23,8 @@ interface TimelineViewProps {
 
 const PACIFIC_TZ = 'America/Los_Angeles'
 const HOUR_HEIGHT = 72
-const START_HOUR = 6
-const END_HOUR = 20
+const START_HOUR = 5
+const END_HOUR = 24
 const TOTAL_HOURS = END_HOUR - START_HOUR
 const DEFAULT_DURATION_HOURS = 1
 
