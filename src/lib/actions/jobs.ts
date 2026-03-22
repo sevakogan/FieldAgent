@@ -34,6 +34,7 @@ export type JobDetail = Job & {
   address_zip: string
   service_name: string
   service_description: string | null
+  service_checklist_items: unknown[] | null
   worker_name: string | null
   worker_id: string | null
 }
@@ -207,10 +208,10 @@ export async function getJob(id: string): Promise<ActionResult<JobDetail>> {
       .eq('id', job.address_id)
       .single()
 
-    // Fetch service
+    // Fetch service (including checklist_items)
     const { data: service } = await supabase
       .from('service_types')
-      .select('name, description')
+      .select('name, description, checklist_items')
       .eq('id', job.service_type_id)
       .single()
 
@@ -243,6 +244,7 @@ export async function getJob(id: string): Promise<ActionResult<JobDetail>> {
       address_zip: address?.zip ?? '',
       service_name: service?.name ?? 'Unknown',
       service_description: service?.description ?? null,
+      service_checklist_items: (service as Record<string, unknown>)?.checklist_items as unknown[] ?? null,
       worker_name: workerName,
       worker_id: job.assigned_worker_id,
     }
@@ -382,6 +384,7 @@ export async function updateJob(
     scheduled_time?: string | null
     price?: number
     status?: string
+    cancellation_reason?: string
   }
 ): Promise<ActionResult> {
   try {
@@ -396,6 +399,7 @@ export async function updateJob(
     if (data.scheduled_time !== undefined) update.scheduled_time = data.scheduled_time
     if (data.price !== undefined) update.price = data.price
     if (data.status !== undefined) update.status = data.status
+    if (data.cancellation_reason !== undefined) update.cancellation_reason = data.cancellation_reason
 
     if (Object.keys(update).length === 0) {
       return { success: true }

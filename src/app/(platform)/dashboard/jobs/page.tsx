@@ -188,11 +188,13 @@ function CallDropdown({
 function JobCard({
   job,
   onStart,
+  onSkip,
   isStarting,
   onClick,
 }: {
   job: JobRow
   onStart: (e: React.MouseEvent) => void
+  onSkip: (e: React.MouseEvent) => void
   isStarting: boolean
   onClick: () => void
 }) {
@@ -200,6 +202,9 @@ function JobCard({
 
   const dotColor = STATUS_DOT_COLORS[job.status] ?? 'bg-[#8E8E93]'
   const borderColor = STATUS_BORDER_COLORS[job.status] ?? 'border-l-[#8E8E93]'
+
+  const fullAddress = `${job.address_street}${job.address_city ? `, ${job.address_city}` : ''}`
+  const mapsUrl = `https://maps.apple.com/?daddr=${encodeURIComponent(fullAddress)}`
 
   return (
     <motion.div
@@ -220,7 +225,7 @@ function JobCard({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[#1C1C1E] truncate group-hover:text-[#007AFF] transition-colors">
-            {job.address_street}{job.address_city ? `, ${job.address_city}` : ''}
+            {fullAddress}
           </p>
           <p className="text-xs text-[#8E8E93] truncate mt-0.5">
             {job.service_name}
@@ -230,51 +235,86 @@ function JobCard({
         </div>
       </div>
 
-      {/* Row 2: Price + status + actions */}
+      {/* Row 2: Price + status */}
       <div className="flex items-center justify-between mt-2 pl-[calc(4rem+0.625rem+0.5rem+0.5rem)]">
         <span className="text-sm font-semibold text-[#1C1C1E]">
           ${Number(job.price).toFixed(2)}
         </span>
-        <div className="flex items-center gap-2">
-          <StatusBadge status={job.status} />
-          <div className="relative">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowCall((prev) => !prev)
-              }}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all
-                ${job.client_phone
-                  ? 'text-[#007AFF] hover:bg-[#007AFF]/10 opacity-0 group-hover:opacity-100'
-                  : 'text-[#C7C7CC] opacity-0 group-hover:opacity-60 cursor-default'
-                }`}
-              title={job.client_phone ? 'Contact client' : 'No phone on file'}
-            >
-              📞
-            </button>
-            <AnimatePresence>
-              {showCall && (
-                <CallDropdown
-                  phone={job.client_phone}
-                  onClose={() => setShowCall(false)}
-                />
-              )}
-            </AnimatePresence>
-          </div>
-          {job.status === 'scheduled' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onStart(e)
-              }}
-              disabled={isStarting}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-[#34C759] text-white hover:bg-[#2DB84E] active:bg-[#28A745] disabled:opacity-50 transition-all opacity-0 group-hover:opacity-100"
-            >
-              {isStarting ? '...' : '▶ Start'}
-            </button>
+        <StatusBadge status={job.status} />
+      </div>
+
+      {/* Row 3: Action buttons — always visible for scheduled jobs */}
+      {(job.status === 'scheduled' || job.status === 'approved') && (
+        <div className="flex items-center gap-2 mt-2.5 pl-[calc(4rem+0.625rem+0.5rem+0.5rem)]">
+          {/* Drive — opens Apple Maps navigation */}
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold bg-[#007AFF] text-white hover:bg-[#0066DD] active:scale-95 transition-all shadow-sm"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Drive
+          </a>
+
+          {/* Start — changes status to in_progress */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onStart(e) }}
+            disabled={isStarting}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold bg-[#34C759] text-white hover:bg-[#2DB84E] active:scale-95 disabled:opacity-50 transition-all shadow-sm"
+          >
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            {isStarting ? '...' : 'Start'}
+          </button>
+
+          {/* Skip — opens skip modal */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onSkip(e) }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold bg-[#FF9F0A]/15 text-[#CC7F08] hover:bg-[#FF9F0A]/25 active:scale-95 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+            Skip
+          </button>
+
+          {/* Phone — contact client */}
+          {job.client_phone && (
+            <div className="relative ml-auto">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowCall(!showCall) }}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-sm text-[#007AFF] hover:bg-[#007AFF]/10 transition-all"
+              >
+                📞
+              </button>
+              <AnimatePresence>
+                {showCall && (
+                  <CallDropdown phone={job.client_phone} onClose={() => setShowCall(false)} />
+                )}
+              </AnimatePresence>
+            </div>
           )}
         </div>
-      </div>
+      )}
+
+      {/* For in_progress jobs — show Complete button */}
+      {job.status === 'in_progress' && (
+        <div className="flex items-center gap-2 mt-2.5 pl-[calc(4rem+0.625rem+0.5rem+0.5rem)]">
+          <button
+            onClick={(e) => { e.stopPropagation(); onStart(e) }}
+            disabled={isStarting}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold bg-[#34C759] text-white hover:bg-[#2DB84E] active:scale-95 disabled:opacity-50 transition-all shadow-sm"
+          >
+            ✓ Complete
+          </button>
+        </div>
+      )}
     </motion.div>
   )
 }
@@ -297,6 +337,10 @@ export default function JobsPage() {
   const [dragJob, setDragJob] = useState<JobRow | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [confirmMove, setConfirmMove] = useState<{ job: JobRow; newDate: string } | null>(null)
+  const [skipJob, setSkipJob] = useState<JobRow | null>(null)
+  const [skipReason, setSkipReason] = useState('')
+  const [skipNewDate, setSkipNewDate] = useState('')
+  const [skipping, setSkipping] = useState(false)
   const [moving, setMoving] = useState(false)
 
   const dayRefs = useRef<Map<string, HTMLDivElement>>(new Map())
@@ -822,6 +866,7 @@ export default function JobsPage() {
                         key={job.id}
                         job={job}
                         onStart={(e) => handleStartJob(e, job.id)}
+                        onSkip={(e) => { e.stopPropagation(); setSkipJob(job) }}
                         isStarting={startingJobId === job.id}
                         onClick={() => handleCardClick(job.id)}
                       />
@@ -878,6 +923,83 @@ export default function JobsPage() {
                 </button>
                 <button onClick={() => setConfirmMove(null)}
                   className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-xs font-semibold hover:bg-[#E5E5EA] transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Skip Job Modal ── */}
+      <AnimatePresence>
+        {skipJob && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4"
+            onClick={() => { setSkipJob(null); setSkipReason(''); setSkipNewDate('') }}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-3xl p-5"
+              style={{
+                background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(40px)',
+                border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)',
+              }}>
+              <h3 className="text-base font-bold text-[#1C1C1E] mb-1">Skip Job</h3>
+              <p className="text-xs text-[#8E8E93] mb-4">{skipJob.service_name} · {skipJob.address_street}</p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#1C1C1E] mb-1">Reason (optional)</label>
+                  <textarea
+                    value={skipReason}
+                    onChange={(e) => setSkipReason(e.target.value)}
+                    placeholder="Why is this job being skipped?"
+                    rows={2}
+                    className="w-full px-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF9F0A]/30 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#1C1C1E] mb-1">Reschedule to (optional)</label>
+                  <input
+                    type="date"
+                    value={skipNewDate}
+                    onChange={(e) => setSkipNewDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF9F0A]/30"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={async () => {
+                    setSkipping(true)
+                    if (skipNewDate) {
+                      await updateJob(skipJob.id, {
+                        scheduled_date: skipNewDate,
+                        cancellation_reason: skipReason || 'Skipped',
+                      })
+                    } else {
+                      await updateJobStatus(skipJob.id, 'cancelled')
+                      if (skipReason) {
+                        await updateJob(skipJob.id, { cancellation_reason: skipReason })
+                      }
+                    }
+                    setSkipJob(null)
+                    setSkipReason('')
+                    setSkipNewDate('')
+                    setSkipping(false)
+                    fetchJobs()
+                  }}
+                  disabled={skipping}
+                  className="flex-1 py-2.5 bg-[#FF9F0A] text-white rounded-xl text-xs font-bold hover:bg-[#E68F09] transition-colors disabled:opacity-50"
+                >
+                  {skipping ? 'Saving...' : skipNewDate ? 'Reschedule' : 'Skip Job'}
+                </button>
+                <button
+                  onClick={() => { setSkipJob(null); setSkipReason(''); setSkipNewDate('') }}
+                  className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-xs font-semibold hover:bg-[#E5E5EA] transition-colors"
+                >
                   Cancel
                 </button>
               </div>

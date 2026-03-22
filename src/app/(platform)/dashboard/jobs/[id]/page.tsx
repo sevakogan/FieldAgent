@@ -40,11 +40,9 @@ const STATUS_FLOW: Record<string, string[]> = {
 
 /** Maps each status to a primary workflow action with label and color */
 const WORKFLOW_ACTIONS: Record<string, { label: string; targetStatus: string; variant: 'primary' | 'success' | 'warning' | 'purple' | 'danger' }> = {
-  scheduled: { label: 'Start Job', targetStatus: 'driving', variant: 'success' },
-  driving: { label: 'Arrived', targetStatus: 'arrived', variant: 'warning' },
-  arrived: { label: 'Begin Work', targetStatus: 'in_progress', variant: 'primary' },
-  in_progress: { label: 'Complete', targetStatus: 'completed', variant: 'success' },
-  pending_review: { label: 'Approve', targetStatus: 'completed', variant: 'success' },
+  scheduled: { label: '▶ Start Job', targetStatus: 'in_progress', variant: 'success' },
+  in_progress: { label: '✓ Complete Job', targetStatus: 'completed', variant: 'success' },
+  pending_review: { label: '✓ Approve', targetStatus: 'completed', variant: 'success' },
 }
 
 const WORKFLOW_SECONDARY: Record<string, { label: string; targetStatus: string; variant: 'primary' | 'success' | 'warning' | 'purple' | 'danger' }> = {
@@ -453,36 +451,46 @@ export default function JobDetailPage() {
             )}
           </motion.div>
 
-          {/* Checklist */}
-          {job.checklist_results && Object.keys(job.checklist_results).length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="glass rounded-2xl p-5"
-            >
-              <h2 className="font-semibold text-[#1C1C1E] mb-4">Checklist</h2>
-              <div className="space-y-2">
-                {Object.entries(job.checklist_results).map(([key, value]) => {
-                  const done = Boolean(value)
-                  return (
-                  <div key={key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F2F2F7]">
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        done ? 'bg-[#34C759] border-[#34C759]' : 'border-[#E5E5EA]'
-                      }`}
-                    >
-                      {done && <span className="text-white text-xs">&#10003;</span>}
-                    </div>
-                    <span className={`text-sm ${done ? 'text-[#8E8E93] line-through' : 'text-[#1C1C1E]'}`}>
-                      {key}
-                    </span>
-                  </div>
-                  )
-                })}
-              </div>
-            </motion.div>
-          )}
+          {/* Tasks / Checklist — always visible, bold heading */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass rounded-2xl p-5"
+          >
+            <h2 className="text-lg font-bold text-[#1C1C1E] mb-3">Tasks</h2>
+            {(() => {
+              const checklistItems = job.checklist_results
+                ? Object.entries(job.checklist_results)
+                : (job.service_checklist_items as string[] ?? []).map((item: string) => [item, false] as const)
+
+              if (checklistItems.length === 0) {
+                return (
+                  <p className="text-sm text-[#8E8E93] italic">No tasks defined for this service type. Add checklist items in Services to see them here.</p>
+                )
+              }
+
+              return (
+                <div className="space-y-1.5">
+                  {checklistItems.map(([key, value], i) => {
+                    const done = Boolean(value)
+                    return (
+                      <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#F2F2F7] transition-colors">
+                        <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 ${
+                          done ? 'bg-[#34C759] border-[#34C759]' : 'border-[#D1D1D6]'
+                        }`}>
+                          {done && <span className="text-white text-[10px] font-bold">✓</span>}
+                        </div>
+                        <span className={`text-sm font-medium ${done ? 'text-[#8E8E93] line-through' : 'text-[#1C1C1E]'}`}>
+                          {key}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </motion.div>
         </div>
 
         {/* Sidebar */}
@@ -494,8 +502,8 @@ export default function JobDetailPage() {
             transition={{ delay: 0.1 }}
             className="glass rounded-2xl p-5"
           >
-            <h2 className="font-semibold text-[#1C1C1E] mb-4">Pricing</h2>
-            <div className="space-y-2 text-sm">
+            <h2 className="text-xs font-medium text-[#8E8E93] uppercase tracking-wider mb-2">Pricing</h2>
+            <div className="space-y-1.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-[#8E8E93]">Service</span>
                 <span className="text-[#1C1C1E]">${Number(job.price).toFixed(2)}</span>
@@ -521,29 +529,26 @@ export default function JobDetailPage() {
             </div>
           </motion.div>
 
-          {/* Status workflow actions */}
-          {nextStatuses.length > 0 && (
+          {/* Actions — simplified: primary + cancel only */}
+          {!isTerminal && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               className="space-y-2"
             >
-              <p className="text-xs font-medium text-[#8E8E93] uppercase tracking-wider mb-1">Actions</p>
-
-              {/* Primary workflow action */}
               {primaryAction && (
                 <Button
                   variant={primaryAction.variant}
                   onClick={() => handleStatusChange(primaryAction.targetStatus)}
                   disabled={updating}
+                  loading={updating}
                   className="w-full"
                 >
                   {primaryAction.label}
                 </Button>
               )}
 
-              {/* Secondary workflow action */}
               {secondaryAction && (
                 <Button
                   variant={secondaryAction.variant}
@@ -555,24 +560,16 @@ export default function JobDetailPage() {
                 </Button>
               )}
 
-              {/* Remaining transitions not covered by primary/secondary */}
-              {nextStatuses
-                .filter(s => s !== primaryAction?.targetStatus && s !== secondaryAction?.targetStatus)
-                .map((s) => {
-                  const isCancel = s === 'cancelled'
-                  const variant = isCancel ? 'danger' : s === 'completed' || s === 'charged' ? 'success' : 'primary'
-                  return (
-                    <Button
-                      key={s}
-                      variant={variant}
-                      onClick={() => handleStatusChange(s)}
-                      disabled={updating}
-                      className="w-full"
-                    >
-                      {isCancel ? 'Cancel Job' : `Mark as ${STATUS_LABELS[s] ?? s}`}
-                    </Button>
-                  )
-                })}
+              {nextStatuses.includes('cancelled') && (
+                <Button
+                  variant="danger"
+                  onClick={() => handleStatusChange('cancelled')}
+                  disabled={updating}
+                  className="w-full"
+                >
+                  Cancel Job
+                </Button>
+              )}
             </motion.div>
           )}
 
