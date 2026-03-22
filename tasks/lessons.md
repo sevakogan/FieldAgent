@@ -32,3 +32,15 @@
 - Clients and addresses are a combined flow — never require separate navigation
 - Client without address = red warning in list view
 - Client creation form includes optional address step
+
+## 2026-03-21 — Pay Configuration Lives on Property, NOT Team Member
+**Mistake:** Put "Pay by Job Type" section on the team member invite form
+**Correct approach:** Pay rates per service type belong on the ADDRESS/PROPERTY level
+**Rule:** 
+- Team member invite = basic info only (name, email, phone, role)
+- Each property (address) has its own services with:
+  - Client price (what the client pays)
+  - Assigned worker
+  - Worker pay rate (what the worker earns for this service at THIS property)
+- This is stored in address_services table (which already has assigned_worker_id)
+- NEVER put pay configuration on the team member — it's property-specific
