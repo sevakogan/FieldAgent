@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getCalendarJobs } from '@/lib/actions/company'
 import { updateJob } from '@/lib/actions/jobs'
-import { TimelineView } from '@/components/platform/TimelineView'
 import { StatusBadge } from '@/components/platform/Badge'
+
+const PACIFIC_TZ = 'America/Los_Angeles'
 
 type CalendarJob = {
   id: string
@@ -22,766 +23,125 @@ type CalendarJob = {
   client_name?: string
 }
 
-type ViewMode = 'month' | 'week' | 'day'
+function hashStr(s: string) { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h) }
 
-const PACIFIC_TZ = 'America/Los_Angeles'
-
-function hashStr(s: string): number {
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
-  return Math.abs(h)
-}
-
-const SERVICE_COLORS = [
-  { bg: '#007AFF', light: 'rgba(0,122,255,0.1)' },
-  { bg: '#AF52DE', light: 'rgba(175,82,222,0.1)' },
-  { bg: '#FF9F0A', light: 'rgba(255,159,10,0.12)' },
-  { bg: '#34C759', light: 'rgba(52,199,89,0.1)' },
-  { bg: '#FF2D55', light: 'rgba(255,45,85,0.1)' },
-  { bg: '#5AC8FA', light: 'rgba(90,200,250,0.12)' },
-  { bg: '#FFD60A', light: 'rgba(255,214,10,0.15)' },
-  { bg: '#5856D6', light: 'rgba(88,86,214,0.1)' },
+const COLORS = [
+  { bg: '#007AFF', light: 'rgba(0,122,255,0.10)', text: '#0055B3' },
+  { bg: '#AF52DE', light: 'rgba(175,82,222,0.10)', text: '#8B44B8' },
+  { bg: '#FF9F0A', light: 'rgba(255,159,10,0.12)', text: '#CC7F08' },
+  { bg: '#34C759', light: 'rgba(52,199,89,0.10)', text: '#248A3D' },
+  { bg: '#FF2D55', light: 'rgba(255,45,85,0.10)', text: '#D62246' },
+  { bg: '#5AC8FA', light: 'rgba(90,200,250,0.12)', text: '#2E8EB8' },
+  { bg: '#FFD60A', light: 'rgba(255,214,10,0.14)', text: '#8B7500' },
+  { bg: '#5856D6', light: 'rgba(88,86,214,0.10)', text: '#4745AB' },
 ]
 
-function getServiceColor(name: string) {
-  return SERVICE_COLORS[hashStr(name) % SERVICE_COLORS.length]
-}
+function getColor(name: string) { return COLORS[hashStr(name) % COLORS.length] }
+function fmtDateKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+function getTodayKey() { return new Date().toLocaleDateString('en-CA', { timeZone: PACIFIC_TZ }) }
+function fmtTime(t: string | null) { if (!t) return ''; const [h, m] = t.split(':'); const hr = parseInt(h, 10); return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}` }
 
-function formatDateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function getTodayKey(): string {
-  return new Date().toLocaleDateString('en-CA', { timeZone: PACIFIC_TZ })
-}
-
-function formatTime12h(t: string | null): string {
-  if (!t) return ''
-  const [h, m] = t.split(':')
-  const hr = parseInt(h, 10)
-  return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`
-}
-
-// ─── Service Icon ────────────────────────────────────────────────────
 function getServiceIcon(name: string): string {
   const n = name.toLowerCase()
   if (n.includes('clean') || n.includes('turnover')) return '🧹'
   if (n.includes('pool')) return '🏊'
-  if (n.includes('lawn') || n.includes('grass') || n.includes('mow')) return '🌿'
+  if (n.includes('lawn') || n.includes('grass')) return '🌿'
   if (n.includes('plumb')) return '🔧'
-  if (n.includes('handyman') || n.includes('repair')) return '🛠️'
+  if (n.includes('handyman')) return '🛠️'
   if (n.includes('laundry') || n.includes('linen')) return '🧺'
-  if (n.includes('inspect') || n.includes('damage')) return '🔍'
-  if (n.includes('pressure') || n.includes('wash')) return '💧'
+  if (n.includes('inspect')) return '🔍'
   if (n.includes('deep')) return '✨'
   return '⚙️'
 }
 
-// ─── Job Pill with Hover Tooltip (Desktop) ──────────────────────────
-function JobPill({ job, onDragStart }: { job: CalendarJob; onDragStart: (job: CalendarJob) => void }) {
-  const [hovered, setHovered] = useState(false)
-  const color = getServiceColor(job.service_name)
-  const pillRef = useRef<HTMLDivElement>(null)
-
-  return (
-    <div className="relative" ref={pillRef}>
-      <motion.div
-        draggable
-        onDragStart={() => onDragStart(job)}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        whileHover={{ scale: 1.03, y: -1 }}
-        className="flex items-center gap-1.5 rounded-xl px-2 py-1.5 cursor-grab active:cursor-grabbing border-l-[3px]"
-        style={{
-          backgroundColor: color.light,
-          borderLeftColor: color.bg,
-          boxShadow: `0 2px 8px ${color.light}, 0 1px 3px rgba(0,0,0,0.04)`,
-        }}
-      >
-        <span className="text-xs">{getServiceIcon(job.service_name)}</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-bold truncate" style={{ color: color.bg }}>{job.service_name}</p>
-          <p className="text-[8px] text-[#8E8E93] truncate">
-            {job.scheduled_time ? formatTime12h(job.scheduled_time) : ''}
-            {job.client_name ? ` · ${job.client_name}` : ''}
-          </p>
-        </div>
-        {job.price != null && (
-          <span className="text-[11px] font-bold text-[#1C1C1E] shrink-0">${Number(job.price).toFixed(0)}</span>
-        )}
-      </motion.div>
-
-      {/* Hover tooltip */}
-      <AnimatePresence>
-        {hovered && (
-          <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.95 }}
-            className="absolute z-50 bottom-full left-0 mb-2 w-56 rounded-2xl p-3 pointer-events-none"
-            style={{
-              background: 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.5)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">{getServiceIcon(job.service_name)}</span>
-              <div>
-                <p className="text-xs font-bold text-[#1C1C1E]">{job.service_name}</p>
-                <p className="text-[10px] text-[#8E8E93]">{job.scheduled_time ? formatTime12h(job.scheduled_time) : 'No time set'}</p>
-              </div>
-            </div>
-            {job.client_name && (
-              <div className="flex items-center gap-1.5 mb-1">
-                <svg className="w-3 h-3 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span className="text-[10px] text-[#1C1C1E] font-medium">{job.client_name}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5 mb-1">
-              <svg className="w-3 h-3 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
-              </svg>
-              <span className="text-[10px] text-[#636366]">{job.address_street}</span>
-            </div>
-            {job.price != null && (
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#E5E5EA]/30">
-                <StatusBadge status={job.status} />
-                <span className="text-sm font-bold text-[#1C1C1E]">${Number(job.price).toFixed(2)}</span>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-// ─── Mobile Job Card ─────────────────────────────────────────────────
-function MobileJobCard({ job, onClick }: { job: CalendarJob; onClick: () => void }) {
-  const color = getServiceColor(job.service_name)
-
-  return (
-    <motion.button
-      onClick={onClick}
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-all active:scale-[0.98]"
-      style={{
-        background: 'rgba(255,255,255,0.7)',
-        backdropFilter: 'blur(16px)',
-        border: '1px solid rgba(255,255,255,0.5)',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-      }}
-    >
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-        style={{ backgroundColor: color.light }}
-      >
-        {getServiceIcon(job.service_name)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[#1C1C1E] truncate">{job.service_name}</p>
-        <p className="text-xs text-[#8E8E93] truncate">
-          {job.client_name ?? 'No client'}
-          {job.address_street ? ` · ${job.address_street}` : ''}
-        </p>
-      </div>
-      <div className="text-right shrink-0">
-        {job.price != null && (
-          <p className="text-sm font-bold text-[#1C1C1E]">${Number(job.price).toFixed(0)}</p>
-        )}
-        <StatusBadge status={job.status} />
-      </div>
-    </motion.button>
-  )
-}
-
-// ─── Mobile Day Job List ─────────────────────────────────────────────
-function MobileDayJobList({ jobs, date, onJobClick }: {
-  jobs: CalendarJob[]
-  date: string
-  onJobClick: (id: string) => void
-}) {
-  const dayJobs = useMemo(() =>
-    jobs.filter(j => j.scheduled_date === date)
-      .sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? '')),
-    [jobs, date]
-  )
-
-  // Group by time
-  const grouped = useMemo(() => {
-    const groups: { time: string; label: string; jobs: CalendarJob[] }[] = []
-    let currentTime = ''
-    for (const j of dayJobs) {
-      const t = j.scheduled_time ?? ''
-      if (t !== currentTime) {
-        currentTime = t
-        groups.push({ time: t, label: t ? formatTime12h(t) : 'Unscheduled', jobs: [] })
-      }
-      groups[groups.length - 1].jobs.push(j)
-    }
-    return groups
-  }, [dayJobs])
-
-  const dateObj = new Date(date + 'T12:00:00')
-  const dayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: PACIFIC_TZ })
-
-  if (dayJobs.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-2xl mb-2">📋</p>
-        <p className="text-sm font-medium text-[#8E8E93]">No jobs on {dayLabel}</p>
-        <Link href="/dashboard/jobs/new" className="text-xs text-[#007AFF] mt-2 inline-block font-medium">
-          + Schedule a job
-        </Link>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {grouped.map((group) => (
-        <div key={group.time}>
-          <p className="text-[10px] font-semibold text-[#AEAEB2] uppercase tracking-wider mb-2 px-1">
-            {group.label}
-          </p>
-          <div className="space-y-2">
-            {group.jobs.map(j => (
-              <MobileJobCard key={j.id} job={j} onClick={() => onJobClick(j.id)} />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ─── Mobile Month View ───────────────────────────────────────────────
-function MobileMonthView({ jobs, month, year, selectedDate, onDayClick }: {
-  jobs: CalendarJob[]
-  month: number
-  year: number
-  selectedDate: string | null
-  onDayClick: (date: string) => void
-}) {
-  const todayKey = getTodayKey()
-  const firstDay = new Date(year, month, 1)
-  const startPad = firstDay.getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-  const jobsByDate = useMemo(() => {
-    const map = new Map<string, CalendarJob[]>()
-    for (const j of jobs) map.set(j.scheduled_date, [...(map.get(j.scheduled_date) ?? []), j])
-    return map
-  }, [jobs])
-
-  const cells = useMemo(() => {
-    const arr: (number | null)[] = []
-    for (let i = 0; i < startPad; i++) arr.push(null)
-    for (let d = 1; d <= daysInMonth; d++) arr.push(d)
-    while (arr.length % 7 !== 0) arr.push(null)
-    return arr
-  }, [startPad, daysInMonth])
-
-  return (
-    <div className="rounded-2xl overflow-hidden" style={{
-      background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.4)',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-    }}>
-      <div className="grid grid-cols-7 border-b border-[#E5E5EA]/30">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <div key={i} className="py-2 text-center text-[10px] font-bold text-[#AEAEB2] uppercase">{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7">
-        {cells.map((day, i) => {
-          if (day === null) return <div key={i} className="min-h-[52px] border-r border-b border-[#E5E5EA]/10 bg-[#F9F9FB]/20" />
-          const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-          const isToday = dateKey === todayKey
-          const isSelected = dateKey === selectedDate
-          const dayJobs = jobsByDate.get(dateKey) ?? []
-
-          // Get unique service colors for dots
-          const dotColors = [...new Set(dayJobs.map(j => getServiceColor(j.service_name).bg))].slice(0, 3)
-
-          return (
-            <button
-              key={i}
-              onClick={() => onDayClick(dateKey)}
-              className={`min-h-[52px] flex flex-col items-center justify-center gap-1 border-r border-b border-[#E5E5EA]/10 transition-all ${
-                isSelected ? 'bg-[#007AFF]/[0.06]' : ''
-              }`}
-            >
-              <span className={`text-sm font-medium w-8 h-8 flex items-center justify-center rounded-full ${
-                isSelected
-                  ? 'bg-[#007AFF] text-white font-bold shadow-md shadow-[#007AFF]/25'
-                  : isToday
-                    ? 'text-[#007AFF] font-bold'
-                    : 'text-[#1C1C1E]'
-              }`}>
-                {day}
-              </span>
-              {dotColors.length > 0 && (
-                <div className="flex gap-[3px]">
-                  {dotColors.map((c, idx) => (
-                    <div key={idx} className="w-[5px] h-[5px] rounded-full" style={{ backgroundColor: c }} />
-                  ))}
-                </div>
-              )}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ─── Mobile Week Strip ───────────────────────────────────────────────
-function MobileWeekStrip({ days, selectedDate, onDayClick, jobs }: {
-  days: Date[]
-  selectedDate: string | null
-  onDayClick: (date: string) => void
-  jobs: CalendarJob[]
-}) {
-  const todayKey = getTodayKey()
-  const jobsByDate = useMemo(() => {
-    const map = new Map<string, CalendarJob[]>()
-    for (const j of jobs) map.set(j.scheduled_date, [...(map.get(j.scheduled_date) ?? []), j])
-    return map
-  }, [jobs])
-
-  return (
-    <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
-      {days.map(d => {
-        const dateKey = formatDateKey(d)
-        const isToday = dateKey === todayKey
-        const isSelected = dateKey === selectedDate
-        const dayJobs = jobsByDate.get(dateKey) ?? []
-        const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0)
-        const dayNum = d.getDate()
-
-        return (
-          <button
-            key={dateKey}
-            onClick={() => onDayClick(dateKey)}
-            className={`flex-1 min-w-[44px] flex flex-col items-center gap-1 py-2.5 rounded-2xl transition-all ${
-              isSelected
-                ? 'bg-[#007AFF] shadow-md shadow-[#007AFF]/25'
-                : 'bg-white/60'
-            }`}
-          >
-            <span className={`text-[10px] font-semibold ${isSelected ? 'text-white/70' : 'text-[#AEAEB2]'}`}>
-              {dayName}
-            </span>
-            <span className={`text-base font-bold ${
-              isSelected ? 'text-white' : isToday ? 'text-[#007AFF]' : 'text-[#1C1C1E]'
-            }`}>
-              {dayNum}
-            </span>
-            {dayJobs.length > 0 && (
-              <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#007AFF]'}`} />
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-// ─── Desktop Month View ──────────────────────────────────────────────
-function MonthView({ jobs, month, year, onDayClick, selectedDate, weeksToShow }: {
-  jobs: CalendarJob[]
-  month: number
-  year: number
-  onDayClick: (date: string) => void
-  selectedDate: string | null
-  weeksToShow: number
-}) {
-  const todayKey = getTodayKey()
-  const firstDay = new Date(year, month, 1)
-  const startPad = firstDay.getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-  const jobsByDate = useMemo(() => {
-    const map = new Map<string, CalendarJob[]>()
-    for (const j of jobs) map.set(j.scheduled_date, [...(map.get(j.scheduled_date) ?? []), j])
-    return map
-  }, [jobs])
-
-  // Build full month cells
-  const allCells = useMemo(() => {
-    const arr: (number | null)[] = []
-    for (let i = 0; i < startPad; i++) arr.push(null)
-    for (let d = 1; d <= daysInMonth; d++) arr.push(d)
-    while (arr.length % 7 !== 0) arr.push(null)
-    return arr
-  }, [startPad, daysInMonth])
-
-  // Limit weeks if filter is active
-  const cells = useMemo(() => {
-    if (weeksToShow === 0) return allCells
-    return allCells.slice(0, weeksToShow * 7)
-  }, [allCells, weeksToShow])
-
-  // Get client abbreviations for a day's jobs (first 3 chars of client name)
-  function getClientTags(dayJobs: CalendarJob[]): string[] {
-    const names = dayJobs
-      .map(j => j.client_name?.split(' ')[0]?.slice(0, 3)?.toUpperCase())
-      .filter(Boolean) as string[]
-    return [...new Set(names)].slice(0, 3)
-  }
-
-  return (
-    <div>
-      <div className="rounded-3xl overflow-hidden" style={{
-        background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(24px)',
-        border: '1px solid rgba(255,255,255,0.5)',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.6)',
-      }}>
-        {/* Day headers */}
-        <div className="grid grid-cols-7 px-2 pt-3 pb-2">
-          {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
-            <div key={d} className="text-center text-[10px] font-bold text-[#C7C7CC] tracking-widest">{d}</div>
-          ))}
-        </div>
-
-        {/* Day cells */}
-        <div className="grid grid-cols-7 gap-1.5 px-2 pb-2">
-          {cells.map((day, i) => {
-            if (day === null) return <div key={i} className="min-h-[96px]" />
-
-            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-            const isToday = dateKey === todayKey
-            const isSelected = dateKey === selectedDate
-            const dayJobs = jobsByDate.get(dateKey) ?? []
-            const jobCount = dayJobs.length
-            const isPast = dateKey < todayKey
-            const clientTags = getClientTags(dayJobs)
-
-            return (
-              <motion.button
-                key={i}
-                onClick={() => onDayClick(dateKey)}
-                whileHover={{ scale: 1.03, y: -2 }}
-                whileTap={{ scale: 0.96 }}
-                className={`min-h-[96px] rounded-2xl flex flex-col items-center justify-start pt-2.5 pb-2 transition-all relative ${
-                  isToday
-                    ? 'bg-white ring-2 ring-[#007AFF] shadow-lg shadow-[#007AFF]/10'
-                    : isSelected
-                      ? 'bg-[#007AFF]/6 ring-1 ring-[#007AFF]/25'
-                      : isPast && jobCount === 0
-                        ? 'bg-[#F2F2F7]/50'
-                        : jobCount > 0
-                          ? 'bg-white shadow-sm'
-                          : 'bg-white/40'
-                }`}
-              >
-                {/* Date number */}
-                <span className={`text-sm font-semibold leading-none ${
-                  isToday ? 'text-[#007AFF]'
-                    : isPast && jobCount === 0 ? 'text-[#D1D1D6]'
-                    : 'text-[#1C1C1E]'
-                }`}>{day}</span>
-
-                {/* Job count — big colored number */}
-                {jobCount > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className={`text-[22px] font-bold mt-1 leading-none ${
-                      jobCount >= 6 ? 'text-[#FF3B30]' : jobCount >= 3 ? 'text-[#FF9F0A]' : 'text-[#34C759]'
-                    }`}
-                  >{jobCount}</motion.span>
-                )}
-
-                {/* Client abbreviation tags */}
-                {clientTags.length > 0 && (
-                  <div className="flex items-center gap-0.5 mt-1 flex-wrap justify-center">
-                    {clientTags.map(tag => (
-                      <span key={tag} className={`text-[7px] font-bold tracking-wide ${
-                        jobCount >= 6 ? 'text-[#FF3B30]/70' : jobCount >= 3 ? 'text-[#FF9F0A]/70' : 'text-[#34C759]/70'
-                      }`}>{tag}</span>
-                    ))}
-                  </div>
-                )}
-              </motion.button>
-            )
-          })}
-        </div>
-
-        {/* Legend */}
-        <div className="flex items-center justify-end gap-4 px-4 pb-3">
-          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#34C759]" /><span className="text-[9px] text-[#8E8E93]">1–2</span></div>
-          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF9F0A]" /><span className="text-[9px] text-[#8E8E93]">3–5</span></div>
-          <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF3B30]" /><span className="text-[9px] text-[#8E8E93]">6+</span></div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Day View (Desktop) ──────────────────────────────────────────────
-function DayView({ jobs, date, onJobClick }: {
-  jobs: CalendarJob[]
-  date: string
-  onJobClick: (id: string) => void
-}) {
-  const dayJobs = useMemo(() =>
-    jobs.filter(j => j.scheduled_date === date)
-      .sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? '')),
-    [jobs, date]
-  )
-
-  const dateObj = new Date(date + 'T12:00:00')
-  const dayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: PACIFIC_TZ })
-
-  return (
-    <div className="glass rounded-2xl p-4">
-      <h3 className="text-sm font-semibold text-[#1C1C1E] mb-3">{dayLabel}</h3>
-      {dayJobs.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-xs text-[#8E8E93]">No jobs scheduled</p>
-          <Link href="/dashboard/jobs/new" className="text-xs text-[#007AFF] mt-2 inline-block hover:underline">+ Schedule a job</Link>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {dayJobs.map(j => {
-            const color = getServiceColor(j.service_name)
-            return (
-              <motion.button
-                key={j.id}
-                onClick={() => onJobClick(j.id)}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:shadow-md transition-all border-l-[3px]"
-                style={{ backgroundColor: color.light, borderLeftColor: color.bg }}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-[#1C1C1E]">{j.service_name}</span>
-                    <StatusBadge status={j.status} />
-                  </div>
-                  <p className="text-xs text-[#8E8E93] mt-0.5">
-                    {j.scheduled_time ? formatTime12h(j.scheduled_time) + ' · ' : ''}{j.address_street}
-                    {j.worker_name ? ` · ${j.worker_name}` : ''}
-                  </p>
-                </div>
-                {j.price != null && (
-                  <span className="text-sm font-bold text-[#1C1C1E]">${Number(j.price).toFixed(0)}</span>
-                )}
-              </motion.button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Main Calendar Page ──────────────────────────────────────────────
 export default function CalendarPage() {
   const router = useRouter()
   const [jobs, setJobs] = useState<CalendarJob[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>('week')
-  const [selectedDate, setSelectedDate] = useState<string | null>(getTodayKey())
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [dragJob, setDragJob] = useState<CalendarJob | null>(null)
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [confirmMove, setConfirmMove] = useState<{ job: CalendarJob; newDate: string } | null>(null)
+  const [moving, setMoving] = useState(false)
 
-  // Current month/year for month view
-  const now = new Date()
-  const [month, setMonth] = useState(now.getMonth())
-  const [year, setYear] = useState(now.getFullYear())
-
-  // Week offset for week view
-  const [weekOffset, setWeekOffset] = useState(0)
-  const [weeksToShow, setWeeksToShow] = useState(0) // 0=all, 1/2/3=limited
-
-  const weekDays = useMemo(() => {
+  // 3 weeks centered on today
+  const days = useMemo(() => {
     const today = new Date()
     const start = new Date(today)
-    start.setDate(today.getDate() - today.getDay() + weekOffset * 7) // Start from Sunday
-    return Array.from({ length: 7 }, (_, i) => {
+    start.setDate(today.getDate() - today.getDay() - 7) // Start 1 week before this week's Sunday
+    return Array.from({ length: 21 }, (_, i) => {
       const d = new Date(start)
       d.setDate(start.getDate() + i)
       return d
     })
-  }, [weekOffset])
+  }, [])
 
+  const todayKey = getTodayKey()
+  const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: PACIFIC_TZ })
+  const rangeLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[20].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+
+  const now = new Date()
   const fetchJobs = useCallback(async () => {
     setLoading(true)
-    const result = await getCalendarJobs(year, month)
-    if (result.success && result.data) {
-      setJobs(result.data as CalendarJob[])
-    }
+    const result = await getCalendarJobs(now.getFullYear(), now.getMonth())
+    if (result.success && result.data) setJobs(result.data as CalendarJob[])
     setLoading(false)
-  }, [year, month])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => { fetchJobs() }, [fetchJobs])
 
-  const monthLabel = new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  const weekLabel = `${weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+  const jobsByDate = useMemo(() => {
+    const map = new Map<string, CalendarJob[]>()
+    for (const j of jobs) map.set(j.scheduled_date, [...(map.get(j.scheduled_date) ?? []), j])
+    return map
+  }, [jobs])
 
-  const handlePrev = () => {
-    if (viewMode === 'month') {
-      if (month === 0) { setMonth(11); setYear(year - 1) } else setMonth(month - 1)
-    } else {
-      setWeekOffset(weekOffset - 1)
-    }
+  const selectedJobs = useMemo(() => {
+    if (!selectedDate) return []
+    return (jobsByDate.get(selectedDate) ?? []).sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))
+  }, [selectedDate, jobsByDate])
+
+  const handleDrop = (dateKey: string) => {
+    if (!dragJob || dragJob.scheduled_date === dateKey) { setDragJob(null); setDropTarget(null); return }
+    setConfirmMove({ job: dragJob, newDate: dateKey })
+    setDragJob(null)
+    setDropTarget(null)
   }
 
-  const handleNext = () => {
-    if (viewMode === 'month') {
-      if (month === 11) { setMonth(0); setYear(year + 1) } else setMonth(month + 1)
-    } else {
-      setWeekOffset(weekOffset + 1)
-    }
+  const confirmMoveAction = async () => {
+    if (!confirmMove) return
+    setMoving(true)
+    await updateJob(confirmMove.job.id, { scheduled_date: confirmMove.newDate })
+    await fetchJobs()
+    setConfirmMove(null)
+    setMoving(false)
   }
 
-  const handleToday = () => {
-    const t = new Date()
-    setMonth(t.getMonth())
-    setYear(t.getFullYear())
-    setWeekOffset(0)
-    setSelectedDate(getTodayKey())
-  }
-
-  const handleDayClick = (dateKey: string) => {
-    setSelectedDate(dateKey)
-    if (viewMode === 'month') setViewMode('day')
-  }
-
-  // Mobile: tap day in month view shows jobs below (doesn't switch to day view)
-  const handleMobileDayClick = (dateKey: string) => {
-    setSelectedDate(dateKey)
-  }
-
-  // Mobile: tap day in week strip
-  const handleMobileWeekDayClick = (dateKey: string) => {
-    setSelectedDate(dateKey)
-  }
-
-  // Selected day label for mobile
-  const selectedDayLabel = selectedDate
-    ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: PACIFIC_TZ })
-    : ''
-
-  // Timeline jobs mapped for TimelineView component
-  const timelineJobs = useMemo(() => {
-    const dayKeys = new Set(weekDays.map(formatDateKey))
-    return jobs
-      .filter(j => dayKeys.has(j.scheduled_date))
-      .map(j => ({
-        id: j.id,
-        address_street: j.address_street,
-        address_city: j.address_city ?? '',
-        service_name: j.service_name,
-        worker_name: j.worker_name,
-        status: j.status,
-        scheduled_date: j.scheduled_date,
-        scheduled_time: j.scheduled_time,
-        price: j.price ?? 0,
-      }))
-  }, [jobs, weekDays])
+  // Week labels
+  const weeks = [
+    { label: 'Last Week', days: days.slice(0, 7) },
+    { label: 'This Week', days: days.slice(7, 14) },
+    { label: 'Next Week', days: days.slice(14, 21) },
+  ]
 
   return (
     <div>
-      {/* ─── Desktop Header ─────────────────────────────────────────── */}
-      <div className="hidden md:flex items-center justify-between mb-5">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C1C1E]">
-            {new Date(year, month).toLocaleDateString('en-US', { month: 'long' })}
-          </h1>
-          <p className="text-xs text-[#8E8E93] mt-0.5">
-            {viewMode === 'month' ? monthLabel : viewMode === 'week' ? weekLabel : selectedDate ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : ''}
-          </p>
+          <h1 className="text-2xl font-bold text-[#1C1C1E]">{currentMonth}</h1>
+          <p className="text-xs text-[#8E8E93] mt-0.5">{rangeLabel} · 3 weeks</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex bg-[#F2F2F7] rounded-xl p-0.5">
-            {([
-              { key: 'month' as const, label: 'Month' },
-              { key: 'week' as const, label: 'Week' },
-              { key: 'day' as const, label: 'Day' },
-            ]).map(({ key, label }) => (
-              <button key={key} onClick={() => setViewMode(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  viewMode === key ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93] hover:text-[#3C3C43]'
-                }`}>
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Week filter — only in month view */}
-          {viewMode === 'month' && (
-            <div className="flex bg-[#F2F2F7] rounded-xl p-0.5">
-              {[
-                { val: 1, label: '1W' },
-                { val: 2, label: '2W' },
-                { val: 3, label: '3W' },
-                { val: 0, label: 'All' },
-              ].map(opt => (
-                <button key={opt.val} onClick={() => setWeeksToShow(opt.val)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                    weeksToShow === opt.val ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93]'
-                  }`}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Today + Nav arrows */}
-          <div className="flex items-center gap-1">
-            <button onClick={handleToday} className="px-3 py-1.5 bg-[#007AFF] text-white rounded-xl text-xs font-semibold hover:bg-[#0066DD] transition-colors">
-              Today
-            </button>
-            <button onClick={handlePrev} className="w-8 h-8 rounded-lg hover:bg-[#F2F2F7] flex items-center justify-center transition-colors">
-              <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="15 18 9 12 15 6" /></svg>
-            </button>
-            <button onClick={handleNext} className="w-8 h-8 rounded-lg hover:bg-[#F2F2F7] flex items-center justify-center transition-colors">
-              <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="9 18 15 12 9 6" /></svg>
-            </button>
-          </div>
-
+          <button onClick={() => setSelectedDate(todayKey)}
+            className="px-3 py-1.5 bg-[#007AFF] text-white rounded-xl text-xs font-semibold hover:bg-[#0066DD] transition-colors">
+            Today
+          </button>
           <Link href="/dashboard/jobs/new"
-            className="px-4 py-2 bg-[#007AFF] text-white rounded-2xl text-xs font-semibold hover:bg-[#0066DD] transition-colors">
+            className="px-4 py-2 bg-[#1C1C1E] text-white rounded-2xl text-xs font-semibold hover:bg-[#3C3C43] transition-colors">
             + New Job
           </Link>
-        </div>
-      </div>
-
-      {/* ─── Mobile Header ──────────────────────────────────────────── */}
-      <div className="md:hidden mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-lg font-bold text-[#1C1C1E]">
-            {viewMode === 'month' ? monthLabel : weekLabel}
-          </h1>
-          <div className="flex items-center gap-1">
-            <button onClick={handlePrev} className="w-8 h-8 rounded-lg hover:bg-[#F2F2F7] flex items-center justify-center">
-              <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="15 18 9 12 15 6" /></svg>
-            </button>
-            <button onClick={handleNext} className="w-8 h-8 rounded-lg hover:bg-[#F2F2F7] flex items-center justify-center">
-              <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="9 18 15 12 9 6" /></svg>
-            </button>
-            <button onClick={handleToday} className="px-2 py-1 rounded-lg text-[11px] font-semibold text-[#007AFF]">
-              Today
-            </button>
-          </div>
-        </div>
-        {/* Mobile view toggle */}
-        <div className="flex bg-[#F2F2F7] rounded-xl p-0.5">
-          {(['month', 'week', 'day'] as const).map(mode => (
-            <button key={mode} onClick={() => setViewMode(mode)}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
-                viewMode === mode ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93]'
-              }`}>
-              {mode}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -790,114 +150,205 @@ export default function CalendarPage() {
           <div className="h-8 w-8 border-3 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <AnimatePresence mode="wait">
-          {/* ─── MONTH VIEW ─────────────────────────────────────────── */}
-          {viewMode === 'month' && (
-            <motion.div key="month" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {/* Desktop month */}
-              <div className="hidden md:block">
-                <MonthView jobs={jobs} month={month} year={year} onDayClick={handleDayClick} selectedDate={selectedDate} weeksToShow={weeksToShow} />
-              </div>
-              {/* Mobile month */}
-              <div className="md:hidden space-y-4">
-                <MobileMonthView
-                  jobs={jobs}
-                  month={month}
-                  year={year}
-                  selectedDate={selectedDate}
-                  onDayClick={handleMobileDayClick}
-                />
-                {/* Selected day job list */}
-                {selectedDate && (
-                  <motion.div
-                    key={selectedDate}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex items-center justify-between mb-2 px-1">
-                      <p className="text-sm font-semibold text-[#1C1C1E]">{selectedDayLabel}</p>
-                      <Link href="/dashboard/jobs/new" className="text-xs text-[#007AFF] font-medium">+ New</Link>
-                    </div>
-                    <MobileDayJobList
-                      jobs={jobs}
-                      date={selectedDate}
-                      onJobClick={(id) => router.push(`/dashboard/jobs/${id}`)}
-                    />
-                  </motion.div>
+        <div className="space-y-6">
+          {/* 3-Week Grid */}
+          {weeks.map((week, wi) => (
+            <div key={wi}>
+              <p className="text-[10px] font-bold text-[#AEAEB2] uppercase tracking-widest mb-2 px-1">{week.label}</p>
+              <div className="grid grid-cols-7 gap-1.5">
+                {wi === 0 && (
+                  // Day headers only on first week
+                  <>
+                    {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
+                      <div key={d} className="text-center text-[9px] font-bold text-[#C7C7CC] tracking-widest mb-1">{d}</div>
+                    ))}
+                  </>
                 )}
-              </div>
-            </motion.div>
-          )}
+                {week.days.map(day => {
+                  const key = fmtDateKey(day)
+                  const isToday = key === todayKey
+                  const isSelected = key === selectedDate
+                  const isDrop = dropTarget === key
+                  const dayJobs = jobsByDate.get(key) ?? []
+                  const count = dayJobs.length
+                  const isPast = key < todayKey
+                  const isThisMonth = day.getMonth() === now.getMonth()
 
-          {/* ─── WEEK VIEW ──────────────────────────────────────────── */}
-          {viewMode === 'week' && (
-            <motion.div key="week" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {/* Desktop week (timeline) */}
-              <div className="hidden md:block">
-                <TimelineView
-                  days={weekDays}
-                  jobs={timelineJobs}
-                  onJobClick={(id) => router.push(`/dashboard/jobs/${id}`)}
-                  onJobMove={async (jobId, newDate) => {
-                    await updateJob(jobId, { scheduled_date: newDate })
-                    fetchJobs()
-                  }}
-                />
-              </div>
-              {/* Mobile week: strip + day list */}
-              <div className="md:hidden space-y-4">
-                <MobileWeekStrip
-                  days={weekDays}
-                  selectedDate={selectedDate}
-                  onDayClick={handleMobileWeekDayClick}
-                  jobs={jobs}
-                />
-                {selectedDate && (
-                  <motion.div
-                    key={selectedDate}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex items-center justify-between mb-2 px-1">
-                      <p className="text-sm font-semibold text-[#1C1C1E]">{selectedDayLabel}</p>
-                      <Link href="/dashboard/jobs/new" className="text-xs text-[#007AFF] font-medium">+ New</Link>
-                    </div>
-                    <MobileDayJobList
-                      jobs={jobs}
-                      date={selectedDate}
-                      onJobClick={(id) => router.push(`/dashboard/jobs/${id}`)}
-                    />
-                  </motion.div>
-                )}
-              </div>
-            </motion.div>
-          )}
+                  return (
+                    <motion.div
+                      key={key}
+                      onClick={() => setSelectedDate(key)}
+                      onDragOver={(e) => { e.preventDefault(); setDropTarget(key) }}
+                      onDragLeave={() => setDropTarget(null)}
+                      onDrop={() => handleDrop(key)}
+                      whileHover={{ scale: 1.04, y: -2 }}
+                      whileTap={{ scale: 0.96 }}
+                      className={`min-h-[80px] rounded-2xl flex flex-col items-center pt-2 pb-1.5 cursor-pointer transition-all relative ${
+                        isToday ? 'ring-2 ring-[#007AFF] bg-white shadow-lg shadow-[#007AFF]/10'
+                        : isDrop ? 'ring-2 ring-[#34C759] bg-[#34C759]/5'
+                        : isSelected ? 'bg-[#007AFF]/6 ring-1 ring-[#007AFF]/20'
+                        : count > 0 ? 'bg-white shadow-sm'
+                        : isPast && isThisMonth ? 'bg-[#F2F2F7]/40'
+                        : !isThisMonth ? 'bg-[#F9F9FB]/30'
+                        : 'bg-white/30'
+                      }`}
+                      style={isToday ? { boxShadow: '0 4px 20px rgba(0,122,255,0.12)' } : undefined}
+                    >
+                      <span className={`text-sm font-semibold leading-none ${
+                        isToday ? 'text-[#007AFF]'
+                        : !isThisMonth ? 'text-[#D1D1D6]'
+                        : isPast && count === 0 ? 'text-[#C7C7CC]'
+                        : 'text-[#1C1C1E]'
+                      }`}>{day.getDate()}</span>
 
-          {/* ─── DAY VIEW ───────────────────────────────────────────── */}
-          {viewMode === 'day' && (
-            <motion.div key="day" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {/* Desktop day */}
-              <div className="hidden md:block">
-                <DayView jobs={jobs} date={selectedDate ?? getTodayKey()} onJobClick={(id) => router.push(`/dashboard/jobs/${id}`)} />
+                      {count > 0 && (
+                        <>
+                          <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                            className={`text-xl font-bold mt-0.5 leading-none ${
+                              count >= 6 ? 'text-[#FF3B30]' : count >= 3 ? 'text-[#FF9F0A]' : 'text-[#34C759]'
+                            }`}>{count}</motion.span>
+                          <div className="flex gap-0.5 mt-1">
+                            {dayJobs.slice(0, 3).map(j => (
+                              <span key={j.id} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getColor(j.service_name).bg }} />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </motion.div>
+                  )
+                })}
               </div>
-              {/* Mobile day */}
-              <div className="md:hidden">
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <p className="text-base font-bold text-[#1C1C1E]">{selectedDayLabel || 'Today'}</p>
-                  <Link href="/dashboard/jobs/new" className="text-xs text-[#007AFF] font-medium">+ New Job</Link>
+            </div>
+          ))}
+
+          {/* Selected Day — Job Cards */}
+          <AnimatePresence>
+            {selectedDate && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 12 }}
+                className="rounded-3xl overflow-hidden"
+                style={{
+                  background: 'rgba(255,255,255,0.8)',
+                  backdropFilter: 'blur(24px)',
+                  border: '1px solid rgba(255,255,255,0.5)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.06)',
+                }}
+              >
+                <div className="px-4 py-3 border-b border-[#E5E5EA]/20 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-bold text-[#1C1C1E]">
+                      {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: PACIFIC_TZ })}
+                    </h2>
+                    <p className="text-[10px] text-[#8E8E93]">{selectedJobs.length} job{selectedJobs.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <button onClick={() => setSelectedDate(null)} className="w-7 h-7 rounded-full bg-[#F2F2F7] flex items-center justify-center">
+                    <svg className="w-3.5 h-3.5 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
-                <MobileDayJobList
-                  jobs={jobs}
-                  date={selectedDate ?? getTodayKey()}
-                  onJobClick={(id) => router.push(`/dashboard/jobs/${id}`)}
-                />
+
+                <div className="p-3">
+                  {selectedJobs.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-[#8E8E93]">No jobs this day</p>
+                      <Link href="/dashboard/jobs/new" className="text-xs text-[#007AFF] mt-2 inline-block hover:underline">+ Schedule a job</Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedJobs.map((job, i) => {
+                        const color = getColor(job.service_name)
+                        return (
+                          <motion.div
+                            key={job.id}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            draggable
+                            onDragStart={() => setDragJob(job)}
+                            onClick={() => router.push(`/dashboard/jobs/${job.id}`)}
+                            className="flex items-center gap-3 p-3 rounded-2xl cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-[3px]"
+                            style={{ backgroundColor: color.light, borderLeftColor: color.bg }}
+                          >
+                            <span className="text-lg">{getServiceIcon(job.service_name)}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-[#1C1C1E] truncate">{job.service_name}</span>
+                                <StatusBadge status={job.status} />
+                              </div>
+                              <p className="text-[11px] text-[#636366] truncate mt-0.5">
+                                {job.scheduled_time ? fmtTime(job.scheduled_time) + ' · ' : ''}
+                                {job.address_street}
+                                {job.client_name ? ` · ${job.client_name}` : ''}
+                              </p>
+                            </div>
+                            {job.price != null && (
+                              <span className="text-base font-bold text-[#1C1C1E] shrink-0">${Number(job.price).toFixed(0)}</span>
+                            )}
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Legend */}
+          <div className="flex items-center justify-center gap-6">
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#34C759]" /><span className="text-[10px] text-[#8E8E93] font-medium">1–2 jobs</span></div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FF9F0A]" /><span className="text-[10px] text-[#8E8E93] font-medium">3–5 jobs</span></div>
+            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FF3B30]" /><span className="text-[10px] text-[#8E8E93] font-medium">6+ jobs</span></div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Move Modal */}
+      <AnimatePresence>
+        {confirmMove && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-sm rounded-3xl p-5"
+              style={{
+                background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(40px)',
+                border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)',
+              }}>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">{getServiceIcon(confirmMove.job.service_name)}</span>
+                <div>
+                  <h3 className="text-sm font-bold text-[#1C1C1E]">Move Job?</h3>
+                  <p className="text-xs text-[#8E8E93]">{confirmMove.job.service_name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mb-4 text-xs text-[#636366]">
+                <span className="px-2 py-1 bg-[#F2F2F7] rounded-lg font-medium">
+                  {new Date(confirmMove.job.scheduled_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+                <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+                <span className="px-2 py-1 bg-[#007AFF]/10 text-[#007AFF] rounded-lg font-bold">
+                  {new Date(confirmMove.newDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={confirmMoveAction} disabled={moving}
+                  className="flex-1 py-2.5 bg-[#007AFF] text-white rounded-xl text-xs font-semibold hover:bg-[#0066DD] transition-colors disabled:opacity-50">
+                  {moving ? 'Moving...' : 'Confirm Move'}
+                </button>
+                <button onClick={() => setConfirmMove(null)}
+                  className="flex-1 py-2.5 bg-[#F2F2F7] text-[#1C1C1E] rounded-xl text-xs font-semibold hover:bg-[#E5E5EA] transition-colors">
+                  Cancel
+                </button>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
