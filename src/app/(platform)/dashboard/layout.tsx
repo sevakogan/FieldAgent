@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import ViewingAsBanner from '@/components/platform/ViewingAsBanner'
+import { UndoToastProvider } from '@/components/platform/UndoToast'
 
 // ─── SVG Icons ───────────────────────────────────────────────────────
 const Icon = ({ d, ...props }: { d: string } & React.SVGProps<SVGSVGElement>) => (
@@ -290,6 +291,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         God Mode
       </Link>
       </div>{/* close flex wrapper */}
+      <UndoToastProvider />
     </div>
   )
 }

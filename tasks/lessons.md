@@ -53,3 +53,11 @@
 - Don't make integration required — they can skip and schedule manually per turn
 - Regular (non-STR) properties use: one_time, weekly, biweekly, monthly
 - STR properties use: per_turn (+ one_time for deep cleans, inspections, etc.)
+
+## 2026-03-21 — Delete = Always Undo (15 seconds)
+**Rule:** Every delete action across the entire app must:
+1. NOT delete immediately — soft delete or mark as pending
+2. Show an "Undo" toast/banner for 15 seconds
+3. If user clicks Undo → restore the item
+4. If 15 seconds pass → actually delete
+5. This applies EVERYWHERE: services, addresses, clients, jobs, team members, invoices, etc.

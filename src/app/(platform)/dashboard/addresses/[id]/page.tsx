@@ -16,6 +16,7 @@ import { getServices, type ServiceRow } from '@/lib/actions/services'
 import { getTeamMembers, type TeamMemberRow } from '@/lib/actions/team'
 import { StatusBadge } from '@/components/platform/Badge'
 import { Button } from '@/components/platform/Button'
+import { showUndoToast } from '@/components/platform/UndoToast'
 
 const RECURRENCE_LABELS: Record<string, string> = {
   one_time: 'One Time',
@@ -192,15 +193,28 @@ export default function AddressDetailPage() {
     setAddingSvc(false)
   }
 
-  const handleRemoveService = async (addressServiceId: string) => {
-    setRemovingSvcId(addressServiceId)
-    const result = await removeServiceFromAddress(addressServiceId)
-    if (result.success) {
-      await fetchAddress()
-    } else {
-      setError(result.error ?? 'Failed to remove service')
-    }
-    setRemovingSvcId(null)
+  const handleRemoveService = (addressServiceId: string, serviceName: string) => {
+    // Optimistically remove from UI
+    if (!address) return
+    const removedSvc = address.services.find(s => s.id === addressServiceId)
+    setAddress({
+      ...address,
+      services: address.services.filter(s => s.id !== addressServiceId),
+    })
+
+    showUndoToast(
+      `Removed "${serviceName}"`,
+      // Undo: restore the service in UI
+      () => {
+        if (removedSvc) {
+          setAddress(prev => prev ? { ...prev, services: [...prev.services, removedSvc] } : prev)
+        }
+      },
+      // Expire: actually delete from DB
+      async () => {
+        await removeServiceFromAddress(addressServiceId)
+      },
+    )
   }
 
   if (loading) {
@@ -443,7 +457,7 @@ export default function AddressDetailPage() {
                       </span>
                       <StatusBadge status={svc.status} />
                       <button
-                        onClick={() => handleRemoveService(svc.id)}
+                        onClick={(e) => { e.stopPropagation(); handleRemoveService(svc.id, svc.service_name) }}
                         disabled={removingSvcId === svc.id}
                         className="w-6 h-6 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FF3B30]/10 text-[#8E8E93] hover:text-[#FF3B30]"
                         aria-label="Remove service"
