@@ -44,3 +44,12 @@
   - Worker pay rate (what the worker earns for this service at THIS property)
 - This is stored in address_services table (which already has assigned_worker_id)
 - NEVER put pay configuration on the team member — it's property-specific
+
+## 2026-03-21 — STR Properties Use "Per Turn" Not Recurring Schedule
+**Rule:** When a property is marked as STR (Short-Term Rental):
+- If NO integration connected: recurrence = "per_turn" (triggered manually per guest checkout)
+- If integration IS connected (Airbnb, VRBO, etc.): jobs auto-created from reservation data
+- Show a soft notification: "Connect an integration for automatic scheduling"
+- Don't make integration required — they can skip and schedule manually per turn
+- Regular (non-STR) properties use: one_time, weekly, biweekly, monthly
+- STR properties use: per_turn (+ one_time for deep cleans, inspections, etc.)

@@ -22,9 +22,11 @@ const RECURRENCE_LABELS: Record<string, string> = {
   weekly: 'Weekly',
   biweekly: 'Biweekly',
   monthly: 'Monthly',
+  per_turn: 'Per Turn',
 }
 
-const RECURRENCE_OPTIONS = ['one_time', 'weekly', 'biweekly', 'monthly'] as const
+const RECURRENCE_OPTIONS_REGULAR = ['one_time', 'weekly', 'biweekly', 'monthly'] as const
+const RECURRENCE_OPTIONS_STR = ['per_turn', 'one_time'] as const
 
 export default function AddressDetailPage() {
   const params = useParams()
@@ -132,7 +134,7 @@ export default function AddressDetailPage() {
     setAddSvcError(null)
     setAddSvcTypeId('')
     setAddSvcPrice('')
-    setAddSvcRecurrence('one_time')
+    setAddSvcRecurrence(address?.is_str ? 'per_turn' : 'one_time')
     setAddSvcWorkerId('')
 
     const [servicesResult, teamResult] = await Promise.all([
@@ -507,8 +509,13 @@ export default function AddressDetailPage() {
 
                   <div>
                     <label className="block text-xs text-[#8E8E93] mb-1">Recurrence</label>
+                    {address.is_str && !address.integration_source && (
+                      <div className="bg-[#FF9F0A]/8 text-[#CC7F08] text-xs rounded-xl px-3 py-2 mb-2">
+                        Connect an integration (Airbnb, VRBO) for automatic scheduling from reservations
+                      </div>
+                    )}
                     <div className="flex gap-1.5 flex-wrap">
-                      {RECURRENCE_OPTIONS.map(opt => (
+                      {(address.is_str ? RECURRENCE_OPTIONS_STR : RECURRENCE_OPTIONS_REGULAR).map(opt => (
                         <button
                           key={opt}
                           type="button"

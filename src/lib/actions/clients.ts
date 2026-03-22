@@ -356,6 +356,113 @@ export async function updateClient(
   }
 }
 
+export type ClientJob = {
+  id: string
+  status: string
+  scheduled_date: string | null
+  scheduled_time: string | null
+  price: number
+  service_name: string
+  address_street: string
+}
+
+export type ClientInvoice = {
+  id: string
+  invoice_number: string
+  total: number
+  status: string
+  created_at: string
+  paid_at: string | null
+}
+
+export type ClientHistory = {
+  jobs: ClientJob[]
+  invoices: ClientInvoice[]
+}
+
+export async function getClientHistory(clientId: string): Promise<ActionResult<ClientHistory>> {
+  try {
+    const companyId = await getCompanyId()
+    const supabase = createAdminClient()
+
+    // Get addresses for this client to join jobs
+    const { data: addresses, error: addrError } = await supabase
+      .from('addresses')
+      .select('id, street')
+      .eq('client_id', clientId)
+      .eq('company_id', companyId)
+
+    if (addrError) {
+      return { success: false, error: addrError.message }
+    }
+
+    const addressIds = (addresses ?? []).map(a => a.id)
+    const addressMap = new Map((addresses ?? []).map(a => [a.id, a.street]))
+
+    let jobs: ClientJob[] = []
+    if (addressIds.length > 0) {
+      const { data: jobRows, error: jobError } = await supabase
+        .from('jobs')
+        .select('id, status, scheduled_date, scheduled_time, price, service_type_id, address_id')
+        .in('address_id', addressIds)
+        .eq('company_id', companyId)
+        .order('scheduled_date', { ascending: false })
+
+      if (jobError) {
+        return { success: false, error: jobError.message }
+      }
+
+      // Get service type names
+      const serviceTypeIds = [...new Set((jobRows ?? []).map(j => j.service_type_id).filter(Boolean))]
+      let serviceMap = new Map<string, string>()
+
+      if (serviceTypeIds.length > 0) {
+        const { data: serviceTypes } = await supabase
+          .from('service_types')
+          .select('id, name')
+          .in('id', serviceTypeIds)
+
+        serviceMap = new Map((serviceTypes ?? []).map(s => [s.id, s.name]))
+      }
+
+      jobs = (jobRows ?? []).map(j => ({
+        id: j.id,
+        status: j.status,
+        scheduled_date: j.scheduled_date,
+        scheduled_time: j.scheduled_time,
+        price: j.price ?? 0,
+        service_name: serviceMap.get(j.service_type_id) ?? 'Unknown',
+        address_street: addressMap.get(j.address_id) ?? 'Unknown',
+      }))
+    }
+
+    // Get invoices
+    const { data: invoiceRows, error: invError } = await supabase
+      .from('invoices')
+      .select('id, invoice_number, total, status, created_at, paid_at')
+      .eq('client_id', clientId)
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+
+    if (invError) {
+      return { success: false, error: invError.message }
+    }
+
+    const invoices: ClientInvoice[] = (invoiceRows ?? []).map(inv => ({
+      id: inv.id,
+      invoice_number: inv.invoice_number,
+      total: inv.total ?? 0,
+      status: inv.status,
+      created_at: inv.created_at,
+      paid_at: inv.paid_at,
+    }))
+
+    return { success: true, data: { jobs, invoices } }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to fetch client history' }
+  }
+}
+
 export async function deleteClient(id: string): Promise<ActionResult> {
   try {
     const companyId = await getCompanyId()
