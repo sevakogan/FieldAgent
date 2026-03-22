@@ -78,9 +78,6 @@ export default function AdminLayout({
           })}
         </nav>
 
-        <div className="p-4 border-t border-[#E5E5EA]">
-          <div className="text-[10px] text-[#C7C7CC] text-center">KleanHQ v1.0</div>
-        </div>
       </aside>
 
       {/* Mobile header */}
