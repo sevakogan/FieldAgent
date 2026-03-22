@@ -70,3 +70,12 @@
 
 ## 2026-03-21 — Jobs Page = 7-Day Calendar + Cards
 **Rule:** The jobs page should show a 7-day rolling calendar at the top with job cards organized by day/time below it. Not just a flat table.
+
+## 2026-03-22 — Telegram Bot for Business Queries
+**Rule:** Build a Telegram bot that can answer questions about:
+- Revenue (daily, weekly, monthly, by client, by service)
+- Reservations/jobs (upcoming, past, by date, by worker)
+- Client names and contact info
+- Number of jobs/services/properties
+- Worker assignments and schedules
+The bot queries Supabase and uses AI to understand natural language questions.

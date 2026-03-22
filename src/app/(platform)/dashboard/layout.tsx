@@ -482,12 +482,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 md:p-5 max-w-7xl mx-auto pb-24 md:pb-20">
           {children}
         </motion.div>
-        {/* Build version — desktop only, bottom center */}
-        <div className="hidden md:block py-3 text-center">
-          <p className="text-[10px] text-[#C7C7CC] font-mono">
-            KleanHQ v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'} · Build {process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'} · {process.env.NEXT_PUBLIC_BUILD_DATE ?? 'dev'} {process.env.NEXT_PUBLIC_BUILD_TIME ?? ''}
-          </p>
-        </div>
       </main>
 
       {/* Floating God Mode — mobile, positioned above bottom nav */}
