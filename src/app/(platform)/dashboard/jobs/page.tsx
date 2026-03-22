@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { getJobs, updateJobStatus, type JobRow } from '@/lib/actions/jobs'
+import { getJobs, updateJobStatus, updateJob, type JobRow } from '@/lib/actions/jobs'
 import { StatusBadge } from '@/components/platform/Badge'
 import { Button } from '@/components/platform/Button'
 import { SegmentedControl } from '@/components/platform/SegmentedControl'
@@ -612,6 +612,10 @@ export default function JobsPage() {
             days={days}
             jobs={timelineJobs}
             onJobClick={handleCardClick}
+            onJobMove={async (jobId, newDate) => {
+              await updateJob(jobId, { scheduled_date: newDate })
+              fetchJobs()
+            }}
           />
         </div>
       )}

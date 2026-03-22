@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getCalendarJobs } from '@/lib/actions/company'
+import { updateJob } from '@/lib/actions/jobs'
 import { TimelineView } from '@/components/platform/TimelineView'
 import { StatusBadge } from '@/components/platform/Badge'
 
@@ -341,7 +342,15 @@ export default function CalendarPage() {
           )}
           {viewMode === 'week' && (
             <motion.div key="week" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <TimelineView days={weekDays} jobs={timelineJobs} onJobClick={(id) => router.push(`/dashboard/jobs/${id}`)} />
+              <TimelineView
+                days={weekDays}
+                jobs={timelineJobs}
+                onJobClick={(id) => router.push(`/dashboard/jobs/${id}`)}
+                onJobMove={async (jobId, newDate) => {
+                  await updateJob(jobId, { scheduled_date: newDate })
+                  fetchJobs()
+                }}
+              />
             </motion.div>
           )}
           {viewMode === 'day' && (
