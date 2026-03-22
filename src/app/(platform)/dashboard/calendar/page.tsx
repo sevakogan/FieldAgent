@@ -217,21 +217,27 @@ export default function CalendarPage() {
                       onDragOver={(e) => { e.preventDefault(); setDropTarget(key) }}
                       onDragLeave={() => setDropTarget(null)}
                       onDrop={() => handleDrop(key)}
-                      whileHover={{ scale: 1.05, y: -3, rotateX: 2, rotateY: -1 }}
-                      whileTap={{ scale: 0.96 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                      className={`min-h-[80px] rounded-2xl flex flex-col items-center pt-2 pb-1.5 cursor-pointer transition-all relative ${
-                        isToday ? 'ring-2 ring-[#007AFF] bg-white shadow-lg shadow-[#007AFF]/10'
+                      whileHover={{ scale: 1.06, y: -4, rotateX: 3, rotateY: -2, boxShadow: '0 12px 32px rgba(0,0,0,0.08)' }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ type: 'spring', stiffness: 350, damping: 18 }}
+                      className={`min-h-[88px] rounded-2xl flex flex-col items-center pt-2.5 pb-2 cursor-pointer transition-all relative ${
+                        isToday ? 'ring-2 ring-[#007AFF] bg-white'
                         : isDrop ? 'ring-2 ring-[#34C759] bg-[#34C759]/5'
-                        : isSelected ? 'bg-[#007AFF]/6 ring-1 ring-[#007AFF]/20'
-                        : count > 0 ? 'bg-white shadow-sm'
-                        : isPast && isThisMonth ? 'bg-[#F2F2F7]/40'
-                        : !isThisMonth ? 'bg-[#F9F9FB]/30'
-                        : 'bg-white/30'
+                        : isSelected ? 'bg-white ring-1 ring-[#007AFF]/25'
+                        : count > 0 ? 'bg-white'
+                        : isPast && isThisMonth ? 'bg-[#F2F2F7]/30'
+                        : !isThisMonth ? 'bg-[#F9F9FB]/20'
+                        : 'bg-white/40'
                       }`}
-                      style={isToday ? { boxShadow: '0 4px 20px rgba(0,122,255,0.12)' } : undefined}
+                      style={{
+                        boxShadow: isToday
+                          ? '0 6px 24px rgba(0,122,255,0.15), 0 2px 8px rgba(0,0,0,0.04)'
+                          : count > 0
+                            ? '0 2px 12px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02)'
+                            : '0 1px 4px rgba(0,0,0,0.02)',
+                      }}
                     >
-                      <span className={`text-sm font-semibold leading-none ${
+                      <span className={`text-[13px] font-semibold leading-none ${
                         isToday ? 'text-[#007AFF]'
                         : !isThisMonth ? 'text-[#D1D1D6]'
                         : isPast && count === 0 ? 'text-[#C7C7CC]'
@@ -241,32 +247,45 @@ export default function CalendarPage() {
                       {count > 0 && (
                         <>
                           <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
-                            className={`text-xl font-bold mt-0.5 leading-none ${
+                            className={`text-[20px] font-bold mt-0.5 leading-none ${
                               count >= 6 ? 'text-[#FF3B30]' : count >= 3 ? 'text-[#FF9F0A]' : 'text-[#34C759]'
                             }`}>{count}</motion.span>
-                          {/* Job dots + client name */}
-                          <div className="w-full px-1 mt-1 space-y-[2px]">
-                            {dayJobs.slice(0, 3).map(j => {
+                          {/* Service icons row with hover tooltips */}
+                          <div className="flex items-center justify-center gap-1 mt-1.5 flex-wrap">
+                            {dayJobs.slice(0, 4).map(j => {
                               const c = getColor(j.service_name)
                               return (
-                                <div key={j.id} className="flex items-center gap-1 group/job relative">
-                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.bg }} />
-                                  <span className="text-[8px] font-medium truncate text-[#636366]">
-                                    {j.client_name?.split(' ')[0]?.toLowerCase() ?? j.service_name.split(' ')[0]?.toLowerCase()}
-                                  </span>
+                                <div key={j.id} className="group/icon relative">
+                                  <div className="w-5 h-5 rounded-lg flex items-center justify-center text-[10px] cursor-pointer hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: c.light }}>
+                                    {getServiceIcon(j.service_name)}
+                                  </div>
                                   {/* Hover tooltip */}
-                                  <div className="absolute z-50 bottom-full left-0 mb-1 w-44 rounded-xl p-2 pointer-events-none opacity-0 group-hover/job:opacity-100 transition-opacity"
-                                    style={{ background: 'rgba(28,28,30,0.92)', backdropFilter: 'blur(12px)' }}>
-                                    <p className="text-[10px] text-white font-bold">{j.client_name ?? 'Unknown'}</p>
-                                    <p className="text-[9px] text-white/60">{j.address_street}</p>
-                                    <p className="text-[9px] text-white/60">{j.service_name} · {fmtTime(j.scheduled_time)}</p>
-                                    {j.price != null && <p className="text-[10px] text-[#34C759] font-bold mt-0.5">${Number(j.price).toFixed(0)}</p>}
+                                  <div className="absolute z-[60] bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 rounded-2xl p-2.5 pointer-events-none opacity-0 group-hover/icon:opacity-100 transition-all scale-95 group-hover/icon:scale-100"
+                                    style={{ background: 'rgba(28,28,30,0.94)', backdropFilter: 'blur(16px)', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <span className="text-sm">{getServiceIcon(j.service_name)}</span>
+                                      <span className="text-[11px] text-white font-bold">{j.service_name}</span>
+                                    </div>
+                                    <p className="text-[10px] text-white/80 flex items-center gap-1">
+                                      <span className="text-white/50">👤</span> {j.client_name ?? 'Unknown'}
+                                    </p>
+                                    <p className="text-[10px] text-white/60 flex items-center gap-1">
+                                      <span className="text-white/50">📍</span> {j.address_street}
+                                    </p>
+                                    <p className="text-[10px] text-white/60 flex items-center gap-1">
+                                      <span className="text-white/50">🕐</span> {fmtTime(j.scheduled_time)}
+                                    </p>
+                                    {j.price != null && (
+                                      <p className="text-[12px] text-[#34C759] font-bold mt-1">${Number(j.price).toFixed(0)}</p>
+                                    )}
+                                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 rotate-45" style={{ background: 'rgba(28,28,30,0.94)' }} />
                                   </div>
                                 </div>
                               )
                             })}
-                            {count > 3 && (
-                              <p className="text-[7px] text-[#AEAEB2] text-center">+{count - 3}</p>
+                            {count > 4 && (
+                              <span className="text-[8px] text-[#AEAEB2] font-bold">+{count - 4}</span>
                             )}
                           </div>
                         </>
