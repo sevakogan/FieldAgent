@@ -491,19 +491,31 @@ export default function CalendarPage() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {/* Client */}
+                      {/* Client — searchable + Add New */}
                       <div>
-                        <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Client</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {schedClients.map(c => (
-                            <button key={c.id} type="button" onClick={() => {
-                              const addrs = schedAddresses.filter(a => a.client_id === c.id)
-                              setSchedForm(f => ({ ...f, client_id: c.id, address_id: addrs.length === 1 ? addrs[0].id : '' }))
-                            }}
-                              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all ${
-                                schedForm.client_id === c.id ? 'bg-[#007AFF] text-white' : 'bg-[#F2F2F7] text-[#3C3C43]'
-                              }`}>{c.full_name}</button>
-                          ))}
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-[#8E8E93] font-semibold uppercase">Client</label>
+                          <Link href="/dashboard/clients/new" onClick={() => setShowSchedule(false)}
+                            className="text-[10px] text-[#34C759] font-semibold hover:underline">+ Add New</Link>
+                        </div>
+                        <input type="text" placeholder="Search clients..." id="sched-client-search"
+                          className="w-full px-3 py-1.5 bg-[#F2F2F7] rounded-xl text-[11px] mb-1.5 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20"
+                          onChange={e => {
+                            const el = document.getElementById('sched-client-search') as HTMLInputElement
+                            el?.setAttribute('data-search', e.target.value.toLowerCase())
+                          }} />
+                        <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto">
+                          {schedClients.map(c => {
+                            return (
+                              <button key={c.id} type="button" onClick={() => {
+                                const addrs = schedAddresses.filter(a => a.client_id === c.id)
+                                setSchedForm(f => ({ ...f, client_id: c.id, address_id: addrs.length === 1 ? addrs[0].id : '' }))
+                              }}
+                                className={`px-2.5 py-1 rounded-xl text-[11px] font-medium transition-all ${
+                                  schedForm.client_id === c.id ? 'bg-[#007AFF] text-white' : 'bg-[#F2F2F7] text-[#3C3C43] hover:bg-[#E5E5EA]'
+                                }`}>{c.full_name}</button>
+                            )
+                          })}
                         </div>
                       </div>
 
@@ -535,13 +547,29 @@ export default function CalendarPage() {
                         </div>
                       </div>
 
-                      {/* Date + Time + Price */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Date</label>
-                          <input type="date" value={schedForm.date} onChange={e => setSchedForm(f => ({ ...f, date: e.target.value }))}
-                            className="w-full px-2.5 py-2 bg-[#F2F2F7] rounded-xl text-[11px] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20" />
+                      {/* Date — visual day strip */}
+                      <div>
+                        <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Date</label>
+                        <div className="flex gap-1 overflow-x-auto pb-1">
+                          {days.slice(0, 14).map(d => {
+                            const dk = fmtDateKey(d)
+                            const isSelected = schedForm.date === dk
+                            const isT = dk === todayKey
+                            return (
+                              <button key={dk} type="button" onClick={() => setSchedForm(f => ({ ...f, date: dk }))}
+                                className={`flex flex-col items-center px-2 py-1.5 rounded-xl text-[10px] shrink-0 transition-all ${
+                                  isSelected ? 'bg-[#007AFF] text-white shadow-sm' : isT ? 'bg-[#007AFF]/8 text-[#007AFF]' : 'bg-[#F2F2F7] text-[#3C3C43] hover:bg-[#E5E5EA]'
+                                }`}>
+                                <span className="font-bold">{d.toLocaleDateString('en-US', { weekday: 'narrow' })}</span>
+                                <span className="font-semibold">{d.getDate()}</span>
+                              </button>
+                            )
+                          })}
                         </div>
+                      </div>
+
+                      {/* Time + Price */}
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Time</label>
                           <input type="time" value={schedForm.time} onChange={e => setSchedForm(f => ({ ...f, time: e.target.value }))}
