@@ -104,7 +104,7 @@ const IconChevron = ({ open }: { open: boolean }) => (
 
 // ─── Smaller icons for mobile tab bar ────────────────────────────────
 function TabIcon({ name, active }: { name: string; active: boolean }) {
-  const color = active ? '#007AFF' : '#8E8E93'
+  const color = active ? '#007AFF' : '#1C1C1E'
   const sw = 1.8
 
   switch (name) {
@@ -304,7 +304,7 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
           borderTop: '1px solid rgba(0,0,0,0.06)',
         }}
       >
-        <div className="flex items-center justify-around px-2" style={{ height: '60px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="flex items-center justify-around px-2" style={{ height: '76px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {tabs.map(tab => {
             const active = tab.name === 'more' ? isMoreActive || moreOpen : isTabActive(tab.href)
 
@@ -316,7 +316,7 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
                   className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1"
                 >
                   <TabIcon name={tab.name} active={active} />
-                  <span className={`text-[9px] font-semibold ${active ? 'text-[#007AFF]' : 'text-[#8E8E93]'}`}>
+                  <span className={`text-[10px] font-semibold ${active ? 'text-[#007AFF]' : 'text-[#1C1C1E]'}`}>
                     {tab.label}
                   </span>
                 </button>
@@ -482,8 +482,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 md:p-5 max-w-7xl mx-auto pb-24 md:pb-20">
           {children}
         </motion.div>
-        {/* Build version — bottom center */}
-        <div className="py-3 text-center pb-20 md:pb-3">
+        {/* Build version — desktop only, bottom center */}
+        <div className="hidden md:block py-3 text-center">
           <p className="text-[10px] text-[#C7C7CC] font-mono">
             KleanHQ v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'} · Build {process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'} · {process.env.NEXT_PUBLIC_BUILD_DATE ?? 'dev'} {process.env.NEXT_PUBLIC_BUILD_TIME ?? ''}
           </p>
