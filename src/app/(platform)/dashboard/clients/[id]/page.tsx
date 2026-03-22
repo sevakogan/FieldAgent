@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getClient, updateClient, deleteClient, getClientHistory, type ClientDetail, type ClientJob, type ClientInvoice } from '@/lib/actions/clients'
@@ -23,6 +23,7 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [jobs, setJobs] = useState<ClientJob[]>([])
+  const [historyTab, setHistoryTab] = useState<'jobs' | 'invoices'>('jobs')
   const [invoices, setInvoices] = useState<ClientInvoice[]>([])
 
   // Edit state
@@ -382,85 +383,98 @@ export default function ClientDetailPage() {
             )}
           </motion.div>
 
-          {/* Job History */}
+          {/* Job History + Invoices — Tabbed Card */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white/60 backdrop-blur-xl rounded-2xl border border-[#E5E5EA]/60 p-3"
+            className="glass rounded-2xl overflow-hidden"
           >
-            <h2 className="font-semibold text-[#1C1C1E] text-sm mb-3">
-              Job History ({jobs.length})
-            </h2>
-            {jobs.length === 0 ? (
-              <p className="text-xs text-[#8E8E93] text-center py-4">No jobs yet</p>
-            ) : (
-              <div className="divide-y divide-[#E5E5EA]/50">
-                {jobs.map(job => (
-                  <Link
-                    key={job.id}
-                    href={`/dashboard/jobs/${job.id}`}
-                    className="flex items-center justify-between py-2.5 hover:bg-[#F2F2F7]/50 -mx-1.5 px-1.5 rounded-lg transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-[#1C1C1E] font-medium truncate">{job.service_name}</span>
-                        <StatusBadge status={job.status} />
-                      </div>
-                      <p className="text-xs text-[#8E8E93] truncate">
-                        {job.scheduled_date
-                          ? new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString()
-                          : 'Unscheduled'}
-                        {job.scheduled_time ? ` at ${job.scheduled_time}` : ''}
-                        {' · '}{job.address_street}
-                      </p>
-                    </div>
-                    <span className="text-sm font-medium text-[#1C1C1E] shrink-0 ml-2">
-                      ${job.price.toFixed(2)}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </motion.div>
+            {/* Tab header */}
+            <div className="flex border-b border-[#E5E5EA]/30">
+              {[
+                { key: 'jobs' as const, label: 'Job History', count: jobs.length },
+                { key: 'invoices' as const, label: 'Invoices', count: invoices.length },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setHistoryTab(tab.key)}
+                  className={`flex-1 py-2.5 text-xs font-semibold text-center transition-all relative ${
+                    historyTab === tab.key
+                      ? 'text-[#007AFF]'
+                      : 'text-[#8E8E93] hover:text-[#3C3C43]'
+                  }`}
+                >
+                  {tab.label}
+                  {tab.count > 0 && (
+                    <span className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-lg ${
+                      historyTab === tab.key ? 'bg-[#007AFF]/10 text-[#007AFF]' : 'bg-[#F2F2F7] text-[#8E8E93]'
+                    }`}>{tab.count}</span>
+                  )}
+                  {historyTab === tab.key && (
+                    <motion.div layoutId="clientTab" className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#007AFF] rounded-full" />
+                  )}
+                </button>
+              ))}
+            </div>
 
-          {/* Invoices */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="bg-white/60 backdrop-blur-xl rounded-2xl border border-[#E5E5EA]/60 p-3"
-          >
-            <h2 className="font-semibold text-[#1C1C1E] text-sm mb-3">
-              Invoices ({invoices.length})
-            </h2>
-            {invoices.length === 0 ? (
-              <p className="text-xs text-[#8E8E93] text-center py-4">No invoices yet</p>
-            ) : (
-              <div className="divide-y divide-[#E5E5EA]/50">
-                {invoices.map(inv => (
-                  <Link
-                    key={inv.id}
-                    href={`/dashboard/invoices/${inv.id}`}
-                    className="flex items-center justify-between py-2.5 hover:bg-[#F2F2F7]/50 -mx-1.5 px-1.5 rounded-lg transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-[#1C1C1E] font-medium">#{inv.invoice_number}</span>
-                        <StatusBadge status={inv.status} />
+            {/* Tab content */}
+            <div className="p-3">
+              <AnimatePresence mode="wait">
+                {historyTab === 'jobs' && (
+                  <motion.div key="jobs" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.15 }}>
+                    {jobs.length === 0 ? (
+                      <p className="text-xs text-[#8E8E93] text-center py-6">No jobs yet</p>
+                    ) : (
+                      <div className="divide-y divide-[#E5E5EA]/50">
+                        {jobs.map(job => (
+                          <Link key={job.id} href={`/dashboard/jobs/${job.id}`}
+                            className="flex items-center justify-between py-2 hover:bg-[#F2F2F7]/50 -mx-1.5 px-1.5 rounded-lg transition-colors">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-[#1C1C1E] font-medium truncate">{job.service_name}</span>
+                                <StatusBadge status={job.status} />
+                              </div>
+                              <p className="text-[10px] text-[#8E8E93] truncate">
+                                {job.scheduled_date ? new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString() : 'Unscheduled'}
+                                {' · '}{job.address_street}
+                              </p>
+                            </div>
+                            <span className="text-xs font-semibold text-[#1C1C1E] shrink-0 ml-2">${job.price.toFixed(2)}</span>
+                          </Link>
+                        ))}
                       </div>
-                      <p className="text-xs text-[#8E8E93]">
-                        {new Date(inv.created_at).toLocaleDateString()}
-                        {inv.paid_at ? ` · Paid ${new Date(inv.paid_at).toLocaleDateString()}` : ''}
-                      </p>
-                    </div>
-                    <span className="text-sm font-medium text-[#1C1C1E] shrink-0 ml-2">
-                      ${inv.total.toFixed(2)}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
+                    )}
+                  </motion.div>
+                )}
+                {historyTab === 'invoices' && (
+                  <motion.div key="invoices" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}>
+                    {invoices.length === 0 ? (
+                      <p className="text-xs text-[#8E8E93] text-center py-6">No invoices yet</p>
+                    ) : (
+                      <div className="divide-y divide-[#E5E5EA]/50">
+                        {invoices.map(inv => (
+                          <Link key={inv.id} href={`/dashboard/invoices/${inv.id}`}
+                            className="flex items-center justify-between py-2 hover:bg-[#F2F2F7]/50 -mx-1.5 px-1.5 rounded-lg transition-colors">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-[#1C1C1E] font-medium">#{inv.invoice_number}</span>
+                                <StatusBadge status={inv.status} />
+                              </div>
+                              <p className="text-[10px] text-[#8E8E93]">
+                                {new Date(inv.created_at).toLocaleDateString()}
+                                {inv.paid_at ? ` · Paid ${new Date(inv.paid_at).toLocaleDateString()}` : ''}
+                              </p>
+                            </div>
+                            <span className="text-xs font-semibold text-[#1C1C1E] shrink-0 ml-2">${inv.total.toFixed(2)}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </motion.div>
         </div>
 
