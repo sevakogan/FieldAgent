@@ -600,8 +600,8 @@ export default function JobsPage() {
       {/* Main Content: Calendar Grid + Job List */}
       {!loading && !error && jobs.length > 0 && (
         <div className="space-y-5">
-          {/* ── Calendar Grid (identical to calendar page) ── */}
-          <div className="rounded-3xl border border-[#E5E5EA]/40 p-3" style={{
+          {/* ── Calendar Grid (desktop only) ── */}
+          <div className="hidden md:block rounded-3xl border border-[#E5E5EA]/40 p-3" style={{
             background: 'rgba(255,255,255,0.5)', boxShadow: '0 4px 24px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.4)',
           }}>
             {weeks.map((week, wi) => (
