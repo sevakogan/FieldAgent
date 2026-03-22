@@ -64,10 +64,15 @@ const STATUS_PILL_COLORS: Record<string, { active: string; inactive: string }> =
 }
 
 // ── Collapsible Card ────────────────────────────────────────────────────
-function CollapsibleCard({ title, icon, children, defaultOpen = true, delay = 0 }: {
-  title: string; icon?: string; children: React.ReactNode; defaultOpen?: boolean; delay?: number
+function CollapsibleCard({ title, icon, children, defaultOpen = true, delay = 0, externalOpen }: {
+  title: string; icon?: string; children: React.ReactNode; defaultOpen?: boolean; delay?: number; externalOpen?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
+
+  // Allow parent to collapse
+  useEffect(() => {
+    if (externalOpen !== undefined) setOpen(externalOpen)
+  }, [externalOpen])
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
       className="glass rounded-2xl overflow-hidden">
@@ -164,7 +169,7 @@ const POOL_FIELDS = [
   { key: 'water_temp', label: 'Water Temp', placeholder: '78', unit: '°F' },
 ]
 
-function WaterChemistryForm({ jobId, existingData }: { jobId: string; existingData: Record<string, string> | null; onSave: () => void }) {
+function WaterChemistryForm({ jobId, existingData, onCollapse }: { jobId: string; existingData: Record<string, string> | null; onSave: () => void; onCollapse?: () => void }) {
   const [values, setValues] = useState<Record<string, string>>(existingData ?? {})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -174,7 +179,7 @@ function WaterChemistryForm({ jobId, existingData }: { jobId: string; existingDa
     await updateJob(jobId, { custom_field_values: values } as Parameters<typeof updateJob>[1])
     setSaving(false)
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setTimeout(() => { setSaved(false); onCollapse?.() }, 800)
   }
 
   return (
@@ -208,12 +213,12 @@ function WaterChemistryForm({ jobId, existingData }: { jobId: string; existingDa
 }
 
 // ── Expense Section ─────────────────────────────────────────────────────
-function ExpenseSection({ jobId, existingTotal }: { jobId: string; existingTotal: number; onUpdate: () => void }) {
+function ExpenseSection({ jobId, existingTotal, existingExpenses }: { jobId: string; existingTotal: number; existingExpenses?: Array<{ description: string; amount: number }>; onUpdate: () => void }) {
   const [showAdd, setShowAdd] = useState(false)
   const [desc, setDesc] = useState('')
   const [amount, setAmount] = useState('')
   const [adding, setAdding] = useState(false)
-  const [expenses, setExpenses] = useState<Array<{ description: string; amount: number }>>([])
+  const [expenses, setExpenses] = useState<Array<{ description: string; amount: number }>>(existingExpenses ?? [])
   const [runningTotal, setRunningTotal] = useState(existingTotal)
 
   async function handleAdd() {
@@ -225,12 +230,14 @@ function ExpenseSection({ jobId, existingTotal }: { jobId: string; existingTotal
     const newExpenses = [...expenses, { description: desc, amount: amt }]
     setExpenses(newExpenses)
 
-    // Update running total locally — no page refresh
     const newTotal = runningTotal + amt
     setRunningTotal(newTotal)
 
-    // Save to DB in background
-    await updateJob(jobId, { expenses_total: newTotal } as Parameters<typeof updateJob>[1])
+    // Save both total and expense list to DB — no page refresh
+    await updateJob(jobId, {
+      expenses_total: newTotal,
+      custom_field_values: { _expenses: newExpenses },
+    } as Parameters<typeof updateJob>[1])
 
     setDesc('')
     setAmount('')
@@ -332,6 +339,7 @@ export default function JobDetailPage() {
   const [cancelNote, setCancelNote] = useState('')
   const [cancelRescheduleDate, setCancelRescheduleDate] = useState('')
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
+  const [waterChemOpen, setWaterChemOpen] = useState(true)
 
   // Edit state
   const [editPrice, setEditPrice] = useState('')
@@ -677,35 +685,30 @@ export default function JobDetailPage() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-[#8E8E93]">Address</p>
-                  <p className="text-[#1C1C1E] font-medium">{fullAddress}</p>
+              <div className="space-y-2 text-xs">
+                {/* Address — compact with maps link */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8E8E93]">📍</span>
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-[#007AFF] font-medium hover:underline flex-1 ml-2 truncate">{fullAddress}</a>
                 </div>
-                <div>
-                  <p className="text-[#8E8E93]">Service</p>
-                  <p className="text-[#1C1C1E] font-medium">{job.service_name}</p>
-                  {job.service_description && (
-                    <p className="text-xs text-[#8E8E93]">{job.service_description}</p>
+                {/* Service + Date/Time on one row */}
+                <div className="flex items-center gap-3">
+                  <span className="text-[#1C1C1E] font-semibold">{job.service_name}</span>
+                  <span className="text-[#8E8E93]">·</span>
+                  <span className="text-[#636366]">{new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                  {job.scheduled_time && <span className="text-[#636366]">{job.scheduled_time}</span>}
+                </div>
+                {/* Worker + Client phone */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8E8E93]">Worker: <span className="text-[#1C1C1E] font-medium">{job.worker_name ?? 'You'}</span></span>
+                  {job.client_phone && (
+                    <a href={`tel:${job.client_phone}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#34C759]/10 text-[#34C759] font-bold text-xs hover:bg-[#34C759]/20 transition-all">
+                      📞 {job.client_phone}
+                    </a>
                   )}
-                </div>
-                <div>
-                  <p className="text-[#8E8E93]">Worker</p>
-                  <p className="text-[#1C1C1E] font-medium">{job.worker_name ?? 'Unassigned'}</p>
-                </div>
-                <div>
-                  <p className="text-[#8E8E93]">Source</p>
-                  <p className="text-[#1C1C1E] font-medium capitalize">{job.source.replace(/_/g, ' ')}</p>
-                </div>
-                <div>
-                  <p className="text-[#8E8E93]">Date</p>
-                  <p className="text-[#1C1C1E] font-medium">
-                    {new Date(job.scheduled_date + 'T00:00:00').toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[#8E8E93]">Time</p>
-                  <p className="text-[#1C1C1E] font-medium">{job.scheduled_time ?? 'Not set'}</p>
                 </div>
               </div>
             )}
@@ -718,8 +721,8 @@ export default function JobDetailPage() {
 
           {/* Water Chemistry — for pool services */}
           {job.service_name?.toLowerCase().includes('pool') && (
-            <CollapsibleCard title="Water Chemistry" icon="💧" delay={0.15}>
-              <WaterChemistryForm jobId={jobId} existingData={job.custom_field_values as Record<string, string> | null} onSave={fetchJob} />
+            <CollapsibleCard title="Water Chemistry" icon="💧" delay={0.15} externalOpen={waterChemOpen}>
+              <WaterChemistryForm jobId={jobId} existingData={job.custom_field_values as Record<string, string> | null} onSave={fetchJob} onCollapse={() => setWaterChemOpen(false)} />
             </CollapsibleCard>
           )}
 
@@ -735,7 +738,7 @@ export default function JobDetailPage() {
 
           {/* Expenses */}
           <CollapsibleCard title="Expenses" icon="💰" delay={0.25}>
-            <ExpenseSection jobId={jobId} existingTotal={Number(job.expenses_total)} onUpdate={fetchJob} />
+            <ExpenseSection jobId={jobId} existingTotal={Number(job.expenses_total)} existingExpenses={((job.custom_field_values as Record<string, unknown>)?._expenses as Array<{ description: string; amount: number }>) ?? []} onUpdate={fetchJob} />
           </CollapsibleCard>
         </div>
 
@@ -923,6 +926,35 @@ export default function JobDetailPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* ── Sticky Bottom Action Bar (mobile) ── */}
+      {!isTerminal && (
+        <div className="fixed bottom-20 md:bottom-4 left-0 right-0 z-40 px-4 md:hidden">
+          <div className="flex gap-2 p-2 rounded-2xl"
+            style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(24px)', boxShadow: '0 -4px 24px rgba(0,0,0,0.08)' }}>
+            {primaryAction && (
+              <button
+                onClick={() => {
+                  if (primaryAction.targetStatus === 'completed') setShowCompleteConfirm(true)
+                  else handleStatusChange(primaryAction.targetStatus)
+                }}
+                disabled={updating}
+                className="flex-1 py-3 rounded-xl text-sm font-bold bg-[#34C759] text-white hover:bg-[#2DB84E] disabled:opacity-50 transition-all"
+              >
+                {updating ? '...' : primaryAction.label}
+              </button>
+            )}
+            {nextStatuses.includes('cancelled') && (
+              <button
+                onClick={() => setShowCancelPopup(true)}
+                className="px-4 py-3 rounded-xl text-sm font-bold bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-all"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -37,6 +37,8 @@ export type JobDetail = Job & {
   service_checklist_items: unknown[] | null
   worker_name: string | null
   worker_id: string | null
+  client_name: string | null
+  client_phone: string | null
 }
 
 export type TeamMember = {
@@ -235,6 +237,21 @@ export async function getJob(id: string): Promise<ActionResult<JobDetail>> {
       }
     }
 
+    // Fetch client info from address
+    let clientName: string | null = null
+    let clientPhone: string | null = null
+    if (address) {
+      const { data: addrRow } = await supabase.from('addresses').select('client_id').eq('id', job.address_id).single()
+      if (addrRow?.client_id) {
+        const { data: clientRow } = await supabase.from('clients').select('user_id').eq('id', addrRow.client_id).single()
+        if (clientRow?.user_id) {
+          const { data: clientUser } = await supabase.from('users').select('full_name, phone').eq('id', clientRow.user_id).single()
+          clientName = clientUser?.full_name ?? null
+          clientPhone = clientUser?.phone ?? null
+        }
+      }
+    }
+
     const detail: JobDetail = {
       ...(job as Job),
       address_street: address?.street ?? 'Unknown',
@@ -247,6 +264,8 @@ export async function getJob(id: string): Promise<ActionResult<JobDetail>> {
       service_checklist_items: (service as Record<string, unknown>)?.checklist_items as unknown[] ?? null,
       worker_name: workerName,
       worker_id: job.assigned_worker_id,
+      client_name: clientName,
+      client_phone: clientPhone,
     }
 
     return { success: true, data: detail }
@@ -386,7 +405,7 @@ export async function updateJob(
     status?: string
     cancellation_reason?: string
     checklist_results?: Record<string, boolean>
-    custom_field_values?: Record<string, string>
+    custom_field_values?: Record<string, unknown>
     expenses_total?: number
   }
 ): Promise<ActionResult> {
