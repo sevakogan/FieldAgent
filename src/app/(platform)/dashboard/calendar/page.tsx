@@ -393,15 +393,15 @@ function MobileWeekStrip({ days, selectedDate, onDayClick, jobs }: {
 }
 
 // ─── Desktop Month View ──────────────────────────────────────────────
-function MonthView({ jobs, month, year, onDayClick, selectedDate }: {
+function MonthView({ jobs, month, year, onDayClick, selectedDate, weeksToShow }: {
   jobs: CalendarJob[]
   month: number
   year: number
   onDayClick: (date: string) => void
   selectedDate: string | null
+  weeksToShow: number
 }) {
   const todayKey = getTodayKey()
-  const [weeksToShow, setWeeksToShow] = useState(0) // 0 = all, 1/2/3 = limited
   const firstDay = new Date(year, month, 1)
   const startPad = firstDay.getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -427,13 +427,6 @@ function MonthView({ jobs, month, year, onDayClick, selectedDate }: {
     return allCells.slice(0, weeksToShow * 7)
   }, [allCells, weeksToShow])
 
-  // Date range label
-  const firstDate = cells.find(d => d !== null)
-  const lastDate = [...cells].reverse().find(d => d !== null)
-  const rangeLabel = firstDate && lastDate
-    ? `${new Date(year, month, firstDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(year, month, lastDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-    : ''
-
   // Get client abbreviations for a day's jobs (first 3 chars of client name)
   function getClientTags(dayJobs: CalendarJob[]): string[] {
     const names = dayJobs
@@ -444,26 +437,6 @@ function MonthView({ jobs, month, year, onDayClick, selectedDate }: {
 
   return (
     <div>
-      {/* Sub-header with date range and week filter */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-[#8E8E93] font-medium">{rangeLabel}</p>
-        <div className="flex bg-[#F2F2F7] rounded-xl p-0.5">
-          {[
-            { val: 1, label: '1W' },
-            { val: 2, label: '2W' },
-            { val: 3, label: '3W' },
-            { val: 0, label: 'All' },
-          ].map(opt => (
-            <button key={opt.val} onClick={() => setWeeksToShow(opt.val)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                weeksToShow === opt.val ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93]'
-              }`}>
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className="rounded-3xl overflow-hidden" style={{
         background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(24px)',
         border: '1px solid rgba(255,255,255,0.5)',
@@ -624,6 +597,7 @@ export default function CalendarPage() {
 
   // Week offset for week view
   const [weekOffset, setWeekOffset] = useState(0)
+  const [weeksToShow, setWeeksToShow] = useState(0) // 0=all, 1/2/3=limited
 
   const weekDays = useMemo(() => {
     const today = new Date()
@@ -716,10 +690,15 @@ export default function CalendarPage() {
     <div>
       {/* ─── Desktop Header ─────────────────────────────────────────── */}
       <div className="hidden md:flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">
-          {viewMode === 'month' ? monthLabel : viewMode === 'week' ? weekLabel : 'Calendar'}
-        </h1>
-        <div className="flex items-center gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1C1C1E]">
+            {new Date(year, month).toLocaleDateString('en-US', { month: 'long' })}
+          </h1>
+          <p className="text-xs text-[#8E8E93] mt-0.5">
+            {viewMode === 'month' ? monthLabel : viewMode === 'week' ? weekLabel : selectedDate ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : ''}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           {/* View toggle */}
           <div className="flex bg-[#F2F2F7] rounded-xl p-0.5">
             {([
@@ -736,16 +715,35 @@ export default function CalendarPage() {
             ))}
           </div>
 
-          {/* Nav arrows + Today */}
+          {/* Week filter — only in month view */}
+          {viewMode === 'month' && (
+            <div className="flex bg-[#F2F2F7] rounded-xl p-0.5">
+              {[
+                { val: 1, label: '1W' },
+                { val: 2, label: '2W' },
+                { val: 3, label: '3W' },
+                { val: 0, label: 'All' },
+              ].map(opt => (
+                <button key={opt.val} onClick={() => setWeeksToShow(opt.val)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                    weeksToShow === opt.val ? 'bg-white text-[#1C1C1E] shadow-sm' : 'text-[#8E8E93]'
+                  }`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Today + Nav arrows */}
           <div className="flex items-center gap-1">
+            <button onClick={handleToday} className="px-3 py-1.5 bg-[#007AFF] text-white rounded-xl text-xs font-semibold hover:bg-[#0066DD] transition-colors">
+              Today
+            </button>
             <button onClick={handlePrev} className="w-8 h-8 rounded-lg hover:bg-[#F2F2F7] flex items-center justify-center transition-colors">
               <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="15 18 9 12 15 6" /></svg>
             </button>
             <button onClick={handleNext} className="w-8 h-8 rounded-lg hover:bg-[#F2F2F7] flex items-center justify-center transition-colors">
               <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="9 18 15 12 9 6" /></svg>
-            </button>
-            <button onClick={handleToday} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#007AFF] hover:bg-[#007AFF]/8 transition-colors">
-              Today
             </button>
           </div>
 
@@ -798,7 +796,7 @@ export default function CalendarPage() {
             <motion.div key="month" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {/* Desktop month */}
               <div className="hidden md:block">
-                <MonthView jobs={jobs} month={month} year={year} onDayClick={handleDayClick} selectedDate={selectedDate} />
+                <MonthView jobs={jobs} month={month} year={year} onDayClick={handleDayClick} selectedDate={selectedDate} weeksToShow={weeksToShow} />
               </div>
               {/* Mobile month */}
               <div className="md:hidden space-y-4">
