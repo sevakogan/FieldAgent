@@ -42,45 +42,89 @@ function InvitePopup({ onClose, onInvited }: { onClose: () => void; onInvited: (
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+      initial={{ opacity: 0, y: -10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.97 }}
-      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-      className="bg-white rounded-2xl border border-[#E5E5EA] shadow-xl p-4 w-full max-w-sm"
+      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+      className="w-[340px] rounded-3xl overflow-hidden"
+      style={{
+        background: 'rgba(255, 255, 255, 0.72)',
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.45)',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)',
+      }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-[#1C1C1E]">Quick Invite</h3>
-        <button onClick={onClose} className="text-[#8E8E93] hover:text-[#1C1C1E] p-1">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      {/* Header with subtle gradient */}
+      <div className="px-5 pt-4 pb-3 flex items-center justify-between"
+        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, transparent 100%)' }}>
+        <div>
+          <h3 className="text-[15px] font-semibold text-[#1C1C1E] tracking-tight">Add Team Member</h3>
+          <p className="text-[11px] text-[#8E8E93] mt-0.5">Invite a worker or lead</p>
+        </div>
+        <button onClick={onClose}
+          className="w-7 h-7 rounded-full bg-[#F2F2F7]/80 hover:bg-[#E5E5EA] flex items-center justify-center transition-colors">
+          <svg className="w-3.5 h-3.5 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+      {error && (
+        <div className="mx-5 mb-2 px-3 py-2 rounded-xl bg-[#FF3B30]/8 text-[#FF3B30] text-xs font-medium">{error}</div>
+      )}
 
-      <form onSubmit={handleSubmit} className="space-y-2.5">
-        <input type="text" value={name} onChange={e => setName(e.target.value)}
-          placeholder="Full Name *" className={INPUT} />
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-          placeholder="Email *" className={INPUT} />
-        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-          placeholder="Phone (optional)" className={INPUT} />
+      <form onSubmit={handleSubmit} className="px-5 pb-5 space-y-3">
+        <div className="space-y-2">
+          <input type="text" value={name} onChange={e => setName(e.target.value)}
+            placeholder="Full Name"
+            className="w-full px-4 py-3 rounded-2xl text-[14px] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/25 transition-shadow"
+            style={{ background: 'rgba(142, 142, 147, 0.06)', border: '1px solid rgba(0,0,0,0.04)' }} />
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="Email"
+            className="w-full px-4 py-3 rounded-2xl text-[14px] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/25 transition-shadow"
+            style={{ background: 'rgba(142, 142, 147, 0.06)', border: '1px solid rgba(0,0,0,0.04)' }} />
+          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+            placeholder="Phone (optional)"
+            className="w-full px-4 py-3 rounded-2xl text-[14px] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/25 transition-shadow"
+            style={{ background: 'rgba(142, 142, 147, 0.06)', border: '1px solid rgba(0,0,0,0.04)' }} />
+        </div>
 
-        <div className="flex gap-1.5">
+        {/* Role selector */}
+        <div className="flex gap-2 p-1 rounded-2xl" style={{ background: 'rgba(142, 142, 147, 0.06)' }}>
           {(['worker', 'lead'] as const).map(r => (
             <button key={r} type="button" onClick={() => setRole(r)}
-              className={`flex-1 py-2 rounded-2xl text-xs font-semibold transition-all ${
-                role === r ? 'bg-[#007AFF] text-white' : 'bg-[#F2F2F7] text-[#3C3C43]'
-              }`}>
+              className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
+                role === r
+                  ? 'bg-white text-[#1C1C1E] shadow-sm'
+                  : 'text-[#8E8E93] hover:text-[#3C3C43]'
+              }`}
+              style={role === r ? { boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.08)' } : undefined}>
               {r === 'worker' ? '👷 Worker' : '🏷️ Lead'}
             </button>
           ))}
         </div>
 
-        <Button type="submit" variant="primary" size="sm" loading={saving} className="w-full">
-          Invite
-        </Button>
+        {/* Submit */}
+        <motion.button
+          type="submit"
+          disabled={saving}
+          whileTap={{ scale: 0.98 }}
+          className="w-full py-3 rounded-2xl text-[15px] font-semibold text-white disabled:opacity-50 transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #007AFF 0%, #0055D4 100%)',
+            boxShadow: '0 4px 12px rgba(0, 122, 255, 0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+          }}>
+          {saving ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Inviting...
+            </span>
+          ) : 'Send Invite'}
+        </motion.button>
       </form>
     </motion.div>
   )
