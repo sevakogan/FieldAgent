@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -418,6 +418,87 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
 }
 
 // ─── Layout ──────────────────────────────────────────────────────────
+// ─── Font Size Steps ────────────────────────────────────────────────
+const FONT_SIZES = [
+  { label: 'S', scale: 0.875 },
+  { label: 'M', scale: 1 },
+  { label: 'L', scale: 1.125 },
+  { label: 'XL', scale: 1.25 },
+]
+const FONT_KEY = 'kleanhq_font_size'
+
+function FontSizeControl() {
+  const [level, setLevel] = useState(1) // default M
+  const [open, setOpen] = useState(false)
+  const [enabled, setEnabled] = useState(false)
+
+  useEffect(() => {
+    // Check if font control is enabled in settings (default OFF)
+    const isEnabled = localStorage.getItem('kleanhq_font_enabled') === 'true'
+    setEnabled(isEnabled)
+    if (!isEnabled) return
+
+    const saved = localStorage.getItem(FONT_KEY)
+    if (saved) {
+      const idx = parseInt(saved, 10)
+      if (idx >= 0 && idx < FONT_SIZES.length) {
+        setLevel(idx)
+        document.documentElement.style.fontSize = `${FONT_SIZES[idx].scale * 16}px`
+      }
+    }
+  }, [])
+
+  const change = useCallback((dir: 1 | -1) => {
+    setLevel(prev => {
+      const next = Math.max(0, Math.min(FONT_SIZES.length - 1, prev + dir))
+      document.documentElement.style.fontSize = `${FONT_SIZES[next].scale * 16}px`
+      localStorage.setItem(FONT_KEY, String(next))
+      return next
+    })
+  }, [])
+
+  // Hidden by default — user must enable in Settings
+  if (!enabled) return null
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="fixed bottom-[100px] left-4 z-50 w-9 h-9 rounded-full bg-white/90 backdrop-blur-lg border border-[#E5E5EA] shadow-lg flex items-center justify-center text-[#8E8E93] hover:text-[#1C1C1E] active:scale-90 transition-all md:bottom-4"
+        title="Font size"
+      >
+        <span className="text-xs font-bold">Aa</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="fixed bottom-[100px] left-4 z-50 flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-lg border border-[#E5E5EA] shadow-lg px-1.5 py-1 md:bottom-4">
+      <button
+        onClick={() => change(-1)}
+        disabled={level === 0}
+        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-[#007AFF] hover:bg-[#007AFF]/10 disabled:text-[#C7C7CC] disabled:hover:bg-transparent transition-all"
+      >
+        A-
+      </button>
+      <span className="text-[10px] font-bold text-[#8E8E93] w-6 text-center">{FONT_SIZES[level].label}</span>
+      <button
+        onClick={() => change(1)}
+        disabled={level === FONT_SIZES.length - 1}
+        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-[#007AFF] hover:bg-[#007AFF]/10 disabled:text-[#C7C7CC] disabled:hover:bg-transparent transition-all"
+      >
+        A+
+      </button>
+      <button
+        onClick={() => setOpen(false)}
+        className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-[#8E8E93] hover:bg-[#F2F2F7] transition-all"
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
@@ -479,6 +560,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </motion.div>
       </main>
 
+
+      {/* Font Size Control — bottom left */}
+      <FontSizeControl />
 
       {/* Floating admin eye — mobile, above bottom nav */}
       <Link

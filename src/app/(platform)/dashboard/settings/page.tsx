@@ -8,6 +8,52 @@ import { getServices, createService } from '@/lib/actions/services'
 import { Button } from '@/components/platform/Button'
 import type { Company } from '@/types/database'
 
+// ─── Accessibility Toggle ────────────────────────────────────────────
+const FONT_ENABLED_KEY = 'kleanhq_font_enabled'
+
+function AccessibilityToggle() {
+  const [enabled, setEnabled] = useState(false)
+
+  useEffect(() => {
+    setEnabled(localStorage.getItem(FONT_ENABLED_KEY) === 'true')
+  }, [])
+
+  const toggle = () => {
+    const next = !enabled
+    setEnabled(next)
+    localStorage.setItem(FONT_ENABLED_KEY, String(next))
+    // Reset font size when disabling
+    if (!next) {
+      document.documentElement.style.fontSize = '16px'
+      localStorage.removeItem('kleanhq_font_size')
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#E5E5EA] p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-xl">🔤</span>
+          <div>
+            <p className="font-medium text-sm text-[#1C1C1E]">Font Size Control</p>
+            <p className="text-xs text-[#8E8E93] mt-0.5">Show A+/A- button to adjust text size</p>
+          </div>
+        </div>
+        <button
+          onClick={toggle}
+          className={`w-12 h-7 rounded-full transition-colors relative ${enabled ? 'bg-[#007AFF]' : 'bg-[#E5E5EA]'}`}
+        >
+          <motion.div
+            className="w-5 h-5 bg-white rounded-full shadow-sm absolute top-1"
+            animate={{ left: enabled ? 26 : 4 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+          />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Business Type Templates ─────────────────────────────────────────
 type ServiceTemplate = { name: string; defaultPrice: number; duration: number; isOutdoor: boolean; checklist: string[] }
 
@@ -226,7 +272,7 @@ export default function SettingsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#1C1C1E]">Company Settings</h1>
+        <h1 className="text-2xl font-bold text-[#1C1C1E]">Settings</h1>
       </div>
 
       {loading && (
@@ -434,7 +480,7 @@ export default function SettingsPage() {
             </Button>
           </div>
 
-          {/* Right Column — Settings Links */}
+          {/* Right Column — Settings Links + Accessibility */}
           <div className="space-y-3">
             <h2 className="font-semibold text-[#1C1C1E] mb-2">More Settings</h2>
             {settingsLinks.map((link) => (
@@ -450,6 +496,9 @@ export default function SettingsPage() {
                 </div>
               </Link>
             ))}
+
+            {/* Accessibility — Font Size Toggle */}
+            <AccessibilityToggle />
           </div>
         </div>
       )}
