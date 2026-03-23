@@ -468,6 +468,7 @@ export default function JobDetailPage() {
   const [waterChemOpen, setWaterChemOpen] = useState(true)
   const [showClientPopup, setShowClientPopup] = useState(false)
   const [showAddressPopup, setShowAddressPopup] = useState(false)
+  const [showViewMenu, setShowViewMenu] = useState(false)
 
   // Edit state
   const [editPrice, setEditPrice] = useState('')
@@ -823,21 +824,15 @@ export default function JobDetailPage() {
                     <p className="text-sm font-semibold text-[#1C1C1E] truncate">{job.client_name ?? 'Client'}</p>
                     {job.client_phone && <p className="text-[10px] text-[#8E8E93]">{job.client_phone}</p>}
                   </div>
-                  <button onClick={() => setShowClientPopup(true)} className="px-2 py-1 rounded-lg text-[10px] font-medium text-[#007AFF] bg-[#007AFF]/8 hover:bg-[#007AFF]/15 transition-all">View</button>
-                  {job.client_phone && (
-                    <a href={`tel:${job.client_phone}`} className="w-8 h-8 rounded-xl bg-[#34C759] flex items-center justify-center shadow-sm hover:bg-[#2DB84E] active:scale-90 transition-all shrink-0">
-                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                    </a>
-                  )}
+                  <button onClick={() => setShowViewMenu(true)} className="px-2.5 py-1 rounded-lg text-[10px] font-medium text-[#007AFF] bg-[#007AFF]/8 hover:bg-[#007AFF]/15 transition-all shrink-0">View</button>
                 </div>
 
-                {/* Address row — tap address for maps, view button for property popup */}
+                {/* Address row — tap address for maps */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm">📍</span>
                   <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`}
                     target="_blank" rel="noopener noreferrer"
                     className="text-xs text-[#007AFF] font-medium flex-1 truncate hover:underline">{fullAddress}</a>
-                  <button onClick={() => setShowAddressPopup(true)} className="px-2 py-1 rounded-lg text-[10px] font-medium text-[#007AFF] bg-[#007AFF]/8 hover:bg-[#007AFF]/15 transition-all shrink-0">View</button>
                 </div>
 
                 {/* Job pill + date/time + worker — single compact row */}
@@ -849,6 +844,15 @@ export default function JobDetailPage() {
                   </span>
                   <span className="text-[10px] text-[#8E8E93]">· 👷 {job.worker_name ?? 'You'}</span>
                 </div>
+
+                {/* Call button — full width bar */}
+                {job.client_phone && (
+                  <a href={`tel:${job.client_phone}`}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#34C759] text-white text-sm font-bold hover:bg-[#2DB84E] active:scale-[0.98] transition-all shadow-sm shadow-[#34C759]/20">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                    Call {job.client_name?.split(' ')[0] ?? 'Client'} · {job.client_phone}
+                  </a>
+                )}
               </div>
             )}
           </motion.div>
@@ -1060,6 +1064,46 @@ export default function JobDetailPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* ── View Menu Popup ── */}
+      <AnimatePresence>
+        {showViewMenu && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/30 flex items-end sm:items-center justify-center p-4" onClick={() => setShowViewMenu(false)}>
+            <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-xs rounded-2xl overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(40px)', boxShadow: '0 16px 48px rgba(0,0,0,0.15)' }}>
+              <button
+                onClick={() => { setShowViewMenu(false); setShowClientPopup(true) }}
+                className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#F2F2F7] transition-colors border-b border-[#F2F2F7]">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5AC8FA] to-[#007AFF] flex items-center justify-center text-white text-[10px] font-bold">
+                  {(job.client_name ?? 'C').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#1C1C1E]">View Client</p>
+                  <p className="text-[10px] text-[#8E8E93]">{job.client_name}</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowViewMenu(false); setShowAddressPopup(true) }}
+                className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#F2F2F7] transition-colors border-b border-[#F2F2F7]">
+                <div className="w-8 h-8 rounded-full bg-[#FF9F0A]/15 flex items-center justify-center text-sm">📍</div>
+                <div>
+                  <p className="text-sm font-semibold text-[#1C1C1E]">View Property</p>
+                  <p className="text-[10px] text-[#8E8E93] truncate max-w-[200px]">{fullAddress}</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setShowViewMenu(false)}
+                className="w-full py-3 text-center text-sm font-medium text-[#FF3B30] hover:bg-[#F2F2F7] transition-colors">
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Client Popup ── */}
       <AnimatePresence>
