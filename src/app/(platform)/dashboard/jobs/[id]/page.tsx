@@ -1075,8 +1075,9 @@ export default function JobDetailPage() {
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-xs rounded-2xl overflow-hidden"
               style={{ background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(40px)', boxShadow: '0 16px 48px rgba(0,0,0,0.15)' }}>
-              <button
-                onClick={() => { setShowViewMenu(false); setShowClientPopup(true) }}
+              <Link
+                href={job.client_id ? `/dashboard/clients/${job.client_id}` : '/dashboard/clients'}
+                onClick={() => setShowViewMenu(false)}
                 className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#F2F2F7] transition-colors border-b border-[#F2F2F7]">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5AC8FA] to-[#007AFF] flex items-center justify-center text-white text-[10px] font-bold">
                   {(job.client_name ?? 'C').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
@@ -1085,16 +1086,17 @@ export default function JobDetailPage() {
                   <p className="text-sm font-semibold text-[#1C1C1E]">View Client</p>
                   <p className="text-[10px] text-[#8E8E93]">{job.client_name}</p>
                 </div>
-              </button>
-              <button
-                onClick={() => { setShowViewMenu(false); setShowAddressPopup(true) }}
+              </Link>
+              <Link
+                href={`/dashboard/addresses/${job.address_id}`}
+                onClick={() => setShowViewMenu(false)}
                 className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#F2F2F7] transition-colors border-b border-[#F2F2F7]">
                 <div className="w-8 h-8 rounded-full bg-[#FF9F0A]/15 flex items-center justify-center text-sm">📍</div>
                 <div>
                   <p className="text-sm font-semibold text-[#1C1C1E]">View Property</p>
                   <p className="text-[10px] text-[#8E8E93] truncate max-w-[200px]">{fullAddress}</p>
                 </div>
-              </button>
+              </Link>
               <button
                 onClick={() => setShowViewMenu(false)}
                 className="w-full py-3 text-center text-sm font-medium text-[#FF3B30] hover:bg-[#F2F2F7] transition-colors">
