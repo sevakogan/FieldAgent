@@ -466,8 +466,6 @@ export default function JobDetailPage() {
   const [cancelRescheduleDate, setCancelRescheduleDate] = useState('')
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
   const [waterChemOpen, setWaterChemOpen] = useState(true)
-  const [showClientPopup, setShowClientPopup] = useState(false)
-  const [showAddressPopup, setShowAddressPopup] = useState(false)
   const [showViewMenu, setShowViewMenu] = useState(false)
 
   // Edit state
@@ -1102,72 +1100,6 @@ export default function JobDetailPage() {
                 className="w-full py-3 text-center text-sm font-medium text-[#FF3B30] hover:bg-[#F2F2F7] transition-colors">
                 Cancel
               </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Client Popup ── */}
-      <AnimatePresence>
-        {showClientPopup && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4" onClick={() => setShowClientPopup(false)}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(40px)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-[#1C1C1E]">Client</h3>
-                <button onClick={() => setShowClientPopup(false)} className="w-7 h-7 rounded-full bg-[#F2F2F7] flex items-center justify-center text-xs text-[#8E8E93]">✕</button>
-              </div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#5AC8FA] to-[#007AFF] flex items-center justify-center text-white text-sm font-bold">
-                  {(job.client_name ?? 'C').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-[#1C1C1E]">{job.client_name ?? 'Unknown'}</p>
-                  {job.client_phone && <a href={`tel:${job.client_phone}`} className="text-sm text-[#007AFF]">{job.client_phone}</a>}
-                </div>
-              </div>
-              {job.client_phone && (
-                <a href={`tel:${job.client_phone}`} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#34C759] text-white text-sm font-bold hover:bg-[#2DB84E] transition-all mb-2">
-                  📞 Call
-                </a>
-              )}
-              <Link href={`/dashboard/clients`} onClick={() => setShowClientPopup(false)}
-                className="flex items-center justify-center w-full py-2 rounded-xl bg-[#F2F2F7] text-[#007AFF] text-xs font-medium hover:bg-[#E5E5EA] transition-all">
-                Open Full Profile →
-              </Link>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Address/Property Popup ── */}
-      <AnimatePresence>
-        {showAddressPopup && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/30 flex items-center justify-center p-4" onClick={() => setShowAddressPopup(false)}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(40px)', boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-[#1C1C1E]">Property</h3>
-                <button onClick={() => setShowAddressPopup(false)} className="w-7 h-7 rounded-full bg-[#F2F2F7] flex items-center justify-center text-xs text-[#8E8E93]">✕</button>
-              </div>
-              <div className="space-y-2 mb-4">
-                <p className="text-sm font-semibold text-[#1C1C1E]">{fullAddress}</p>
-                <p className="text-xs text-[#8E8E93]">Client: {job.client_name ?? 'Unknown'}</p>
-                <p className="text-xs text-[#8E8E93]">Service: {job.service_name}</p>
-              </div>
-              <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#007AFF] text-white text-sm font-bold hover:bg-[#0066DD] transition-all mb-2">
-                📍 Navigate
-              </a>
-              <Link href={`/dashboard/addresses`} onClick={() => setShowAddressPopup(false)}
-                className="flex items-center justify-center w-full py-2 rounded-xl bg-[#F2F2F7] text-[#007AFF] text-xs font-medium hover:bg-[#E5E5EA] transition-all">
-                View Property Details →
-              </Link>
             </motion.div>
           </motion.div>
         )}
