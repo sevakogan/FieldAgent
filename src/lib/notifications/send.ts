@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { sendSms, sendWhatsApp } from "@/lib/integrations/twilio";
+import { sendSms } from "@/lib/integrations/telnyx";
 import { getNotificationTemplate } from "@/lib/notifications/templates";
 
 export type NotificationType =
@@ -122,16 +122,10 @@ export async function sendNotification(
       if (result.success) sentChannels.push("email");
     }
 
-    // SMS
+    // SMS (via Telnyx)
     if (preferences.sms && contact.phone) {
       const result = await sendSms(contact.phone, `${template.title}: ${template.body}`);
       if (result.success) sentChannels.push("sms");
-    }
-
-    // WhatsApp
-    if (preferences.whatsapp && contact.phone) {
-      const result = await sendWhatsApp(contact.phone, `*${template.title}*\n${template.body}`);
-      if (result.success) sentChannels.push("whatsapp");
     }
 
     return { success: sentChannels.length > 0, channels: sentChannels };

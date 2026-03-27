@@ -29,6 +29,7 @@
 - This reduces navigation and makes the workflow: Create Client → Add Address → Add Services → Schedule Job
 
 ## Rules (updated)
+- NEVER use SSH for Git — ALWAYS use HTTPS (https://github.com/sevakogan/FieldAgent.git)
 - Clients and addresses are a combined flow — never require separate navigation
 - Client without address = red warning in list view
 - Client creation form includes optional address step
@@ -79,6 +80,15 @@
 - Number of jobs/services/properties
 - Worker assignments and schedules
 The bot queries Supabase and uses AI to understand natural language questions.
+
+## 2026-03-27 — NEVER Use SSH for Git (CRITICAL)
+**Mistake:** Tried to push to GitHub via SSH (`git@github.com:...`), which failed because the SSH key wasn't authorized.
+**Correct approach:** ALWAYS use HTTPS for all Git operations. The remote is already set to `https://github.com/sevakogan/FieldAgent.git`.
+**Rule:**
+- NEVER use SSH keys or SSH URLs for Git — always HTTPS
+- Before pushing, verify remote is HTTPS: `git remote -v`
+- If remote is SSH, switch it: `git remote set-url origin https://github.com/sevakogan/FieldAgent.git`
+- `gh` CLI and HTTPS auth are already configured and working
 
 ## 2026-03-22 — Beta V1 vs V2 Feature Split
 **V1 Beta (NOW):** Overview, Calendar, Jobs, Clients & Properties, Team, Services, Invoices, Settings
