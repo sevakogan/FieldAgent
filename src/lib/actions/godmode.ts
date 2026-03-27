@@ -2,10 +2,10 @@
 
 import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getAuthSession } from '@/lib/auth/session'
 
 const VIEW_AS_COOKIE = 'kleanhq_view_as'
 const ACT_AS_COOKIE = 'kleanhq_act_as'
-const ADMIN_PASSWORD = 'seva'
 
 export interface CompanyOption {
   readonly id: string
@@ -17,8 +17,20 @@ export interface CompanyOption {
   readonly owner_email: string
 }
 
+/**
+ * Verify the caller is the platform owner. Throws if not.
+ */
+async function requirePlatformOwner(): Promise<void> {
+  const session = await getAuthSession()
+  if (!session?.isPlatformOwner) {
+    throw new Error('Platform owner access required')
+  }
+}
+
 export async function getAllCompanies(): Promise<{ success: boolean; data?: readonly CompanyOption[]; error?: string }> {
   try {
+    await requirePlatformOwner()
+
     const supabase = createAdminClient()
     const { data: companies, error } = await supabase
       .from('companies')
@@ -34,16 +46,28 @@ export async function getAllCompanies(): Promise<{ success: boolean; data?: read
       .select('id, full_name, email')
       .in('id', ownerIds)
 
-    const userMap = new Map((users ?? []).map(u => [u.id, u]))
+    // Also check profiles table as fallback
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', ownerIds)
+
+    const userMap = new Map<string, { full_name: string; email: string }>()
+    for (const p of profiles ?? []) {
+      userMap.set(p.id, { full_name: p.full_name ?? 'Unknown', email: p.email ?? '' })
+    }
+    for (const u of users ?? []) {
+      userMap.set(u.id, { full_name: u.full_name ?? 'Unknown', email: u.email ?? '' })
+    }
 
     const options: readonly CompanyOption[] = companies.map(c => {
       const owner = userMap.get(c.owner_id)
       return {
         id: c.id,
         name: c.name,
-        slug: c.slug,
-        business_type: c.business_type,
-        status: c.status,
+        slug: c.slug ?? '',
+        business_type: c.business_type ?? '',
+        status: c.status ?? 'active',
         owner_name: owner?.full_name ?? 'Unknown',
         owner_email: owner?.email ?? '',
       }
@@ -57,6 +81,8 @@ export async function getAllCompanies(): Promise<{ success: boolean; data?: read
 
 export async function setViewAsCompany(companyId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    await requirePlatformOwner()
+
     const supabase = createAdminClient()
     const { data } = await supabase.from('companies').select('id').eq('id', companyId).single()
     if (!data) return { success: false, error: 'Company not found' }
@@ -67,7 +93,6 @@ export async function setViewAsCompany(companyId: string): Promise<{ success: bo
       maxAge: 60 * 60 * 24,
       sameSite: 'lax',
     })
-    // Clear act-as when switching to view-as
     cookieStore.delete(ACT_AS_COOKIE)
 
     return { success: true }
@@ -76,13 +101,14 @@ export async function setViewAsCompany(companyId: string): Promise<{ success: bo
   }
 }
 
-/** Elevate from read-only view to full "Act as Company" mode after password confirmation */
-export async function setActAsCompany(companyId: string, password: string): Promise<{ success: boolean; error?: string }> {
-  if (password !== ADMIN_PASSWORD) {
-    return { success: false, error: 'Incorrect password' }
-  }
-
+/**
+ * Elevate from read-only view to full "Act as Company" mode.
+ * No password needed — identity is verified via session.
+ */
+export async function setActAsCompany(companyId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    await requirePlatformOwner()
+
     const supabase = createAdminClient()
     const { data } = await supabase.from('companies').select('id').eq('id', companyId).single()
     if (!data) return { success: false, error: 'Company not found' }
@@ -93,7 +119,6 @@ export async function setActAsCompany(companyId: string, password: string): Prom
       maxAge: 60 * 60 * 24,
       sameSite: 'lax',
     })
-    // Also set view-as so getCompanyId picks it up
     cookieStore.set(VIEW_AS_COOKIE, companyId, {
       path: '/',
       maxAge: 60 * 60 * 24,
@@ -118,7 +143,6 @@ export async function getViewAsCompanyId(): Promise<string | null> {
   return cookieStore.get(VIEW_AS_COOKIE)?.value ?? null
 }
 
-/** Check if currently in "Act as" mode (full rights) vs view-only */
 export async function isActingAsCompany(): Promise<boolean> {
   const cookieStore = await cookies()
   const actAs = cookieStore.get(ACT_AS_COOKIE)?.value
@@ -140,7 +164,7 @@ export async function getViewAsCompany(): Promise<CompanyOption | null> {
   if (!company) return null
 
   const { data: owner } = await supabase
-    .from('users')
+    .from('profiles')
     .select('full_name, email')
     .eq('id', company.owner_id)
     .single()
@@ -148,30 +172,16 @@ export async function getViewAsCompany(): Promise<CompanyOption | null> {
   return {
     id: company.id,
     name: company.name,
-    slug: company.slug,
-    business_type: company.business_type,
-    status: company.status,
+    slug: company.slug ?? '',
+    business_type: company.business_type ?? '',
+    status: company.status ?? 'active',
     owner_name: owner?.full_name ?? 'Unknown',
     owner_email: owner?.email ?? '',
   }
 }
 
-/** Returns true if viewing another company in READ-ONLY mode (not acting as). */
 export async function isReadOnlyMode(): Promise<boolean> {
-  const viewAsId = await getViewAsCompanyId()
-  if (!viewAsId) return false
-
-  // If acting as this company, NOT read-only
-  const acting = await isActingAsCompany()
-  if (acting) return false
-
-  const supabase = createAdminClient()
-  const { data: ownCompany } = await supabase
-    .from('companies')
-    .select('id')
-    .limit(1)
-    .single()
-
-  if (!ownCompany) return false
-  return viewAsId !== ownCompany.id
+  const session = await getAuthSession()
+  if (!session) return true
+  return session.isViewingAs && !session.isActingAs
 }
