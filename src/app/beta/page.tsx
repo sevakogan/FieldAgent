@@ -196,9 +196,17 @@ export default function BetaLandingPage() {
 
       {/* Footer */}
       <footer className="text-center px-5 py-6 border-t" style={{ borderColor: '#E5E5EA' }}>
-        <p className="text-xs" style={{ color: '#AEAEB2' }}>
-          &copy; 2026 TheLevelTeam LLC &middot; KleanHQ
-        </p>
+        <div className="flex items-center justify-center gap-3 text-xs" style={{ color: '#AEAEB2' }}>
+          <span>&copy; 2026 TheLevelTeam LLC</span>
+          <span style={{ color: '#E5E5EA' }}>&middot;</span>
+          <Link href="/terms" className="hover:text-[#1C1C1E] transition-colors no-underline">
+            Terms
+          </Link>
+          <span style={{ color: '#E5E5EA' }}>&middot;</span>
+          <Link href="/privacy" className="hover:text-[#1C1C1E] transition-colors no-underline">
+            Privacy
+          </Link>
+        </div>
       </footer>
     </div>
   )
