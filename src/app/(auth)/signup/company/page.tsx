@@ -31,6 +31,7 @@ interface CompanyFormData {
   readonly password: string
   readonly companyName: string
   readonly businessType: string
+  readonly smsOptIn: boolean
 }
 
 const INITIAL_FORM: CompanyFormData = {
@@ -42,6 +43,7 @@ const INITIAL_FORM: CompanyFormData = {
   password: '',
   companyName: '',
   businessType: '',
+  smsOptIn: false,
 }
 
 const spring = { type: 'spring' as const, stiffness: 300, damping: 30 }
@@ -86,59 +88,39 @@ export default function CompanySignupPage() {
     setLoading(true)
 
     try {
-      const supabase = createClient()
-
-      // 1. Create auth user
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          data: {
-            role: 'company_owner',
-            first_name: form.firstName,
-            last_name: form.lastName,
-            username: form.username,
-            business_name: form.companyName,
-            business_type: form.businessType,
-            phone: form.phone,
-          },
-        },
-      })
-
-      if (signUpError) {
-        setError(signUpError.message)
-        setLoading(false)
-        return
-      }
-
-      if (!signUpData.session) {
-        // Email confirmation required — rare for beta but handle it
-        setError('')
-        setLoading(false)
-        router.push('/login?message=check_email')
-        return
-      }
-
-      // 2. Call onboard API to create company + profile + seed services
-      const onboardRes = await fetch('/api/onboard', {
+      // 1. Create user + company via our API (auto-confirmed, welcome email via Resend)
+      const signupRes = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyName: form.companyName,
-          fullName: `${form.firstName} ${form.lastName}`.trim(),
+          email: form.email,
+          password: form.password,
           firstName: form.firstName,
           lastName: form.lastName,
           username: form.username,
           phone: form.phone,
+          companyName: form.companyName,
           businessType: form.businessType,
-          sendWelcomeEmail: true,
         }),
       })
 
-      if (!onboardRes.ok) {
-        const body = await onboardRes.json().catch(() => ({}))
-        setError(body.error ?? 'Failed to set up your account. Please try again.')
+      if (!signupRes.ok) {
+        const body = await signupRes.json().catch(() => ({}))
+        setError(body.error ?? 'Failed to create your account. Please try again.')
         setLoading(false)
+        return
+      }
+
+      // 2. Sign in to establish browser session
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      })
+
+      if (signInError) {
+        // Account was created but sign-in failed — send to login
+        router.push('/login?message=account_created')
         return
       }
 
@@ -304,6 +286,25 @@ export default function CompanySignupPage() {
               <p className="text-[12px]" style={{ color: '#8E8E93' }}>
                 We&apos;ll pre-load services based on your business type. You can customize everything later.
               </p>
+
+              {/* SMS Consent — required for 10DLC compliance */}
+              <div className="flex items-start gap-3 mt-2">
+                <input
+                  id="sms-opt-in"
+                  type="checkbox"
+                  checked={form.smsOptIn}
+                  onChange={(e) => setForm((prev) => ({ ...prev, smsOptIn: e.target.checked }))}
+                  className="mt-1 w-4 h-4 rounded cursor-pointer accent-[#007AFF]"
+                />
+                <label htmlFor="sms-opt-in" className="text-[12px] leading-relaxed cursor-pointer" style={{ color: '#8E8E93' }}>
+                  I agree to receive SMS notifications from KleanHQ for job reminders and account updates.
+                  Message frequency may vary. Msg&amp;data rates may apply. Consent is not a condition of purchase.
+                  Reply STOP to opt out, HELP for help.{' '}
+                  <a href="/privacy" target="_blank" className="underline" style={{ color: '#007AFF' }}>
+                    Privacy Policy
+                  </a>
+                </label>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

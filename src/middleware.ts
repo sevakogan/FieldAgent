@@ -45,6 +45,7 @@ const PUBLIC_ROUTES = new Set([
 
 const PUBLIC_PREFIXES = [
   '/auth/',
+  '/api/auth/',
   '/api/waitlist/',
   '/api/onboard',
   '/invite/',

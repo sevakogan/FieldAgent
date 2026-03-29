@@ -146,6 +146,16 @@ function LoginForm() {
           </motion.div>
         )}
 
+        {message === 'account_created' && (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-emerald-50 text-emerald-700 rounded-xl px-4 py-3 text-[13px] font-medium mb-4"
+          >
+            Your account has been created! Sign in to get started.
+          </motion.div>
+        )}
+
         {error && (
           <motion.div
             initial={{ opacity: 0, x: -10 }}
