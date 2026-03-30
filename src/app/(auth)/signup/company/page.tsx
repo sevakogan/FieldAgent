@@ -299,7 +299,8 @@ export default function CompanySignupPage() {
                 <label htmlFor="sms-opt-in" className="text-[12px] leading-relaxed cursor-pointer" style={{ color: '#8E8E93' }}>
                   I agree to receive SMS notifications from KleanHQ for job reminders and account updates.
                   Message frequency may vary. Msg&amp;data rates may apply. Consent is not a condition of purchase.
-                  Reply STOP to opt out, HELP for help.{' '}
+                  Reply STOP to opt out, HELP for help.
+                  Your mobile information will not be sold or shared with third parties for promotional or marketing purposes.{' '}
                   <a href="/privacy" target="_blank" className="underline" style={{ color: '#007AFF' }}>
                     Privacy Policy
                   </a>
