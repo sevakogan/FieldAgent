@@ -80,6 +80,10 @@ export default function PrivacyPolicyPage() {
             <strong>HELP</strong> for assistance. You may also opt back in by replying{" "}
             <strong>START</strong>.
           </p>
+          <p className="mt-3">
+            <strong>Consent is not a condition of purchase.</strong> Your mobile information
+            will not be sold or shared with third parties for promotional or marketing purposes.
+          </p>
         </Section>
 
         <Section title="5. Data Sharing">
@@ -87,7 +91,7 @@ export default function PrivacyPolicyPage() {
           <ul className="list-disc pl-6 mt-2 space-y-1">
             <li>
               <strong>Service providers:</strong> Third-party services that help us operate
-              KleanHQ (e.g., hosting, SMS delivery via Twilio, analytics).
+              KleanHQ (e.g., hosting, SMS delivery via Telnyx, analytics).
             </li>
             <li>
               <strong>Legal requirements:</strong> When required by law, regulation, or legal
@@ -100,6 +104,8 @@ export default function PrivacyPolicyPage() {
           </ul>
           <p className="mt-3">
             We do not share your information with third parties for their marketing purposes.
+            Your mobile information will not be sold or shared with third parties for
+            promotional or marketing purposes.
           </p>
         </Section>
 
