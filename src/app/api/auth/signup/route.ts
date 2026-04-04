@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       : ['lawn_care']
 
   // 1. Create user via admin API — auto-confirmed, NO Supabase email sent
+  let userId: string
   const { data: userData, error: createError } = await admin.auth.admin.createUser({
     email,
     password,
@@ -67,22 +68,52 @@ export async function POST(request: Request) {
       msg.includes('already been registered') ||
       msg.includes('already exists') ||
       msg.includes('email address is already')
-    if (isDuplicate) {
+
+    if (!isDuplicate) {
+      return NextResponse.json({ error: createError.message }, { status: 500 })
+    }
+
+    // Auth user exists — check if signup completed (profile exists)
+    const { data: existingUsers } = await admin.auth.admin.listUsers()
+    const existingUser = existingUsers?.users?.find(
+      (u) => u.email?.toLowerCase() === email.toLowerCase(),
+    )
+
+    if (!existingUser) {
       return NextResponse.json(
         { error: 'An account with this email already exists. Please sign in or reset your password.' },
         { status: 409 },
       )
     }
-    return NextResponse.json({ error: createError.message }, { status: 500 })
+
+    const { data: existingProfile } = await admin
+      .from('profiles')
+      .select('id, company_id')
+      .eq('id', existingUser.id)
+      .maybeSingle()
+
+    if (existingProfile?.company_id) {
+      // Signup fully completed — genuine duplicate
+      return NextResponse.json(
+        { error: 'An account with this email already exists. Please sign in or reset your password.' },
+        { status: 409 },
+      )
+    }
+
+    // Orphaned auth user (previous signup failed mid-way) — resume
+    // Update password in case they're retrying with a different one
+    await admin.auth.admin.updateUserById(existingUser.id, { password })
+    userId = existingUser.id
+  } else {
+    userId = userData.user.id
   }
 
-  const user = userData.user
-
   // 2. Create profile first (company_id filled in after company is created)
+  // Upsert handles the case where profile was partially created before
   const { error: profileError } = await admin
     .from('profiles')
-    .insert({
-      id: user.id,
+    .upsert({
+      id: userId,
       company_id: null,
       role: 'owner',
       full_name: fullName,
@@ -91,9 +122,10 @@ export async function POST(request: Request) {
       ...(firstName ? { first_name: firstName } : {}),
       ...(lastName ? { last_name: lastName } : {}),
       ...(username ? { username } : {}),
-    })
+    }, { onConflict: 'id', ignoreDuplicates: false })
 
   if (profileError) {
+    await admin.auth.admin.deleteUser(userId)
     return NextResponse.json({ error: profileError.message }, { status: 500 })
   }
 
@@ -108,7 +140,7 @@ export async function POST(request: Request) {
     .insert({
       name: companyName,
       slug,
-      owner_id: user.id,
+      owner_id: userId,
       phone: phone || '',
       business_type: businessTypeStr,
     })
@@ -116,6 +148,7 @@ export async function POST(request: Request) {
     .single()
 
   if (companyError) {
+    await admin.auth.admin.deleteUser(userId)
     return NextResponse.json({ error: companyError.message }, { status: 500 })
   }
 
@@ -123,9 +156,10 @@ export async function POST(request: Request) {
   const { error: profileUpdateError } = await admin
     .from('profiles')
     .update({ company_id: company.id })
-    .eq('id', user.id)
+    .eq('id', userId)
 
   if (profileUpdateError) {
+    await admin.auth.admin.deleteUser(userId)
     return NextResponse.json({ error: profileUpdateError.message }, { status: 500 })
   }
 
