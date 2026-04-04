@@ -61,10 +61,15 @@ export async function POST(request: Request) {
   })
 
   if (createError) {
-    // Handle duplicate email
-    if (createError.message?.includes('already been registered')) {
+    const msg = createError.message?.toLowerCase() ?? ''
+    const isDuplicate =
+      msg.includes('already registered') ||
+      msg.includes('already been registered') ||
+      msg.includes('already exists') ||
+      msg.includes('email address is already')
+    if (isDuplicate) {
       return NextResponse.json(
-        { error: 'An account with this email already exists. Please sign in.' },
+        { error: 'An account with this email already exists. Please sign in or reset your password.' },
         { status: 409 },
       )
     }
