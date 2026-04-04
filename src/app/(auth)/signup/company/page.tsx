@@ -235,6 +235,26 @@ export default function CompanySignupPage() {
                 minLength={6}
                 required
               />
+
+              {/* SMS Consent — visible alongside phone field for 10DLC compliance */}
+              <div className="flex items-start gap-3 mt-2">
+                <input
+                  id="sms-opt-in"
+                  type="checkbox"
+                  checked={form.smsOptIn}
+                  onChange={(e) => setForm((prev) => ({ ...prev, smsOptIn: e.target.checked }))}
+                  className="mt-1 w-4 h-4 rounded cursor-pointer accent-[#007AFF]"
+                />
+                <label htmlFor="sms-opt-in" className="text-[12px] leading-relaxed cursor-pointer" style={{ color: '#8E8E93' }}>
+                  I agree to receive SMS notifications from KleanHQ for job reminders and account updates.
+                  Message frequency may vary. Msg&amp;data rates may apply. Consent is not a condition of purchase.
+                  Reply STOP to opt out, HELP for help.
+                  Your mobile information will not be sold or shared with third parties for promotional or marketing purposes.{' '}
+                  <a href="/privacy" target="_blank" className="underline" style={{ color: '#007AFF' }}>
+                    Privacy Policy
+                  </a>
+                </label>
+              </div>
             </motion.div>
           )}
 
@@ -286,26 +306,6 @@ export default function CompanySignupPage() {
               <p className="text-[12px]" style={{ color: '#8E8E93' }}>
                 We&apos;ll pre-load services based on your business type. You can customize everything later.
               </p>
-
-              {/* SMS Consent — required for 10DLC compliance */}
-              <div className="flex items-start gap-3 mt-2">
-                <input
-                  id="sms-opt-in"
-                  type="checkbox"
-                  checked={form.smsOptIn}
-                  onChange={(e) => setForm((prev) => ({ ...prev, smsOptIn: e.target.checked }))}
-                  className="mt-1 w-4 h-4 rounded cursor-pointer accent-[#007AFF]"
-                />
-                <label htmlFor="sms-opt-in" className="text-[12px] leading-relaxed cursor-pointer" style={{ color: '#8E8E93' }}>
-                  I agree to receive SMS notifications from KleanHQ for job reminders and account updates.
-                  Message frequency may vary. Msg&amp;data rates may apply. Consent is not a condition of purchase.
-                  Reply STOP to opt out, HELP for help.
-                  Your mobile information will not be sold or shared with third parties for promotional or marketing purposes.{' '}
-                  <a href="/privacy" target="_blank" className="underline" style={{ color: '#007AFF' }}>
-                    Privacy Policy
-                  </a>
-                </label>
-              </div>
             </motion.div>
           )}
         </AnimatePresence>
