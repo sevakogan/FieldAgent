@@ -78,7 +78,26 @@ export async function POST(request: Request) {
 
   const user = userData.user
 
-  // 2. Create company
+  // 2. Create profile first (company_id filled in after company is created)
+  const { error: profileError } = await admin
+    .from('profiles')
+    .insert({
+      id: user.id,
+      company_id: null,
+      role: 'owner',
+      full_name: fullName,
+      phone: phone || '',
+      email,
+      ...(firstName ? { first_name: firstName } : {}),
+      ...(lastName ? { last_name: lastName } : {}),
+      ...(username ? { username } : {}),
+    })
+
+  if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 500 })
+  }
+
+  // 3. Create company (owner_id now satisfies FK since profile exists)
   const slug =
     companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') +
     '-' +
@@ -100,26 +119,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: companyError.message }, { status: 500 })
   }
 
-  // 3. Create profile
-  const { error: profileError } = await admin
+  // 4. Back-fill company_id on the profile
+  const { error: profileUpdateError } = await admin
     .from('profiles')
-    .insert({
-      id: user.id,
-      company_id: company.id,
-      role: 'owner',
-      full_name: fullName,
-      phone: phone || '',
-      email,
-      ...(firstName ? { first_name: firstName } : {}),
-      ...(lastName ? { last_name: lastName } : {}),
-      ...(username ? { username } : {}),
-    })
+    .update({ company_id: company.id })
+    .eq('id', user.id)
 
-  if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 })
+  if (profileUpdateError) {
+    return NextResponse.json({ error: profileUpdateError.message }, { status: 500 })
   }
 
-  // 4. Seed company services
+  // 5. Seed company services
   const mergedServices = getMergedServices(businessTypes)
   const servicesToInsert = mergedServices.map((s, i) => ({
     company_id: company.id,
@@ -139,7 +149,7 @@ export async function POST(request: Request) {
     }
   }
 
-  // 5. Send welcome email via Resend
+  // 6. Send welcome email via Resend
   const html = welcomeEmailHtml({ email, fullName, role: 'company' })
   const emailResult = await sendEmail({
     to: email,
