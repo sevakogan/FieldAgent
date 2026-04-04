@@ -79,10 +79,16 @@ export async function POST(request: Request) {
   const user = userData.user
 
   // 2. Create company
+  const slug =
+    companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') +
+    '-' +
+    Date.now().toString(36)
+
   const { data: company, error: companyError } = await admin
     .from('companies')
     .insert({
       name: companyName,
+      slug,
       owner_id: user.id,
       phone: phone || '',
       business_type: businessTypeStr,
