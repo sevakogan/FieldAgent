@@ -84,11 +84,25 @@ export async function POST(request: Request) {
 
     companyId = existing.company_id
   } else {
+    // Create public.users row
+    await admin.from('users').upsert({
+      id: user.id,
+      email: user.email ?? '',
+      full_name: resolvedFullName,
+      phone: phone || null,
+      role: 'owner',
+    }, { onConflict: 'id', ignoreDuplicates: false })
+
     // Create company
+    const slug =
+      companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') +
+      '-' + Date.now().toString(36)
+
     const { data: company, error: companyError } = await admin
       .from('companies')
       .insert({
         name: companyName,
+        slug,
         owner_id: user.id,
         phone: phone || '',
         business_type: businessTypeStr,
@@ -132,6 +146,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: profileError.message }, { status: 500 })
       }
     }
+
+    // Create company_members link
+    await admin.from('company_members').upsert({
+      company_id: company.id,
+      user_id: user.id,
+      role: 'owner',
+    }, { onConflict: 'company_id,user_id', ignoreDuplicates: true })
 
     companyId = company.id
   }

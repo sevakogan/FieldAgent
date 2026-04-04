@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       ? rawBusinessType.split(',').filter(Boolean)
       : ['lawn_care']
 
-  // 1. Create user via admin API — auto-confirmed, NO Supabase email sent
+  // 1. Create auth user via admin API — auto-confirmed, NO Supabase email sent
   let userId: string
   const { data: userData, error: createError } = await admin.auth.admin.createUser({
     email,
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: createError.message }, { status: 500 })
     }
 
-    // Auth user exists — check if signup completed (profile exists)
+    // Auth user exists — check if signup was completed
     const { data: existingUsers } = await admin.auth.admin.listUsers()
     const existingUser = existingUsers?.users?.find(
       (u) => u.email?.toLowerCase() === email.toLowerCase(),
@@ -86,50 +86,45 @@ export async function POST(request: Request) {
       )
     }
 
-    const { data: existingProfile } = await admin
-      .from('profiles')
-      .select('id, company_id')
-      .eq('id', existingUser.id)
+    // Check if company already created (signup fully completed)
+    const { data: existingCompany } = await admin
+      .from('companies')
+      .select('id')
+      .eq('owner_id', existingUser.id)
       .maybeSingle()
 
-    if (existingProfile?.company_id) {
-      // Signup fully completed — genuine duplicate
+    if (existingCompany) {
       return NextResponse.json(
         { error: 'An account with this email already exists. Please sign in or reset your password.' },
         { status: 409 },
       )
     }
 
-    // Orphaned auth user (previous signup failed mid-way) — resume
-    // Update password in case they're retrying with a different one
+    // Orphaned auth user — resume signup, update password
     await admin.auth.admin.updateUserById(existingUser.id, { password })
     userId = existingUser.id
   } else {
     userId = userData.user.id
   }
 
-  // 2. Create profile first (company_id filled in after company is created)
-  // Upsert handles the case where profile was partially created before
-  const { error: profileError } = await admin
-    .from('profiles')
+  // 2. Create public.users row (used by all business logic)
+  const { error: usersError } = await admin
+    .from('users')
     .upsert({
       id: userId,
-      company_id: null,
-      role: 'owner',
-      full_name: fullName,
-      phone: phone || '',
       email,
-      ...(firstName ? { first_name: firstName } : {}),
-      ...(lastName ? { last_name: lastName } : {}),
-      ...(username ? { username } : {}),
+      full_name: fullName,
+      phone: phone || null,
+      role: 'owner',
     }, { onConflict: 'id', ignoreDuplicates: false })
 
-  if (profileError) {
+  if (usersError) {
+    console.error('[auth/signup] Users table error:', usersError)
     await admin.auth.admin.deleteUser(userId)
-    return NextResponse.json({ error: profileError.message }, { status: 500 })
+    return NextResponse.json({ error: usersError.message }, { status: 500 })
   }
 
-  // 3. Create company (owner_id now satisfies FK since profile exists)
+  // 3. Create company
   const slug =
     companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') +
     '-' +
@@ -152,18 +147,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: companyError.message }, { status: 500 })
   }
 
-  // 4. Back-fill company_id on the profile
-  const { error: profileUpdateError } = await admin
-    .from('profiles')
-    .update({ company_id: company.id })
-    .eq('id', userId)
+  // 4. Create company_members row (links user to company with role)
+  const { error: memberError } = await admin
+    .from('company_members')
+    .upsert({
+      company_id: company.id,
+      user_id: userId,
+      role: 'owner',
+    }, { onConflict: 'company_id,user_id', ignoreDuplicates: true })
 
-  if (profileUpdateError) {
-    await admin.auth.admin.deleteUser(userId)
-    return NextResponse.json({ error: profileUpdateError.message }, { status: 500 })
+  if (memberError) {
+    console.error('[auth/signup] Company member error:', memberError)
+    // Non-fatal: company and user exist, member link can be fixed later
   }
 
-  // 5. Seed company services
+  // 5. Create profiles row (used by auth session for company_id lookup)
+  const { error: profileError } = await admin
+    .from('profiles')
+    .upsert({
+      id: userId,
+      company_id: company.id,
+      role: 'owner',
+      full_name: fullName,
+      phone: phone || '',
+      email,
+      ...(firstName ? { first_name: firstName } : {}),
+      ...(lastName ? { last_name: lastName } : {}),
+      ...(username ? { username } : {}),
+    }, { onConflict: 'id', ignoreDuplicates: false })
+
+  if (profileError) {
+    console.error('[auth/signup] Profile error:', profileError)
+    // Non-fatal: session will fall back to bootstrap pattern
+  }
+
+  // 6. Seed company services
   const mergedServices = getMergedServices(businessTypes)
   const servicesToInsert = mergedServices.map((s, i) => ({
     company_id: company.id,
@@ -183,7 +201,7 @@ export async function POST(request: Request) {
     }
   }
 
-  // 6. Send welcome email via Resend
+  // 7. Send welcome email via Resend
   const html = welcomeEmailHtml({ email, fullName, role: 'company' })
   const emailResult = await sendEmail({
     to: email,

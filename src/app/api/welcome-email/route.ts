@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { sendEmail, welcomeEmailHtml } from "@/lib/email";
+import { sendEmail } from "@/lib/email/send";
+import { welcomeEmailHtml } from "@/lib/email/templates/welcome";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { email, fullName, role } = body;
 
     if (!email || typeof email !== "string") {
       return NextResponse.json(
@@ -13,10 +14,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const html = welcomeEmailHtml({
+      email,
+      fullName: fullName || email.split("@")[0],
+      role: role || "company",
+    });
+
     const result = await sendEmail({
       to: email,
       subject: "Welcome to KleanHQ — let's get you set up",
-      html: welcomeEmailHtml(email),
+      html,
     });
 
     if (!result.success) {
