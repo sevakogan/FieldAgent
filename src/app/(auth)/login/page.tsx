@@ -100,21 +100,24 @@ function LoginForm() {
     setLoading(true)
 
     try {
-      const supabase = createClient()
-      const { error: magicError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      const res = await fetch('/api/auth/magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }),
       })
 
-      if (magicError) {
-        setError(magicError.message)
+      const body = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        setError(body.error ?? 'Failed to send magic link. Please try again.')
         setLoading(false)
         return
       }
 
-      setSuccess('Check your email for a login link.')
+      setSuccess('Check your email for a sign-in link.')
       setLoading(false)
     } catch {
       setError('An unexpected error occurred. Please try again.')

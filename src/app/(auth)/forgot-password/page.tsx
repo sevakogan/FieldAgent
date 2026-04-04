@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { createClient } from "@/lib/supabase/client";
-
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -18,18 +16,14 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
 
-      if (resetError) {
-        setError(resetError.message);
-        setLoading(false);
-        return;
-      }
-
-      setSuccess("Check your email for a password reset link.");
+      // Always show success — don't reveal whether email exists
+      setSuccess("If that email is registered, you'll receive a reset link shortly.");
       setLoading(false);
     } catch {
       setError("An unexpected error occurred. Please try again.");
