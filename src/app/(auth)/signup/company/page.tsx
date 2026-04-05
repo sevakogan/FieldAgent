@@ -23,27 +23,19 @@ const BUSINESS_TYPES = [
 const TOTAL_STEPS = 2
 
 interface CompanyFormData {
-  readonly firstName: string
-  readonly lastName: string
-  readonly username: string
+  readonly fullName: string
   readonly email: string
-  readonly phone: string
   readonly password: string
   readonly companyName: string
   readonly businessType: string
-  readonly smsOptIn: boolean
 }
 
 const INITIAL_FORM: CompanyFormData = {
-  firstName: '',
-  lastName: '',
-  username: '',
+  fullName: '',
   email: '',
-  phone: '',
   password: '',
   companyName: '',
   businessType: '',
-  smsOptIn: false,
 }
 
 const spring = { type: 'spring' as const, stiffness: 300, damping: 30 }
@@ -51,6 +43,7 @@ const spring = { type: 'spring' as const, stiffness: 300, damping: 30 }
 export default function CompanySignupPage() {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<CompanyFormData>(INITIAL_FORM)
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -59,11 +52,34 @@ export default function CompanySignupPage() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
+  const passwordStrength = (() => {
+    const p = form.password
+    if (p.length === 0) return { level: 0, label: '' }
+    if (p.length < 6) return { level: 1, label: 'Too short' }
+    const hasUpper = /[A-Z]/.test(p)
+    const hasNumber = /[0-9]/.test(p)
+    const hasSpecial = /[^A-Za-z0-9]/.test(p)
+    const score = [p.length >= 8, hasUpper, hasNumber, hasSpecial].filter(Boolean).length
+    if (score <= 1) return { level: 2, label: 'Weak' }
+    if (score <= 2) return { level: 3, label: 'Fair' }
+    if (score <= 3) return { level: 4, label: 'Good' }
+    return { level: 5, label: 'Strong' }
+  })()
+
+  const strengthColors: Record<number, string> = {
+    0: '#E5E5EA',
+    1: '#FF3B30',
+    2: '#FF9500',
+    3: '#FFCC00',
+    4: '#34C759',
+    5: '#30D158',
+  }
+
   const handleNext = () => {
     setError('')
     if (step === 1) {
-      if (!form.firstName || !form.lastName || !form.email || !form.password) {
-        setError('Please fill in all required fields.')
+      if (!form.fullName || !form.email || !form.password) {
+        setError('Please fill in all fields.')
         return
       }
       if (form.password.length < 6) {
@@ -87,18 +103,21 @@ export default function CompanySignupPage() {
     }
     setLoading(true)
 
+    // Split full name into first/last for the API
+    const nameParts = form.fullName.trim().split(/\s+/)
+    const firstName = nameParts[0] ?? ''
+    const lastName = nameParts.slice(1).join(' ') || ''
+
     try {
-      // 1. Create user + company via our API (auto-confirmed, welcome email via Resend)
       const signupRes = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: form.email,
           password: form.password,
-          firstName: form.firstName,
-          lastName: form.lastName,
-          username: form.username,
-          phone: form.phone,
+          firstName,
+          lastName,
+          fullName: form.fullName.trim(),
           companyName: form.companyName,
           businessType: form.businessType,
         }),
@@ -111,7 +130,7 @@ export default function CompanySignupPage() {
         return
       }
 
-      // 2. Sign in to establish browser session
+      // Sign in to establish browser session
       const supabase = createClient()
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: form.email,
@@ -119,7 +138,6 @@ export default function CompanySignupPage() {
       })
 
       if (signInError) {
-        // Account was created but sign-in failed — send to login
         router.push('/login?message=account_created')
         return
       }
@@ -155,11 +173,11 @@ export default function CompanySignupPage() {
         </div>
 
         <h2 className="font-extrabold text-lg mb-1" style={{ color: '#1C1C1E' }}>
-          {step === 1 && 'Your Information'}
+          {step === 1 && 'Create Your Account'}
           {step === 2 && 'Company Details'}
         </h2>
         <p className="text-sm mb-5" style={{ color: '#8E8E93' }}>
-          {step === 1 && 'Tell us about yourself'}
+          {step === 1 && 'Takes about 30 seconds'}
           {step === 2 && 'Tell us about your business'}
         </p>
 
@@ -183,77 +201,89 @@ export default function CompanySignupPage() {
               transition={spring}
               className="space-y-4"
             >
-              <div className="grid grid-cols-2 gap-3">
-                <InputField
-                  id="first-name"
-                  label="FIRST NAME *"
-                  value={form.firstName}
-                  onChange={(v) => updateField('firstName', v)}
-                  placeholder="John"
-                  required
-                />
-                <InputField
-                  id="last-name"
-                  label="LAST NAME *"
-                  value={form.lastName}
-                  onChange={(v) => updateField('lastName', v)}
-                  placeholder="Smith"
-                  required
-                />
-              </div>
+              {/* Full Name */}
               <InputField
-                id="username"
-                label="USERNAME"
-                value={form.username}
-                onChange={(v) => updateField('username', v)}
-                placeholder="johnsmith (optional)"
+                id="full-name"
+                label="FULL NAME"
+                value={form.fullName}
+                onChange={(v) => updateField('fullName', v)}
+                placeholder="John Smith"
+                autoComplete="name"
+                required
               />
+
+              {/* Email */}
               <InputField
                 id="email"
-                label="EMAIL *"
+                label="EMAIL"
                 type="email"
                 value={form.email}
                 onChange={(v) => updateField('email', v)}
                 placeholder="you@company.com"
-                required
-              />
-              <InputField
-                id="phone"
-                label="PHONE"
-                type="tel"
-                value={form.phone}
-                onChange={(v) => updateField('phone', v)}
-                placeholder="(555) 123-4567"
-              />
-              <InputField
-                id="password"
-                label="PASSWORD *"
-                type="password"
-                value={form.password}
-                onChange={(v) => updateField('password', v)}
-                placeholder="Min 6 characters"
-                minLength={6}
+                autoComplete="email"
                 required
               />
 
-              {/* SMS Consent — visible alongside phone field for 10DLC compliance */}
-              <div className="flex items-start gap-3 mt-2">
-                <input
-                  id="sms-opt-in"
-                  type="checkbox"
-                  checked={form.smsOptIn}
-                  onChange={(e) => setForm((prev) => ({ ...prev, smsOptIn: e.target.checked }))}
-                  className="mt-1 w-4 h-4 rounded cursor-pointer accent-[#007AFF]"
-                />
-                <label htmlFor="sms-opt-in" className="text-[12px] leading-relaxed cursor-pointer" style={{ color: '#8E8E93' }}>
-                  I agree to receive SMS notifications from KleanHQ for job reminders and account updates.
-                  Message frequency may vary. Msg&amp;data rates may apply. Consent is not a condition of purchase.
-                  Reply STOP to opt out, HELP for help.
-                  Your mobile information will not be sold or shared with third parties for promotional or marketing purposes.{' '}
-                  <a href="/privacy" target="_blank" className="underline" style={{ color: '#007AFF' }}>
-                    Privacy Policy
-                  </a>
+              {/* Password with toggle + strength meter */}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="text-[10px] font-semibold tracking-widest block mb-1.5"
+                  style={{ color: '#8E8E93' }}
+                >
+                  PASSWORD
                 </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={(e) => updateField('password', e.target.value)}
+                    className="w-full border rounded-xl px-4 py-3 pr-12 text-[14px] outline-none transition-colors"
+                    style={{ backgroundColor: '#F2F2F7', borderColor: '#E5E5EA', color: '#1C1C1E' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = '#007AFF' }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = '#E5E5EA' }}
+                    placeholder="6+ characters"
+                    autoComplete="new-password"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 cursor-pointer"
+                    style={{ color: '#8E8E93' }}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                </div>
+                {/* Strength meter */}
+                {form.password.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <div
+                          key={i}
+                          className="h-1 flex-1 rounded-full transition-colors"
+                          style={{
+                            backgroundColor: i <= passwordStrength.level
+                              ? strengthColors[passwordStrength.level]
+                              : '#E5E5EA',
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[11px] mt-1 font-medium" style={{ color: strengthColors[passwordStrength.level] }}>
+                      {passwordStrength.label}
+                    </p>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -269,10 +299,11 @@ export default function CompanySignupPage() {
             >
               <InputField
                 id="company-name"
-                label="COMPANY NAME *"
+                label="COMPANY NAME"
                 value={form.companyName}
                 onChange={(v) => updateField('companyName', v)}
                 placeholder="Sparkle Clean Co."
+                autoComplete="organization"
                 required
               />
               <div>
@@ -281,7 +312,7 @@ export default function CompanySignupPage() {
                   className="text-[10px] font-semibold tracking-widest block mb-1.5"
                   style={{ color: '#8E8E93' }}
                 >
-                  BUSINESS TYPE *
+                  BUSINESS TYPE
                 </label>
                 <select
                   id="business-type"
@@ -343,6 +374,11 @@ export default function CompanySignupPage() {
             </button>
           )}
         </div>
+
+        {/* Trust signal */}
+        <p className="text-center text-[11px] mt-4" style={{ color: '#AEAEB2' }}>
+          Free to start &middot; No credit card required
+        </p>
       </div>
 
       {/* Sign In */}
@@ -370,6 +406,7 @@ function InputField({
   type = 'text',
   required,
   minLength,
+  autoComplete,
 }: {
   readonly id: string
   readonly label: string
@@ -379,6 +416,7 @@ function InputField({
   readonly type?: string
   readonly required?: boolean
   readonly minLength?: number
+  readonly autoComplete?: string
 }) {
   return (
     <div>
@@ -401,6 +439,7 @@ function InputField({
         placeholder={placeholder}
         required={required}
         minLength={minLength}
+        autoComplete={autoComplete}
       />
     </div>
   )
