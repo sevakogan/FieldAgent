@@ -9,15 +9,20 @@ export async function POST(request: Request) {
   const {
     email,
     password,
-    firstName,
-    lastName,
+    firstName: rawFirst,
+    lastName: rawLast,
+    fullName: rawFullName,
     username,
     phone,
     companyName,
     businessType: rawBusinessType = 'lawn_care',
   } = body
 
-  if (!email || !password || !firstName || !lastName || !companyName) {
+  // Accept either firstName+lastName or fullName (split on first space)
+  const firstName = rawFirst || rawFullName?.trim().split(/\s+/)[0] || ''
+  const lastName = rawLast || rawFullName?.trim().split(/\s+/).slice(1).join(' ') || ''
+
+  if (!email || !password || !firstName || !companyName) {
     return NextResponse.json(
       { error: 'Missing required fields' },
       { status: 400 },
