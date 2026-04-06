@@ -11,6 +11,7 @@ import { StatsCounter } from "@/components/landing/StatsCounter";
 import { WaitlistForm } from "@/components/landing/WaitlistForm";
 import { LiveCounter } from "@/components/landing/LiveCounter";
 import { Footer } from "@/components/landing/Footer";
+import { AuthButtons } from "@/components/landing/AuthButtons";
 import { CookieConsent } from "@/components/landing/CookieConsent";
 import { FloatingOrbs } from "@/components/effects/FloatingOrbs";
 import { CursorGlow } from "@/components/effects/CursorGlow";
@@ -98,6 +99,10 @@ export default function LandingPage() {
 
         <section id="waitlist" className="py-16 md:py-24 bg-gradient-to-b from-[#E0ECFF] to-[#F2F2F7]">
           <WaitlistForm />
+        </section>
+
+        <section className="py-12 pb-16 bg-[#F2F2F7]">
+          <AuthButtons />
         </section>
 
         <Footer />
