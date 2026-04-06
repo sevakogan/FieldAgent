@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 
 export type ActionResult<T = unknown> = {
   success: boolean
@@ -9,9 +10,6 @@ export type ActionResult<T = unknown> = {
 }
 
 // ─── Client resolution ─────────────────────────────────────────────
-// Portal pages call this to identify the current client.
-// For now: returns the first client record. In production this would
-// be gated behind auth.
 
 export type PortalClient = {
   clientId: string
@@ -24,17 +22,25 @@ export type PortalClient = {
 
 export async function getPortalClient(): Promise<ActionResult<PortalClient>> {
   try {
+    // Get the authenticated user from session
+    const serverSupabase = await createServerClient()
+    const { data: { user: authUser } } = await serverSupabase.auth.getUser()
+
+    if (!authUser) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
     const supabase = createAdminClient()
 
+    // Find the client record for this authenticated user
     const { data: client, error: clientErr } = await supabase
       .from('clients')
-      .select('id, user_id, created_at')
-      .order('created_at', { ascending: true })
-      .limit(1)
+      .select('id, user_id')
+      .eq('user_id', authUser.id)
       .single()
 
     if (clientErr || !client) {
-      return { success: false, error: 'No client account found' }
+      return { success: false, error: 'No client account found for this user' }
     }
 
     const { data: user, error: userErr } = await supabase
