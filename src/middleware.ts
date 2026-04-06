@@ -121,7 +121,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected routes — require auth
-  const protectedPrefixes = ['/dashboard', '/worker', '/portal', '/reseller']
+  const protectedPrefixes = ['/dashboard', '/onboard', '/worker', '/portal', '/reseller']
   if (protectedPrefixes.some((prefix) => pathname.startsWith(prefix))) {
     if (!user) {
       const url = request.nextUrl.clone()

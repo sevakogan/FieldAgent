@@ -142,7 +142,7 @@ export default function CompanySignupPage() {
         return
       }
 
-      router.push('/dashboard')
+      router.push('/onboard')
       router.refresh()
     } catch {
       setError('An unexpected error occurred. Please try again.')

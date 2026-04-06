@@ -2,7 +2,8 @@
 
 import { type ReactNode, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { motion, AnimatePresence } from 'framer-motion'
 import ViewingAsBanner from '@/components/platform/ViewingAsBanner'
 import { UndoToastProvider } from '@/components/platform/UndoToast'
@@ -501,7 +502,26 @@ function FontSizeControl() {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const dashboardRouter = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    async function checkOnboarding() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single()
+      if (profile && profile.onboarding_completed === false) {
+        dashboardRouter.push('/onboard')
+      }
+    }
+    checkOnboarding()
+  }, [dashboardRouter])
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F2F2F7]">
