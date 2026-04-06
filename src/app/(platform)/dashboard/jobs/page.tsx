@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { getJobs, updateJobStatus, updateJob, type JobRow } from '@/lib/actions/jobs'
+import { getJobs, updateJobStatus, updateJob, getTeamMembers, type JobRow, type TeamMember } from '@/lib/actions/jobs'
 import { StatusBadge } from '@/components/platform/Badge'
 import { Button } from '@/components/platform/Button'
 
@@ -191,14 +191,31 @@ function JobCard({
   onSkip,
   isStarting,
   onClick,
+  members,
+  onAssign,
 }: {
   job: JobRow
   onStart: (e: React.MouseEvent) => void
   onSkip: (e: React.MouseEvent) => void
   isStarting: boolean
   onClick: () => void
+  members: TeamMember[]
+  onAssign: (jobId: string, memberId: string | null) => void
 }) {
   const [showCall, setShowCall] = useState(false)
+  const [showAssign, setShowAssign] = useState(false)
+  const assignRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showAssign) return
+    function handleClickOutside(e: MouseEvent) {
+      if (assignRef.current && !assignRef.current.contains(e.target as Node)) {
+        setShowAssign(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showAssign])
 
   const dotColor = STATUS_DOT_COLORS[job.status] ?? 'bg-[#8E8E93]'
   const borderColor = STATUS_BORDER_COLORS[job.status] ?? 'border-l-[#8E8E93]'
@@ -227,11 +244,71 @@ function JobCard({
           <p className="text-sm font-semibold text-[#1C1C1E] truncate group-hover:text-[#007AFF] transition-colors">
             {fullAddress}
           </p>
-          <p className="text-xs text-[#8E8E93] truncate mt-0.5">
-            {job.service_name}
-            {job.worker_name ? ` · ${job.worker_name}` : ''}
-            {job.client_name ? ` · ${job.client_name}` : ''}
-          </p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <p className="text-xs text-[#8E8E93] truncate">
+              {job.service_name}
+              {job.client_name ? ` · ${job.client_name}` : ''}
+            </p>
+            {/* Assign worker button */}
+            <div className="relative shrink-0" ref={assignRef}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowAssign(!showAssign) }}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-medium transition-colors ${
+                  job.worker_name
+                    ? 'bg-[#34C759]/10 text-[#248A3D] hover:bg-[#34C759]/20'
+                    : 'bg-[#FF9F0A]/10 text-[#CC7F08] hover:bg-[#FF9F0A]/20'
+                }`}
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                {job.worker_name ?? 'Assign'}
+              </button>
+              <AnimatePresence>
+                {showAssign && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute left-0 top-full mt-1 z-50 w-48 glass-elevated rounded-xl shadow-lg border border-[#E5E5EA] overflow-hidden"
+                  >
+                    <div className="px-3 py-2 text-[10px] font-semibold text-[#8E8E93] uppercase tracking-wider border-b border-[#E5E5EA]/40">
+                      Assign Worker
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onAssign(job.id, null); setShowAssign(false) }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[#F2F2F7] ${
+                        !job.assigned_worker_id ? 'text-[#007AFF] font-medium' : 'text-[#8E8E93]'
+                      }`}
+                    >
+                      <span className="w-6 h-6 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[10px]">—</span>
+                      Unassigned
+                    </button>
+                    {members.map((m) => (
+                      <button
+                        key={m.member_id}
+                        onClick={(e) => { e.stopPropagation(); onAssign(job.id, m.member_id); setShowAssign(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[#F2F2F7] ${
+                          job.assigned_worker_id === m.member_id ? 'text-[#007AFF] font-medium' : 'text-[#1C1C1E]'
+                        }`}
+                      >
+                        <span className="w-6 h-6 rounded-full bg-[#34C759]/15 text-[#248A3D] flex items-center justify-center text-[10px] font-bold">
+                          {m.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </span>
+                        {m.full_name}
+                        {job.assigned_worker_id === m.member_id && (
+                          <svg className="w-4 h-4 ml-auto text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -342,6 +419,7 @@ export default function JobsPage() {
   const [skipNewDate, setSkipNewDate] = useState('')
   const [skipping, setSkipping] = useState(false)
   const [moving, setMoving] = useState(false)
+  const [members, setMembers] = useState<TeamMember[]>([])
 
   const dayRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
@@ -419,6 +497,13 @@ export default function JobsPage() {
       }
     })
   }, [fetchJobs])
+
+  // Fetch team members for assignment dropdown
+  useEffect(() => {
+    getTeamMembers().then((result) => {
+      if (result.success && result.data) setMembers(result.data)
+    })
+  }, [])
 
   // ── Derived Data ───────────────────────────────────────────────────────
 
@@ -498,6 +583,19 @@ export default function JobsPage() {
       setError(result.error ?? 'Failed to start job')
     }
     setStartingJobId(null)
+  }
+
+  async function handleAssign(jobId: string, memberId: string | null) {
+    const result = await updateJob(jobId, { assigned_worker_id: memberId })
+    if (result.success) {
+      // Optimistic update: find the member name
+      const memberName = memberId ? members.find(m => m.member_id === memberId)?.full_name ?? null : null
+      setJobs(prev => prev.map(j =>
+        j.id === jobId ? { ...j, assigned_worker_id: memberId, worker_name: memberName } : j
+      ))
+    } else {
+      setError(result.error ?? 'Failed to assign worker')
+    }
   }
 
   function handleCardClick(jobId: string) {
@@ -871,6 +969,8 @@ export default function JobsPage() {
                         onSkip={(e) => { e.stopPropagation(); setSkipJob(job) }}
                         isStarting={startingJobId === job.id}
                         onClick={() => handleCardClick(job.id)}
+                        members={members}
+                        onAssign={handleAssign}
                       />
                     ))}
                   </div>

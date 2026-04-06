@@ -55,6 +55,7 @@ export default function ServicesPage() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards')
 
   const fetchServices = useCallback(async () => {
     setLoading(true)
@@ -187,9 +188,31 @@ export default function ServicesPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-bold text-[#1C1C1E]">Services</h1>
-        <Button variant="primary" size="sm" onClick={openCreate}>
-          + Add Service
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-[#F2F2F7] rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'cards' ? 'bg-white shadow-sm text-[#007AFF]' : 'text-[#8E8E93] hover:text-[#1C1C1E]'}`}
+              aria-label="Card view"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-[#007AFF]' : 'text-[#8E8E93] hover:text-[#1C1C1E]'}`}
+              aria-label="List view"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+          <Button variant="primary" size="sm" onClick={openCreate}>
+            + Add Service
+          </Button>
+        </div>
       </div>
 
       {loading && (
@@ -219,7 +242,7 @@ export default function ServicesPage() {
         </motion.div>
       )}
 
-      {!loading && !error && services.length > 0 && (
+      {!loading && !error && services.length > 0 && viewMode === 'cards' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {services.map((service, i) => (
             <motion.div
@@ -301,6 +324,67 @@ export default function ServicesPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                     </svg>
                   </button>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {!loading && !error && services.length > 0 && viewMode === 'list' && (
+        <div className="glass rounded-2xl overflow-hidden">
+          {/* List header */}
+          <div className="grid grid-cols-[1fr_100px_80px_80px] sm:grid-cols-[1fr_1fr_100px_80px_80px] gap-2 px-4 py-2.5 bg-[#F2F2F7]/60 border-b border-[#E5E5EA]/40 text-[10px] font-semibold text-[#8E8E93] uppercase tracking-wider">
+            <span>Service</span>
+            <span className="hidden sm:block">Description</span>
+            <span className="text-right">Price</span>
+            <span className="text-center">Duration</span>
+            <span className="text-center">Tags</span>
+          </div>
+          {services.map((service, i) => (
+            <motion.div
+              key={service.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.02 }}
+              onClick={() => openEdit(service)}
+              className={`grid grid-cols-[1fr_100px_80px_80px] sm:grid-cols-[1fr_1fr_100px_80px_80px] gap-2 px-4 py-3 cursor-pointer hover:bg-[#007AFF]/4 transition-colors group ${i < services.length - 1 ? 'border-b border-[#E5E5EA]/30' : ''}`}
+            >
+              {/* Name with icon */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-[#007AFF]/8 flex items-center justify-center text-sm shrink-0">
+                  {getServiceIcon(service.name)}
+                </div>
+                <span className="text-sm font-medium text-[#1C1C1E] truncate">
+                  {service.name}
+                </span>
+              </div>
+
+              {/* Description */}
+              <p className="hidden sm:block text-xs text-[#8E8E93] truncate self-center">
+                {service.description ?? '-'}
+              </p>
+
+              {/* Price */}
+              <span className="text-sm font-semibold text-[#34C759] text-right self-center">
+                ${Number(service.default_price).toFixed(2)}
+              </span>
+
+              {/* Duration */}
+              <span className="text-xs text-[#8E8E93] text-center self-center">
+                {service.estimated_duration_minutes ? `${service.estimated_duration_minutes} min` : '-'}
+              </span>
+
+              {/* Tags */}
+              <div className="flex items-center justify-center gap-1.5 self-center">
+                {service.photo_required && (
+                  <span className="w-2 h-2 rounded-full bg-[#AF52DE]" title="Photo required" />
+                )}
+                {service.is_outdoor && (
+                  <span className="w-2 h-2 rounded-full bg-[#34C759]" title="Outdoor" />
+                )}
+                {!service.photo_required && !service.is_outdoor && (
+                  <span className="text-xs text-[#C7C7CC]">-</span>
                 )}
               </div>
             </motion.div>

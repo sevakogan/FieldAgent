@@ -15,6 +15,7 @@ export type JobRow = {
   address_street: string
   address_city: string
   service_name: string
+  assigned_worker_id: string | null
   worker_name: string | null
   status: JobStatus
   scheduled_date: string
@@ -171,6 +172,7 @@ export async function getJobs(filters?: {
         address_street: addr?.street ?? 'Unknown',
         address_city: addr?.city ?? '',
         service_name: serviceMap.get(job.service_type_id) ?? 'Unknown',
+        assigned_worker_id: job.assigned_worker_id ?? null,
         worker_name: job.assigned_worker_id ? (memberNameMap.get(job.assigned_worker_id) ?? null) : null,
         status: job.status as JobStatus,
         scheduled_date: job.scheduled_date,
