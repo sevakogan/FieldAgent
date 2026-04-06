@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
+import GoogleAuthButton from '@/components/auth/GoogleAuthButton'
 
 type AuthMode = 'password' | 'magic-link'
 
@@ -178,6 +179,8 @@ function LoginForm() {
             {success}
           </motion.div>
         )}
+
+        <GoogleAuthButton mode="login" />
 
         {/* Mode Toggle */}
         <div className="flex rounded-xl p-1 mb-5" style={{ backgroundColor: '#F2F2F7' }}>

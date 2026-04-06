@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
+import GoogleAuthButton from '@/components/auth/GoogleAuthButton'
 
 const BUSINESS_TYPES = [
   'Pool Cleaning',
@@ -201,6 +202,8 @@ export default function CompanySignupPage() {
               transition={spring}
               className="space-y-4"
             >
+              <GoogleAuthButton mode="signup" />
+
               {/* Full Name */}
               <InputField
                 id="full-name"

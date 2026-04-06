@@ -38,12 +38,22 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('role, company_id')
+    .select('role, company_id, onboarding_completed')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.company_id) {
-    return NextResponse.redirect(new URL('/signup/company', origin))
+  if (!profile) {
+    // New OAuth user — no profile at all. Send to company setup.
+    return NextResponse.redirect(new URL('/setup-company', origin))
+  }
+
+  if (!profile.company_id) {
+    // Profile exists but no company — also needs company setup
+    return NextResponse.redirect(new URL('/setup-company', origin))
+  }
+
+  if (!profile.onboarding_completed) {
+    return NextResponse.redirect(new URL('/onboard', origin))
   }
 
   const role = profile.role ?? 'owner'
