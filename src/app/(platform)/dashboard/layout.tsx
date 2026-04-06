@@ -504,28 +504,70 @@ function FontSizeControl() {
   )
 }
 
+type UserInfo = {
+  fullName: string
+  email: string
+  avatarUrl: string | null
+  role: string
+  companyName: string
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const dashboardRouter = useRouter()
   const [collapsed, setCollapsed] = useState(false)
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
 
-  // Redirect to onboarding if not completed
   useEffect(() => {
-    async function checkOnboarding() {
+    async function loadUserAndCheck() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+
       const { data: profile } = await supabase
         .from('profiles')
-        .select('onboarding_completed')
+        .select('onboarding_completed, company_id, role, full_name')
         .eq('id', user.id)
         .single()
+
       if (profile && profile.onboarding_completed === false) {
         dashboardRouter.push('/onboard')
+        return
       }
+
+      // Fetch user details + company name
+      const { data: userData } = await supabase
+        .from('users')
+        .select('full_name, email, avatar_url')
+        .eq('id', user.id)
+        .single()
+
+      let companyName = ''
+      if (profile?.company_id) {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('name')
+          .eq('id', profile.company_id)
+          .single()
+        companyName = company?.name ?? ''
+      }
+
+      setUserInfo({
+        fullName: userData?.full_name ?? user.user_metadata?.full_name ?? '',
+        email: userData?.email ?? user.email ?? '',
+        avatarUrl: userData?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
+        role: profile?.role ?? 'owner',
+        companyName,
+      })
     }
-    checkOnboarding()
+    loadUserAndCheck()
   }, [dashboardRouter])
+
+  const initials = userInfo
+    ? userInfo.fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    : ''
+  const roleLabel = userInfo?.role === 'owner' ? 'Owner' : userInfo?.role === 'admin' ? 'Admin' : userInfo?.role ?? ''
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F2F2F7]">
@@ -535,14 +577,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className={`hidden md:flex flex-col ${collapsed ? 'w-16' : 'w-60'} glass-sidebar transition-all duration-300`}>
         <div className="p-4 border-b border-[#E5E5EA] flex items-center justify-between">
           {!collapsed && (
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-[#1C1C1E]">KleanHQ</h1>
-              <span className="text-[8px] bg-[#FF9F0A] text-white px-1.5 py-0.5 rounded-lg font-bold uppercase tracking-wider">Beta</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-[#1C1C1E]">KleanHQ</h1>
+                <span className="text-[8px] bg-[#FF9F0A] text-white px-1.5 py-0.5 rounded-lg font-bold uppercase tracking-wider">Beta</span>
+              </div>
+              {userInfo?.companyName && (
+                <p className="text-[11px] text-[#8E8E93] font-medium mt-0.5 truncate">{userInfo.companyName}</p>
+              )}
             </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-lg hover:bg-[#F2F2F7] text-[#8E8E93] transition-colors"
+            className="p-2 rounded-lg hover:bg-[#F2F2F7] text-[#8E8E93] transition-colors shrink-0"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               {collapsed ? <><polyline points="9 18 15 12 9 6" /></> : <><polyline points="15 18 9 12 15 6" /></>}
@@ -561,20 +608,73 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
 
-        <div className="p-3 border-t border-[#E5E5EA]">
+        <div className="p-3 border-t border-[#E5E5EA] relative">
           <button
-            onClick={async () => {
-              const supabase = createClient()
-              await supabase.auth.signOut()
-              dashboardRouter.push('/login')
-            }}
-            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-[13px] font-medium text-[#FF3B30] hover:bg-[#FF3B30]/8 transition-all"
+            onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+            className="flex items-center gap-2.5 w-full px-2 py-2 rounded-xl hover:bg-[#F2F2F7] transition-all"
           >
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            {!collapsed && 'Sign Out'}
+            {userInfo?.avatarUrl ? (
+              <img src={userInfo.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                {initials}
+              </div>
+            )}
+            {!collapsed && userInfo && (
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-[13px] font-semibold text-[#1C1C1E] truncate">{userInfo.fullName}</p>
+                <p className="text-[10px] text-[#8E8E93] truncate">{roleLabel}</p>
+              </div>
+            )}
           </button>
+
+          <AnimatePresence>
+            {profileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full left-3 right-3 mb-2 bg-white rounded-xl shadow-lg border border-[#E5E5EA] overflow-hidden z-50"
+              >
+                <Link
+                  href="/dashboard/settings"
+                  onClick={() => setProfileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-[#1C1C1E] hover:bg-[#F2F2F7] transition-colors"
+                >
+                  <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                  My Profile & Settings
+                </Link>
+                <Link
+                  href="/dashboard/team"
+                  onClick={() => setProfileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-[#1C1C1E] hover:bg-[#F2F2F7] transition-colors"
+                >
+                  <svg className="w-4 h-4 text-[#8E8E93]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                  Team Members
+                </Link>
+                <div className="border-t border-[#E5E5EA]" />
+                <button
+                  onClick={async () => {
+                    setProfileMenuOpen(false)
+                    const supabase = createClient()
+                    await supabase.auth.signOut()
+                    dashboardRouter.push('/login')
+                  }}
+                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-[13px] text-[#FF3B30] hover:bg-[#FF3B30]/5 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign Out
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </aside>
 
