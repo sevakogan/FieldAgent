@@ -60,7 +60,6 @@ function LoginForm() {
     if (role === 'client') {
       router.push('/portal')
     } else if (userEmail.toLowerCase() === ADMIN_EMAIL) {
-      // Platform owner goes to dashboard (God Mode available there)
       router.push('/dashboard')
     } else {
       router.push('/dashboard')

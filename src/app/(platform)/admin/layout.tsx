@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import GodModeSwitcher from "@/components/platform/GodModeSwitcher";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
@@ -54,8 +53,6 @@ export default function AdminLayout({
             </div>
           </div>
         </div>
-
-        <GodModeSwitcher />
 
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
           {NAV_ITEMS.map((item) => {
@@ -126,16 +123,17 @@ export default function AdminLayout({
             </Link>
           );
         })}
-        {/* God Mode — go to company dashboard */}
+        {/* Settings (5th tab on mobile) */}
         <Link
-          href="/dashboard"
-          className="flex flex-col items-center justify-center gap-1 flex-1 py-2 text-[#AF52DE]"
+          href="/admin/settings"
+          className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 ${
+            isActive("/admin/settings") ? "text-[#007AFF]" : "text-[#1C1C1E]"
+          }`}
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d={NAV_ITEMS[5].icon} />
           </svg>
-          <span className="text-[11px] font-bold">My Co</span>
+          <span className={`text-[11px] font-bold ${isActive("/admin/settings") ? 'text-[#007AFF]' : 'text-[#1C1C1E]'}`}>Settings</span>
         </Link>
       </nav>
     </div>

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAdminCompanies, updateCompanyStatus, createAdminCompany, updateCompany, canDeleteCompany, deleteCompany } from "@/lib/actions/admin";
-import { setViewAsCompany } from "@/lib/actions/godmode";
 import { StatusBadge } from "@/components/platform/Badge";
 import { Button } from "@/components/platform/Button";
 
@@ -36,7 +35,6 @@ export default function AdminCompaniesPage() {
   const [newBusinessType, setNewBusinessType] = useState("cleaning");
   const [creating, setCreating] = useState(false);
   const [skipPayment, setSkipPayment] = useState(false);
-  const [enteringId, setEnteringId] = useState<string | null>(null);
   const router = useRouter();
 
   // Edit state
@@ -93,16 +91,6 @@ export default function AdminCompaniesPage() {
     }
   }, [toast]);
 
-  const handleEnterCompany = async (companyId: string) => {
-    setEnteringId(companyId);
-    const result = await setViewAsCompany(companyId);
-    if (result.success) {
-      router.push('/dashboard');
-    } else {
-      setToast({ message: result.error ?? 'Failed to enter company', type: 'error' });
-      setEnteringId(null);
-    }
-  };
 
   const handleToggleStatus = async (companyId: string, currentStatus: string) => {
     const newStatus = currentStatus === "suspended" ? "active" : "suspended";
@@ -313,15 +301,6 @@ export default function AdminCompaniesPage() {
                   <td className="px-5 py-3.5 text-[12px] text-[#8E8E93]">{new Date(c.created_at).toLocaleDateString()}</td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleEnterCompany(c.id)}
-                        disabled={enteringId === c.id}
-                        loading={enteringId === c.id}
-                      >
-                        {enteringId === c.id ? "..." : "Enter →"}
-                      </Button>
                       <Button
                         variant="warning"
                         size="sm"

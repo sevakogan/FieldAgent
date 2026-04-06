@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { motion, AnimatePresence } from 'framer-motion'
-import ViewingAsBanner from '@/components/platform/ViewingAsBanner'
 import { UndoToastProvider } from '@/components/platform/UndoToast'
 
 // ─── SVG Icons ───────────────────────────────────────────────────────
@@ -397,18 +396,6 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
                   )
                 })}
 
-                {/* God Mode link in More sheet */}
-                <Link
-                  href="/admin"
-                  onClick={() => setMoreOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-2xl text-[#AF52DE] active:bg-[#AF52DE]/10 transition-all"
-                >
-                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  <span className="text-sm font-medium">God Mode</span>
-                </Link>
               </div>
             </motion.div>
           </>
@@ -525,7 +512,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F2F2F7]">
-      <ViewingAsBanner />
       <div className="flex flex-1">
 
       {/* Desktop Sidebar */}
@@ -558,19 +544,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
 
-        {/* God Mode */}
-        <div className="p-3 border-t border-[#E5E5EA]">
-          <Link
-            href="/admin"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-[#AF52DE] bg-[#AF52DE]/8 hover:bg-[#AF52DE]/15 transition-colors w-full"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            {!collapsed && 'God Mode'}
-          </Link>
-        </div>
       </aside>
 
       {/* Main Content */}
