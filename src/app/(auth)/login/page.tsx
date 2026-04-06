@@ -294,6 +294,16 @@ function LoginForm() {
           Create Account
         </Link>
       </p>
+
+      <p className="text-center text-[11px] mt-3" style={{ color: '#C7C7CC' }}>
+        <Link
+          href="/admin-login"
+          className="hover:opacity-70 transition-opacity"
+          style={{ color: '#C7C7CC' }}
+        >
+          Admin Login →
+        </Link>
+      </p>
     </motion.div>
   )
 }

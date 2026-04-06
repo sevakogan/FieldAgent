@@ -39,6 +39,7 @@ const PUBLIC_ROUTES = new Set([
   '/forgot-password',
   '/reset-password',
   '/gate',
+  '/admin-login',
   '/privacy',
   '/terms',
 ])
@@ -109,7 +110,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/admin')) {
     if (!user) {
       const url = request.nextUrl.clone()
-      url.pathname = '/login'
+      url.pathname = '/admin-login'
       return NextResponse.redirect(url)
     }
     if (user.email?.toLowerCase() !== ADMIN_EMAIL) {
