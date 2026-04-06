@@ -434,6 +434,8 @@ export default function JobsPage() {
   // Filtered jobs for the list below calendar
   const filtered = useMemo(() => {
     return jobs.filter((j) => {
+      // Status filter
+      if (filter !== 'all' && j.status !== filter) return false
       // Text search
       if (search) {
         const q = search.toLowerCase()
@@ -445,13 +447,13 @@ export default function JobsPage() {
           (j.client_name ?? '').toLowerCase().includes(q)
         if (!matchesSearch) return false
       }
-      // Date filter: if a day is selected, only show that day; otherwise scope to visible range
+      // Date filter: if a day is selected, only show that day; otherwise show today and forward
       if (selectedDate) {
         return j.scheduled_date === selectedDate
       }
-      return visibleDateKeys.has(j.scheduled_date)
+      return j.scheduled_date >= todayKey
     })
-  }, [jobs, search, selectedDate, visibleDateKeys])
+  }, [jobs, search, selectedDate, filter, todayKey])
 
   // Group filtered jobs by date
   const groupedByDate = useMemo(() => {

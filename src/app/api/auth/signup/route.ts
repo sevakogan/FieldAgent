@@ -159,6 +159,7 @@ export async function POST(request: Request) {
       company_id: company.id,
       user_id: userId,
       role: 'owner',
+      status: 'active',
     }, { onConflict: 'company_id,user_id', ignoreDuplicates: true })
 
   if (memberError) {
