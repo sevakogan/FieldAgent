@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import { getWorkerInfo } from '@/lib/actions/worker';
 import type { WorkerInfo } from '@/lib/actions/worker';
@@ -108,6 +109,7 @@ function BottomTabs() {
 
 function DesktopSidebar({ worker }: { readonly worker: WorkerInfo | null }) {
   const pathname = usePathname();
+  const router = useRouter();
   const initials = worker ? getInitials(worker.fullName) : '..';
   const displayName = worker?.fullName ?? 'Loading...';
   const roleName = worker?.role === 'owner' ? 'Owner' : worker?.role === 'lead' ? 'Lead' : 'Cleaner';
@@ -152,6 +154,19 @@ function DesktopSidebar({ worker }: { readonly worker: WorkerInfo | null }) {
             <p className="text-[11px] text-[#8E8E93]">{roleName}</p>
           </div>
         </div>
+        <button
+          onClick={async () => {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push('/login');
+          }}
+          className="mt-3 flex items-center gap-2 w-full px-3 py-2 rounded-xl text-[13px] font-medium text-[#FF3B30] hover:bg-[#FF3B30]/8 transition-all"
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Sign Out
+        </button>
       </div>
     </aside>
   );

@@ -396,6 +396,23 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
                   )
                 })}
 
+                <div className="mt-2 pt-2 border-t border-[#E5E5EA]">
+                  <button
+                    onClick={async () => {
+                      setMoreOpen(false)
+                      const { createClient } = await import('@/lib/supabase/client')
+                      const supabase = createClient()
+                      await supabase.auth.signOut()
+                      window.location.href = '/login'
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl text-[#FF3B30] active:bg-[#FF3B30]/10 transition-all w-full"
+                  >
+                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span className="text-sm font-medium">Sign Out</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>
@@ -544,6 +561,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
 
+        <div className="p-3 border-t border-[#E5E5EA]">
+          <button
+            onClick={async () => {
+              const supabase = createClient()
+              await supabase.auth.signOut()
+              dashboardRouter.push('/login')
+            }}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-[13px] font-medium text-[#FF3B30] hover:bg-[#FF3B30]/8 transition-all"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            {!collapsed && 'Sign Out'}
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -557,16 +589,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Font Size Control — bottom left */}
       <FontSizeControl />
 
-      {/* Floating admin eye — mobile, above bottom nav */}
-      <Link
-        href="/admin"
-        className="fixed bottom-[100px] right-4 z-50 w-10 h-10 rounded-full bg-[#AF52DE] text-white flex items-center justify-center shadow-lg shadow-[#AF52DE]/30 hover:bg-[#9B3DC8] active:scale-90 transition-all md:hidden"
-      >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        </svg>
-      </Link>
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav pathname={pathname} />

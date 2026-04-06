@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { getPortalClient } from '@/lib/actions/portal';
 import type { PortalClient } from '@/lib/actions/portal';
 
@@ -37,8 +39,15 @@ function getInitials(name: string): string {
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [client, setClient] = useState<PortalClient | null>(null);
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   useEffect(() => {
     getPortalClient().then(result => {
@@ -103,6 +112,17 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                 </li>
               ))}
             </ul>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#FF3B30] hover:bg-[#FF3B30]/10 transition-colors w-full"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Sign Out
+              </button>
+            </div>
           </nav>
         </div>
       )}
@@ -142,6 +162,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               </div>
             </div>
           </div>
+          <button
+            onClick={handleSignOut}
+            className="mt-3 flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-medium text-[#FF3B30] hover:bg-[#FF3B30]/10 transition-colors"
+          >
+            <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign Out
+          </button>
         </aside>
 
         {/* Main content */}
