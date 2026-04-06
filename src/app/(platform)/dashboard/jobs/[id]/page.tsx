@@ -9,6 +9,8 @@ import { getServices, type ServiceRow } from '@/lib/actions/services'
 import type { JobStatus } from '@/types/database'
 import { StatusBadge } from '@/components/platform/Badge'
 import { Button } from '@/components/platform/Button'
+import { DatePicker } from '@/components/platform/DatePicker'
+import { TimePicker } from '@/components/platform/TimePicker'
 
 const STATUS_LABELS: Record<string, string> = {
   requested: 'Requested',
@@ -745,24 +747,17 @@ export default function JobDetailPage() {
 
                     {/* Date & Time */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs text-[#8E8E93] mb-1">Scheduled Date</label>
-                        <input
-                          type="date"
-                          value={editDate}
-                          onChange={(e) => setEditDate(e.target.value)}
-                          className="w-full px-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-[#8E8E93] mb-1">Time</label>
-                        <input
-                          type="time"
-                          value={editTime}
-                          onChange={(e) => setEditTime(e.target.value)}
-                          className="w-full px-3 py-2 border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                        />
-                      </div>
+                      <DatePicker
+                        label="Scheduled Date"
+                        value={editDate}
+                        onChange={(date) => setEditDate(date)}
+                      />
+                      <TimePicker
+                        label="Time"
+                        value={editTime}
+                        onChange={(time) => setEditTime(time)}
+                        intervalMinutes={15}
+                      />
                     </div>
 
                     {/* Price */}
@@ -980,15 +975,11 @@ export default function JobDetailPage() {
                         className="w-full px-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF3B30]/30 resize-none"
                       />
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-[#1C1C1E] mb-1 block">Reschedule to (optional)</label>
-                      <input
-                        type="date"
-                        value={cancelRescheduleDate}
-                        onChange={(e) => setCancelRescheduleDate(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF3B30]/30"
-                      />
-                    </div>
+                    <DatePicker
+                      label="Reschedule to (optional)"
+                      value={cancelRescheduleDate}
+                      onChange={(date) => setCancelRescheduleDate(date)}
+                    />
                   </div>
                   <div className="flex gap-2 mt-4">
                     <button

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getAdminPromoCodes, createPromoCode, updatePromoCodeStatus } from "@/lib/actions/admin";
 import { StatusBadge } from "@/components/platform/Badge";
 import { Button } from "@/components/platform/Button";
+import { DatePicker } from "@/components/platform/DatePicker";
 
 type PromoCode = {
   id: string;
@@ -148,15 +149,11 @@ export default function AdminPromoCodesPage() {
                 className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] placeholder:text-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
               />
             </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-[#8E8E93] uppercase mb-1.5">Expires</label>
-              <input
-                type="date"
-                value={formExpires}
-                onChange={(e) => setFormExpires(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-[#E5E5EA] text-[13px] text-[#1C1C1E] focus:outline-none focus:ring-2 focus:ring-[#8E8E93]/30"
-              />
-            </div>
+            <DatePicker
+              label="Expires"
+              value={formExpires}
+              onChange={(date) => setFormExpires(date)}
+            />
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="secondary" size="sm" onClick={() => setShowCreate(false)}>

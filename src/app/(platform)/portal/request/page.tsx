@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getRequestFormData, submitServiceRequest } from '@/lib/actions/portal';
 import type { RequestFormData } from '@/lib/actions/portal';
+import { DatePicker } from '@/components/platform/DatePicker';
 
 const TIME_SLOTS = [
   '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
@@ -176,12 +177,10 @@ export default function RequestServicePage() {
           </div>
 
           <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Preferred Date</label>
-            <input
-              type="date"
+            <DatePicker
+              label="Preferred Date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-[#F2F2F7] px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-[#AF52DE]"
+              onChange={(date) => setSelectedDate(date)}
             />
           </div>
 

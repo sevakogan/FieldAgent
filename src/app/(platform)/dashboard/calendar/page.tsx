@@ -10,6 +10,7 @@ import { getClients, type ClientRow } from '@/lib/actions/clients'
 import { getAddresses, type AddressRow } from '@/lib/actions/addresses'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
 import { StatusBadge } from '@/components/platform/Badge'
+import { TimePicker } from '@/components/platform/TimePicker'
 
 const PACIFIC_TZ = 'America/Los_Angeles'
 
@@ -570,11 +571,12 @@ export default function CalendarPage() {
 
                       {/* Time + Price */}
                       <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Time</label>
-                          <input type="time" value={schedForm.time} onChange={e => setSchedForm(f => ({ ...f, time: e.target.value }))}
-                            className="w-full px-2.5 py-2 bg-[#F2F2F7] rounded-xl text-[11px] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20" />
-                        </div>
+                        <TimePicker
+                          label="Time"
+                          value={schedForm.time}
+                          onChange={(time) => setSchedForm(f => ({ ...f, time }))}
+                          intervalMinutes={15}
+                        />
                         <div>
                           <label className="text-[10px] text-[#8E8E93] font-semibold uppercase mb-1 block">Price</label>
                           <div className="relative">

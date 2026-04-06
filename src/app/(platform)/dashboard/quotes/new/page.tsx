@@ -12,6 +12,7 @@ import {
   type AddressOption,
   type QuoteLineItem,
 } from '@/lib/actions/quotes'
+import { DatePicker } from '@/components/platform/DatePicker'
 
 const EMPTY_LINE_ITEM: QuoteLineItem = { description: '', quantity: 1, unit_price: 0 }
 
@@ -279,15 +280,11 @@ export default function NewQuotePage() {
               className="bg-white rounded-2xl border border-[#E5E5EA] p-5"
             >
               <h2 className="font-semibold text-[#1C1C1E] mb-4">Settings</h2>
-              <div>
-                <label className="block text-sm text-[#8E8E93] mb-1">Valid Until</label>
-                <input
-                  type="date"
-                  value={validUntil}
-                  onChange={(e) => setValidUntil(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                />
-              </div>
+              <DatePicker
+                label="Valid Until"
+                value={validUntil}
+                onChange={(date) => setValidUntil(date)}
+              />
             </motion.div>
 
             {error && (

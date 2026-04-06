@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createJob } from '@/lib/actions/jobs'
 import { Button } from '@/components/platform/Button'
+import { DatePicker } from '@/components/platform/DatePicker'
+import { TimePicker } from '@/components/platform/TimePicker'
 import { getTeamMembers, type TeamMember } from '@/lib/actions/jobs'
 import { getAddresses, getAddressServicePrice, type AddressRow } from '@/lib/actions/addresses'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
@@ -428,28 +430,17 @@ export default function NewJobPage() {
 
         {/* Date & Time */}
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
-              Scheduled Date <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              value={form.scheduled_date}
-              onChange={(e) => handleChange('scheduled_date', e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
-              Time <span className="text-[#8E8E93] font-normal">(optional)</span>
-            </label>
-            <input
-              type="time"
-              value={form.scheduled_time}
-              onChange={(e) => handleChange('scheduled_time', e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-            />
-          </div>
+          <DatePicker
+            label="Scheduled Date *"
+            value={form.scheduled_date}
+            onChange={(date) => handleChange('scheduled_date', date)}
+          />
+          <TimePicker
+            label="Time (optional)"
+            value={form.scheduled_time}
+            onChange={(time) => handleChange('scheduled_time', time)}
+            intervalMinutes={15}
+          />
         </div>
 
         {/* Job Frequency + Payment Frequency side by side */}

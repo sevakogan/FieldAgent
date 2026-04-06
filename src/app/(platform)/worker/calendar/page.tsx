@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getWorkerMonthJobs } from '@/lib/actions/worker';
+import { DatePicker } from '@/components/platform/DatePicker';
 import type { WorkerJobRow } from '@/lib/actions/worker';
 
 type ViewMode = 'week' | 'month';
@@ -27,15 +28,11 @@ function DayOffModal({
       >
         <h3 className="text-lg font-bold text-gray-900 mb-4">Request Day Off</h3>
         <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-[#8E8E93] mb-1">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#007AFF] focus:outline-none"
-            />
-          </div>
+          <DatePicker
+            label="Date"
+            value={date}
+            onChange={(d) => setDate(d)}
+          />
           <div>
             <label className="block text-xs font-semibold text-[#8E8E93] mb-1">Note (optional)</label>
             <textarea

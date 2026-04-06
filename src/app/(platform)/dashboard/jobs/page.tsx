@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { getJobs, updateJobStatus, updateJob, getTeamMembers, type JobRow, type TeamMember } from '@/lib/actions/jobs'
+import { DatePicker } from '@/components/platform/DatePicker'
 import { StatusBadge } from '@/components/platform/Badge'
 import { Button } from '@/components/platform/Button'
 
@@ -1061,15 +1062,11 @@ export default function JobsPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[#1C1C1E] mb-1">Reschedule to (optional)</label>
-                  <input
-                    type="date"
-                    value={skipNewDate}
-                    onChange={(e) => setSkipNewDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#F2F2F7] border border-[#E5E5EA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF9F0A]/30"
-                  />
-                </div>
+                <DatePicker
+                  label="Reschedule to (optional)"
+                  value={skipNewDate}
+                  onChange={(date) => setSkipNewDate(date)}
+                />
               </div>
 
               <div className="flex gap-2 mt-4">
