@@ -334,12 +334,13 @@ export default function ServicesPage() {
       {!loading && !error && services.length > 0 && viewMode === 'list' && (
         <div className="glass rounded-2xl overflow-hidden">
           {/* List header */}
-          <div className="grid grid-cols-[1fr_100px_80px_80px] sm:grid-cols-[1fr_1fr_100px_80px_80px] gap-2 px-4 py-2.5 bg-[#F2F2F7]/60 border-b border-[#E5E5EA]/40 text-[10px] font-semibold text-[#8E8E93] uppercase tracking-wider">
+          <div className="grid grid-cols-[1fr_100px_80px_80px_44px] sm:grid-cols-[1fr_1fr_100px_80px_80px_44px] gap-2 px-4 py-2.5 bg-[#F2F2F7]/60 border-b border-[#E5E5EA]/40 text-[10px] font-semibold text-[#8E8E93] uppercase tracking-wider">
             <span>Service</span>
             <span className="hidden sm:block">Description</span>
             <span className="text-right">Price</span>
             <span className="text-center">Duration</span>
             <span className="text-center">Tags</span>
+            <span />
           </div>
           {services.map((service, i) => (
             <motion.div
@@ -348,7 +349,7 @@ export default function ServicesPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.02 }}
               onClick={() => openEdit(service)}
-              className={`grid grid-cols-[1fr_100px_80px_80px] sm:grid-cols-[1fr_1fr_100px_80px_80px] gap-2 px-4 py-3 cursor-pointer hover:bg-[#007AFF]/4 transition-colors group ${i < services.length - 1 ? 'border-b border-[#E5E5EA]/30' : ''}`}
+              className={`grid grid-cols-[1fr_100px_80px_80px_44px] sm:grid-cols-[1fr_1fr_100px_80px_80px_44px] gap-2 px-4 py-3 cursor-pointer hover:bg-[#007AFF]/4 transition-colors group ${i < services.length - 1 ? 'border-b border-[#E5E5EA]/30' : ''}`}
             >
               {/* Name with icon */}
               <div className="flex items-center gap-2 min-w-0">
@@ -385,6 +386,39 @@ export default function ServicesPage() {
                 )}
                 {!service.photo_required && !service.is_outdoor && (
                   <span className="text-xs text-[#C7C7CC]">-</span>
+                )}
+              </div>
+
+              {/* Delete action */}
+              <div className="flex items-center justify-center self-center">
+                {deleteConfirmId === service.id ? (
+                  <div className="flex gap-0.5">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(service.id) }}
+                      disabled={submitting}
+                      className="w-6 h-6 rounded-lg flex items-center justify-center bg-[#FF3B30]/10 text-[#FF3B30] hover:bg-[#FF3B30]/20 transition-colors text-xs"
+                      aria-label="Confirm archive"
+                    >
+                      &#10003;
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null) }}
+                      className="w-6 h-6 rounded-lg flex items-center justify-center bg-[#F2F2F7] text-[#8E8E93] hover:bg-[#E5E5EA] transition-colors text-xs"
+                      aria-label="Cancel"
+                    >
+                      &#10005;
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(service.id) }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 text-[#8E8E93] hover:text-[#FF3B30] hover:bg-[#FF3B30]/10 transition-all"
+                    aria-label="Archive"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 )}
               </div>
             </motion.div>

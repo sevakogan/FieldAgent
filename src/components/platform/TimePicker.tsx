@@ -73,7 +73,7 @@ export function TimePicker({
   }, [handleClose]);
 
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`} ref={containerRef}>
+    <div className={`relative flex flex-col gap-1.5 ${className}`} ref={containerRef}>
       {label && (
         <span className="text-sm font-medium text-[#1C1C1E]">{label}</span>
       )}
@@ -112,7 +112,7 @@ export function TimePicker({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="relative z-50 mt-1 rounded-[12px] border border-[#E5E5EA] bg-white shadow-lg overflow-hidden"
+            className="absolute left-0 top-full z-50 mt-1 w-full rounded-[12px] border border-[#E5E5EA] bg-white shadow-lg overflow-hidden"
           >
             <ul className="max-h-[260px] overflow-y-auto py-1">
               {slots.map((slot) => (

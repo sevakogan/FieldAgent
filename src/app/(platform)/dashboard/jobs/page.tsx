@@ -294,10 +294,12 @@ function JobCard({
                           job.assigned_worker_id === m.member_id ? 'text-[#007AFF] font-medium' : 'text-[#1C1C1E]'
                         }`}
                       >
-                        <span className="w-6 h-6 rounded-full bg-[#34C759]/15 text-[#248A3D] flex items-center justify-center text-[10px] font-bold">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          m.is_current_user ? 'bg-[#007AFF]/15 text-[#007AFF]' : 'bg-[#34C759]/15 text-[#248A3D]'
+                        }`}>
                           {m.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </span>
-                        {m.full_name}
+                        {m.is_current_user ? `Yourself` : m.full_name}
                         {job.assigned_worker_id === m.member_id && (
                           <svg className="w-4 h-4 ml-auto text-[#007AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -502,7 +504,7 @@ export default function JobsPage() {
   // Fetch team members for assignment dropdown
   useEffect(() => {
     getTeamMembers().then((result) => {
-      if (result.success && result.data) setMembers(result.data)
+      if (result.success && result.data) setMembers(result.data.members)
     })
   }, [])
 

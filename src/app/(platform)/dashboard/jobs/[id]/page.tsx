@@ -512,7 +512,7 @@ export default function JobDetailPage() {
       getTeamMembers(),
     ])
     if (svcResult.success && svcResult.data) setServices(svcResult.data)
-    if (memberResult.success && memberResult.data) setMembers(memberResult.data)
+    if (memberResult.success && memberResult.data) setMembers(memberResult.data.members)
     setLoadingDropdowns(false)
   }
 
@@ -689,20 +689,9 @@ export default function JobDetailPage() {
                     {/* Worker — avatar pill buttons */}
                     <div>
                       <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
-                        Assign Worker <span className="text-[#8E8E93] font-normal">(optional)</span>
+                        Assign Worker
                       </label>
                       <div className="flex flex-wrap gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setEditWorkerId('')}
-                          className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
-                            editWorkerId === ''
-                              ? 'bg-[#8E8E93]/15 text-[#1C1C1E] font-medium'
-                              : 'bg-[#F2F2F7]/60 text-[#8E8E93] hover:bg-[#E5E5EA]/60'
-                          }`}
-                        >
-                          Unassigned
-                        </button>
                         {members.map((m) => (
                           <button
                             key={m.member_id}
@@ -714,10 +703,12 @@ export default function JobDetailPage() {
                                 : 'bg-[#F2F2F7]/60 text-[#3C3C43] hover:bg-[#E5E5EA]/60'
                             }`}
                           >
-                            <span className="w-5 h-5 rounded-full bg-[#34C759] flex items-center justify-center text-white text-[8px] font-bold shrink-0">
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0 ${
+                              m.is_current_user ? 'bg-[#007AFF]' : 'bg-[#34C759]'
+                            }`}>
                               {m.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                             </span>
-                            {m.full_name}
+                            {m.is_current_user ? `Yourself (${m.full_name})` : m.full_name}
                           </button>
                         ))}
                       </div>

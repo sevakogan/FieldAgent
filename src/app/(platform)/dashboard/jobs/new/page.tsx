@@ -8,7 +8,7 @@ import { createJob } from '@/lib/actions/jobs'
 import { Button } from '@/components/platform/Button'
 import { DatePicker } from '@/components/platform/DatePicker'
 import { TimePicker } from '@/components/platform/TimePicker'
-import { getTeamMembers, type TeamMember } from '@/lib/actions/jobs'
+import { getTeamMembers, type TeamMember, type TeamMembersResult } from '@/lib/actions/jobs'
 import { getAddresses, getAddressServicePrice, type AddressRow } from '@/lib/actions/addresses'
 import { getServices, type ServiceRow } from '@/lib/actions/services'
 import { getClients, createClient, type ClientRow } from '@/lib/actions/clients'
@@ -84,7 +84,13 @@ export default function NewJobPage() {
       if (clientResult.success && clientResult.data) setClients(clientResult.data)
       if (addrResult.success && addrResult.data) setAddresses(addrResult.data)
       if (svcResult.success && svcResult.data) setServices(svcResult.data)
-      if (memberResult.success && memberResult.data) setMembers(memberResult.data)
+      if (memberResult.success && memberResult.data) {
+        setMembers(memberResult.data.members)
+        // Default assignment to yourself
+        if (memberResult.data.currentMemberId) {
+          setForm(prev => ({ ...prev, assigned_worker_id: memberResult.data!.currentMemberId! }))
+        }
+      }
       setLoadingDropdowns(false)
     }
     loadDropdowns()
@@ -401,17 +407,9 @@ export default function NewJobPage() {
         {/* Worker Assignment */}
         <div>
           <label className="block text-sm font-medium text-[#1C1C1E] mb-1.5">
-            Assign Worker <span className="text-[#8E8E93] font-normal">(optional)</span>
+            Assign Worker
           </label>
           <div className="flex flex-wrap gap-1.5">
-            <button type="button" onClick={() => handleChange('assigned_worker_id', '')}
-              className={`px-3 py-1.5 rounded-xl text-xs transition-all ${
-                form.assigned_worker_id === ''
-                  ? 'bg-[#8E8E93]/15 text-[#1C1C1E] font-medium'
-                  : 'bg-[#F2F2F7]/60 text-[#8E8E93] hover:bg-[#E5E5EA]/60'
-              }`}>
-              Unassigned
-            </button>
             {members.map((m) => (
               <button key={m.member_id} type="button" onClick={() => handleChange('assigned_worker_id', m.member_id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all ${
@@ -419,10 +417,12 @@ export default function NewJobPage() {
                     ? 'bg-[#007AFF]/10 text-[#007AFF] font-semibold ring-1 ring-[#007AFF]/20'
                     : 'bg-[#F2F2F7]/60 text-[#3C3C43] hover:bg-[#E5E5EA]/60'
                 }`}>
-                <span className="w-5 h-5 rounded-full bg-[#34C759] flex items-center justify-center text-white text-[8px] font-bold shrink-0">
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0 ${
+                  m.is_current_user ? 'bg-[#007AFF]' : 'bg-[#34C759]'
+                }`}>
                   {m.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                 </span>
-                {m.full_name}
+                {m.is_current_user ? `Yourself (${m.full_name})` : m.full_name}
               </button>
             ))}
           </div>

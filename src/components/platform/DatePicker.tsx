@@ -48,7 +48,7 @@ export function DatePicker({
     : '';
 
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`} ref={containerRef}>
+    <div className={`relative flex flex-col gap-1.5 ${className}`} ref={containerRef}>
       {label && (
         <span className="text-sm font-medium text-[#1C1C1E]">{label}</span>
       )}
@@ -87,7 +87,7 @@ export function DatePicker({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            className="relative z-50 mt-1"
+            className="absolute left-0 top-full z-50 mt-1"
           >
             <Calendar
               selectedDate={value}

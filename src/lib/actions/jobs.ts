@@ -49,6 +49,12 @@ export type TeamMember = {
   user_id: string
   full_name: string
   role: string
+  is_current_user?: boolean
+}
+
+export type TeamMembersResult = {
+  members: TeamMember[]
+  currentMemberId: string | null
 }
 
 export async function getJobs(filters?: {
@@ -537,10 +543,16 @@ export async function deleteJob(id: string): Promise<ActionResult> {
   }
 }
 
-export async function getTeamMembers(): Promise<ActionResult<TeamMember[]>> {
+export async function getTeamMembers(): Promise<ActionResult<TeamMembersResult>> {
   try {
     const companyId = await getCompanyId()
     const supabase = createAdminClient()
+
+    // Get the current authenticated user
+    const { createClient: createServerClient } = await import('@/lib/supabase/server')
+    const serverClient = await createServerClient()
+    const { data: { user: authUser } } = await serverClient.auth.getUser()
+    const currentUserId = authUser?.id ?? null
 
     const { data: members, error: membersError } = await supabase
       .from('company_members')
@@ -553,7 +565,7 @@ export async function getTeamMembers(): Promise<ActionResult<TeamMember[]>> {
     }
 
     if (!members || members.length === 0) {
-      return { success: true, data: [] }
+      return { success: true, data: { members: [], currentMemberId: null } }
     }
 
     const userIds = members.map(m => m.user_id)
@@ -568,14 +580,27 @@ export async function getTeamMembers(): Promise<ActionResult<TeamMember[]>> {
 
     const userMap = new Map((users ?? []).map(u => [u.id, u.full_name]))
 
-    const teamMembers: TeamMember[] = members.map(m => ({
-      member_id: m.id,
-      user_id: m.user_id,
-      full_name: userMap.get(m.user_id) ?? 'Unknown',
-      role: m.role,
-    }))
+    let currentMemberId: string | null = null
+    const teamMembers: TeamMember[] = members.map(m => {
+      const isCurrent = m.user_id === currentUserId
+      if (isCurrent) currentMemberId = m.id
+      return {
+        member_id: m.id,
+        user_id: m.user_id,
+        full_name: userMap.get(m.user_id) ?? 'Unknown',
+        role: m.role,
+        is_current_user: isCurrent,
+      }
+    })
 
-    return { success: true, data: teamMembers }
+    // Sort: current user first, then alphabetically
+    teamMembers.sort((a, b) => {
+      if (a.is_current_user) return -1
+      if (b.is_current_user) return 1
+      return a.full_name.localeCompare(b.full_name)
+    })
+
+    return { success: true, data: { members: teamMembers, currentMemberId } }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to fetch team members' }
   }
